@@ -1,4 +1,16 @@
-//use std::fmt;
+/*
+
+https://doc.rust-lang.org/stable/rust-by-example/hello/print/print_debug.html
+
+*/
+
+
+macro_rules! fookume {
+ () => {
+  println!("fookume je kral");
+ };
+}
+
 
 fn main() {
    //comment test
@@ -8,6 +20,10 @@ fn main() {
 
    stejny jak v influx_1
    */
+
+
+   fookume!(); // bez ;
+   
 
    let x = 2 * 2 * 2 ; //3
    let y = 10;
@@ -25,10 +41,19 @@ fn main() {
 
    println!("{:>width$}\n", format!("{:#010b}", 66), width=22+8+2);
 
-   #[allow(dead_code)]
+   //#[allow(dead_code)]
+   //struct Structure(i32);
+
+   #[derive(Debug)]
    struct Structure(i32);
 
-   //println!("This struct `{}` won't print...", Structure(3));
+   #[derive(Debug)]
+   struct Deep(Structure);
+
+   let sss = Structure(3);
+   //let sss = String::from("SSS");
+   
+   println!("{}", format!("This struct `{:?}` won't print...", sss));
 
 
    let pi = 3.141592;
