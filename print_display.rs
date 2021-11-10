@@ -47,6 +47,21 @@ impl fmt::Display for Complex {
 
 //BINARY
 // https://doc.rust-lang.org/std/fmt/
+// umim formatovat ale musel jsem pretypovat na int
+// spravne: 10.75
+// https://www.log2base2.com/number-system/float-to-binary-conversion.html
+// http://sandbox.mc.edu/%7Ebennet/cs110/flt/dtof.html
+// INTEGRAL:
+//   10 = (1010)2
+// FRACTIONAL:
+//  0.75 * 2 =>1.50 // 1 take 0.50
+//  0.50 * 2 =>1.00 // 1 stop
+//  0.75 = (11)2
+//   back: (1/2 + ((1/2)/2)) = (0.5 + 0.25) = 0.75
+//
+//   (01)2
+//   back: (0/2 + ((1/2)/2)) = 0 + 0.25 = 0.25
+
 impl fmt::Binary for Point2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let bin = format!("x: {:b} y: {:b}", self.x, self.y);
@@ -81,9 +96,10 @@ fn main() {
 
     // Error. Both `Debug` and `Display` were implemented, but `{:b}`
     // requires `fmt::Binary` to be implemented. This will not work.
-    //
+    //println!("What does Point2D look like in binary: {:b} ?", point);
+    println!("Binary: {:b} ?", point);
 
-    println!("What does Point2D look like in binary: {:b} ?", point);
+
 
     println!("complex_Display: {}", complex);
     println!("complex_Debug: {:?}", complex);
