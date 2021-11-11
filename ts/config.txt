@@ -1,0 +1,3 @@
+SECURE="https"
+SERVER="ruth"
+PORT=8086
