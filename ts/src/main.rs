@@ -10,7 +10,8 @@ use ts::Config;
 
 fn main() {
     /* TIMESTAMP */
-    
+
+    /*
     // GET LOCAL TIMESTAMP
     let debug_ts: bool = false;
     let ts_ms: i64 = timestamp::ts_now(debug_ts);
@@ -20,12 +21,12 @@ fn main() {
     let debug_ts_to_dt: bool = false;
     let ts_dt = timestamp::ts_to_datetime(ts_ms, debug_ts_to_dt);
     println!("\nTS_DT: {:?}", ts_dt);
+    */
 
     
     /* CONFIG */
     let args: Vec<String> = env::args().collect();
 
-    //let config = Config::new(&args);
     let config = Config::new(&args).unwrap_or_else(|err| {
         println!("EXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
         process::exit(1);
