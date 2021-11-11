@@ -1,16 +1,23 @@
 use std::fs;
 use std::error::Error;
 use std::env;
+// use std::io::Read;
 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; // GLOB
 
+    #[test]
+    fn panic_test() {
+        panic!("### MAKE THIS TEST FAIL");
+    }
+
+    
     #[test]
     fn one_result() {
         let query = "duct"; //SEARCH STRING
-        // start with \ no new_line \n
+        // start's with \ no new_line \n
         // tim padem se me vrati jen radek ktery obsahuje QUERY
         let contents = "\
 Rust:
@@ -52,60 +59,64 @@ Trust me.";
 }
 
 
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
+pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
+    data
+        .lines()
+        .filter(|line| line.to_lowercase().contains(&query.to_lowercase()))
+        .collect()
 
+    /*
     // changes String -> &str slice
-    let query = query.to_lowercase(); //oproti me one pouzijou & az pri volani .contains(&query)
+    let query = query.to_lowercase(); //oproti me pouzivaji & az pri volani .contains(&query)
 
     let mut results = Vec::new();
 
-    for line in contents.lines() {
+    for line in data.lines() {
         if line.to_lowercase().contains(&query) { // changes String -> &str slice
             results.push(line);
         }
     }
 
     results
+    */
 }
 
 
 // <'a> lifetime
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<&'a str> {
-    //println!("\n### i am searching");
-
+pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
+    data
+        .lines()
+        .filter(|line| line.contains(query))
+        .collect()
+    
+    /*
     let mut results = Vec::new();
 
     // MY_SHADOW // let query = &query.to_lowercase(); // QUERY TO lower_case
-    
-    for line in contents.lines() {
-        //let search_result = line.contains(query);
-
-        
+    for line in data.lines() {
         // MY LOWER_CASE // if line.to_lowercase().contains(query) { // DATA LINE TO lower_case
         if line.contains(query) { // DATA LINE TO lower_case
             results.push(line);
         }
         
-        /*
-        println!("line [{b}]: {l}",
-                 l=line,
-                 b=&search_result);
-        */
     }
 
-    /*
-    println!("\nTrue_lines: {:?}\n",
-                 results);
-    */
-    
     // vec![] // TEST FAILED as we return empty vector
     results // TEST OK
+    */
 }
 
 
 pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
     // sice namem PANIC! ale nevypisuju filename parametr jako pro .unwrap_or_else(|err|
+
     let data = fs::read_to_string(&config.filename)?;
+
+    /* TROSKU JINE VOLANI
+    let mut data = String::new();
+    fs::File::open(&config.filename)?.read_to_string(&mut data)?;
+    */
+    
     /*
     let data = fs::read_to_string(&config.filename)
         .expect(&format!("ERROR reading file: {}", &config.filename)); // zatim nevim proc &format!
@@ -133,11 +144,13 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
     };
 
     let mut count: u8 = 0;
-    
+    //let count_closure = |x| x + 1;
+    let count_closure = |x: u8| -> u8 { x + 1 };
+
     for line in results {
-        count += 1;
-        //println!("{}", line);
-        println!("[{i}] result_line: {l}",
+        //count += 1;
+        count = count_closure(count);
+        println!("[{i:?}] result_line: {l}",
                  l=line,
                  i=count);
     }
@@ -147,6 +160,7 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
 
 
 pub struct Config {
+    // do not forget to chance ARG_COUNT verification 
     pub query: String,
     pub filename: String,
     pub case_sensitive: bool,
@@ -155,26 +169,37 @@ pub struct Config {
 
 impl Config {
     // Result<OK Config, ERROR &str>
-    pub fn new(args: &[String]) -> Result<Config, &str> { // Config {
+    // pub fn new(args: &[String]) -> Result<Config, &str> { // Config {
+    pub fn new(mut args: env::Args) -> Result<Config, &'static str> { // Config {
 
-        const ARG_COUNT: usize = 3;
+        const ARG_COUNT: usize = 4;
         
         if args.len() < ARG_COUNT {
             //panic!("NOT ENOUGH ARGUMENTS");
             return Err("not enough arguments") // ERR_MSG
         }
 
-        // /* DEBUG
-        println!("cmd: {:?} /\n\n[0]: {}",
+        //args.next(); // we ignore first call as there is program name
+        let program = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a query string [keyword]"),
+        };
+
+        // /* DEBUG // cargo call is with relative path 'target/debug/ts' different then rustc
+        println!("\ncmd: {:?} /\n\n[0]: {}",
                  args,
-                 &args[0]);
+                 program);
         // */
 
+        /*
         let query = args[1].clone();
         let filename = args[2].clone();
-
         // PARAM as faster changing
         let case_sensitive: bool = args[3].clone().parse().unwrap();
+        // let case_sensitive = args[3].clone().parse::<bool>().unwrap();
+        // let case_sensitive = String::from(args[3].clone()).parse().unwrap();
+        // let case_sensitive = String::from(args[3].clone()).parse::<bool>().unwrap();
+        */
 
         /* ENV
         // $export CASE_INSENSITIVE=1
@@ -182,6 +207,22 @@ impl Config {
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
         */
 
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a query string [keyword]"),
+        };
+
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Didn't get a file name [path]"),
+        };
+
+        let case_sensitive = match args.next() {
+            Some(arg) => arg.parse::<bool>().unwrap(),
+            None => return Err("Didn't get a case sensitive [bool]"),
+        };
+        
+        
         // /* DEBUG
         println!("[1]: {}\n[2]: {}\n[3]: {}",
                  query,
