@@ -8,16 +8,18 @@ pub use util::ts as timestamp;
 mod file_config;
 pub use file_config::Data;
 
-use std::env;
-use std::process;
-use ts::Config;
+//use std::env;
+//use std::process;
+//use ts::Config;
 
 use chrono::{Datelike, Timelike};
 
 use std::process::{Command};
 
 //use reqwest::{Client};
+
 //use serde_json::json;
+//use serde_json::Value;
 
 extern crate strfmt;
 use strfmt::strfmt;
@@ -36,7 +38,6 @@ struct Influx{
     port: Option<u16>
 }
 */
-
 
 
 fn main() {
@@ -120,6 +121,35 @@ fn main() {
     );
     */
 
+
+    /* SENSOR */
+    let sensor_output = Command::new("/usr/bin/sensors")
+        .arg("-j")
+        //.arg("|")
+        //.arg("egrep")
+        //.arg("\"Core (0|1)\"")
+        .output().expect("failed to execute command");
+
+    let sensor_string = String::from_utf8_lossy(&sensor_output.stdout);
+    // println!("sensor_string: {}", sensor_string);
+
+    let sensor_value:serde_json::Value = serde_json::from_str(&sensor_string).unwrap();
+    // println!("\nsensor_value: {}", sensor_value);
+
+    let name_core_0 = 0;
+    let name_core_1 = 1;
+    let temperature_core_0 = &sensor_value["coretemp-isa-0000"]["Core 0"]["temp2_input"].to_string();
+    let temperature_core_1 = &sensor_value["coretemp-isa-0000"]["Core 1"]["temp3_input"].to_string();
+
+    println!("\nCore 0: {}", temperature_core_0);
+    println!("\nCore 1: {}", temperature_core_1);
+    
+    //let sensor_value: Value = Value::Object(serde_json::from_str(&sensor_string));
+    
+    //let sensor_data  = serde_json::from_str(&sensor_string);
+
+
+    /* CURL */
     let uri_template = String::from("{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}");
     let mut uri = HashMap::new();
     uri.insert("secure".to_string(), config_data.influx_default.secure);
@@ -132,42 +162,52 @@ fn main() {
     println!("URI: {}", strfmt(&uri_template, &uri).unwrap());
 
 
-    let lp_template = String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} SensorDecimal={sensor_decimal} {ts}");
+    let lp_template = String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}");
 
     let mut lp = HashMap::new();
-    lp.insert("measurement".to_string(), String::from("laptop"));
+    lp.insert("measurement".to_string(), String::from("temperature"));
     lp.insert("host".to_string(), config_data.host);
     lp.insert("machine_id".to_string(), String::from("spongebob"));
-
-    let sensor_id: u32 = 1;
-    lp.insert("sensor_id".to_string(), sensor_id.to_string());
 
     lp.insert("sensor_carrier".to_string(), String::from("cargo"));
     lp.insert("sensor_valid".to_string(), String::from("true"));
 
-    let sensor_decimal: f64 = 123.4567;
-    lp.insert("sensor_decimal".to_string(), sensor_decimal.to_string());
-
     lp.insert("ts".to_string(), ts_ms.to_string());
+
+
+    for single_temp in &[(name_core_0, temperature_core_0), (name_core_1, temperature_core_1)] {
+        let sensor_id = single_temp.0.to_string(); // SENSOR_ID
+        lp.insert("sensor_id".to_string(), sensor_id.to_string());    
+
+        let temperature_decimal = single_temp.1;//&temperature_core_0; // TEMPERATURE_DECIMAL
+        lp.insert("temperature_decimal".to_string(), temperature_decimal.to_string());
+        
+        println!("LINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
+
+        let curl_output = Command::new("/usr/bin/curl")
+            .arg("-k")
+            .arg("--request")
+            .arg("POST")
+            .arg(strfmt(&uri_template, &uri).unwrap()) // URI
+            .arg("--header")
+            .arg(format!("Authorization: Token {token}",
+                         token=config_data.influx_default.token))
+            .arg("--data-raw")
+            .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
+            .output().expect("failed to execute command");
+        
+        //println!("\nstdout: {:?}", &output);
+        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+        
+    }
     
-    println!("LINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
+    
     
 
-    let output = Command::new("/usr/bin/curl")
-        .arg("-k")
-        .arg("--request")
-        .arg("POST")
-        .arg(strfmt(&uri_template, &uri).unwrap()) // URI
-        .arg("--header")
-        .arg(format!("Authorization: Token {token}",
-                     token=config_data.influx_default.token))
-        .arg("--data-raw")
-        .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
-        .output().expect("failed to execute command");
+    
 
-    //println!("\nstdout: {:?}", &output);
-    println!("\nstdout: {}", String::from_utf8_lossy(&output.stdout));
-    println!("\nstderr: {}", String::from_utf8_lossy(&output.stderr));
+
 
     
     /*
