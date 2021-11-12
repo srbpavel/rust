@@ -8,10 +8,12 @@ use std::env;
 mod tests {
     use super::*; // GLOB
 
+    /*
     #[test]
     fn panic_test() {
         panic!("### MAKE THIS TEST FAIL");
     }
+    */
 
     
     #[test]
@@ -108,8 +110,7 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 
 
 pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
-    // sice namem PANIC! ale nevypisuju filename parametr jako pro .unwrap_or_else(|err|
-
+    // sice namem PANIC! ale nevypisuju filename parametr jako pro .unwrap_or_else(|err|    
     let data = fs::read_to_string(&config.filename)?;
 
     /* TROSKU JINE VOLANI
@@ -122,11 +123,13 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
         .expect(&format!("ERROR reading file: {}", &config.filename)); // zatim nevim proc &format!
     */
 
-    // /* DEBUG
+    //
+    /* DEBUG
     println!("\n###DATA_START [{f}]:\n{d}\n###DATA_END\n",
              d=data,
              f=config.filename);
-    // */
+    //
+    */
 
     /*
     let mut count: u8 = 0;
@@ -145,11 +148,11 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
 
     let mut count: u8 = 0;
     //let count_closure = |x| x + 1;
-    let count_closure = |x: u8| -> u8 { x + 1 };
+    // let count_closure = |x: u8| -> u8 { x + 1 };
 
     for line in results {
-        //count += 1;
-        count = count_closure(count);
+        count += 1;
+        //count = count_closure(count);
         println!("[{i:?}] result_line: {l}",
                  l=line,
                  i=count);

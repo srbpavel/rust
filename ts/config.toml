@@ -1,0 +1,40 @@
+NAME = 'sensor_001'
+
+HOST = 'spongebob'
+
+WORK_DIR = '/home/conan/soft/rust/ts'
+
+
+[flag]
+DEBUG_TS = true #False
+
+
+[delay]
+SECONDS = 60 #1
+MINUTES = 1 #5
+
+
+[influx_default]
+STATUS = true #false
+SECURE = 'https'
+SERVER = 'ruth'
+PORT = '8086'
+BUCKET = 'test_rust'
+TOKEN = 'riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw=='
+ORG = 'foookin_paavel'
+PRECISION = 'ms'
+DEFAULT_CARRIER = 'cargo'
+DEFAULT_VALID_STATUS = 'true'
+
+
+[influx_backup]
+STATUS = false
+SECURE = 'https'
+SERVER = 'jozefina'
+PORT = '8086'
+BUCKET = 'backup_test_rust'
+TOKEN = ''
+ORG = 'foookin_paavel'
+PRECISION = 'ms'
+DEFAULT_CARRIER = 'cargo'
+DEFAULT_VALID_STATUS = 'true'

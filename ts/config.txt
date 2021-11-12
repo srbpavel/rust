@@ -1,7 +1,0 @@
-SECURE="https"
-SERVER="ruth"
-PORT=8086
-
-TOKEN=0123456789
-BUCKET="hemichromis"
-token="adas334543345k34j534k5n345"
