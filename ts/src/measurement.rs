@@ -24,9 +24,26 @@ stderr: {}",
                  sensor_stderr_string,
         );
     }
-    
+
+    // JSON 
     let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
 
+    // json_DICT
+    /*
+    let dict = value.get("coretemp-isa-0000")
+        .and_then(|v| v.get("Core 0"))
+        .and_then(|v| v.get("temp2_input"))
+        .unwrap();
+
+    println!("\n#DICT: {}", dict);
+    */
+
+    // json_LIST
+    /*
+    let temperature_core_0 = &value["coretemp-isa-0000"]["Core 0"]["temp2_input"].to_string();
+    println!("\nLIST: {}", temperature_core_0);
+    */
+    
     // INFLUX
     for single_influx in &config.all_influx.values {
         println!("\n#INFLUX:

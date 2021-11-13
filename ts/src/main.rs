@@ -1,15 +1,43 @@
 // MY FIRST LESSON
+
+// TS
 mod util;
 pub use util::ts as timestamp;
 
+// SENSORS
 mod measurement;
 
+// CONFIG_HARD_CODED STRUCT
 mod file_config;
 pub use file_config::Data;
 
-//use std::env;
-//use std::process;
-//use ts::Config;
+// CONFIG_ARG
+use std::env;
+use std::process;
+use ts::Config;
+
+// CONFIG TOML 
+use std::fs;
+use toml;
+use serde::{Serialize, Deserialize};
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Ccc {
+    flag: Flag,
+    delay: Delay,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Flag {
+    debug_ts: String
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Delay {
+    seconds: u32,
+    minutes: u32,
+    //hours: u32,
+}
 
 
 fn main() {
@@ -28,145 +56,11 @@ fn main() {
     println!("\n#TS:\n{}", ts_ms);
 
     /* SENSOR */
-    //let diablo = measurement::mmm();
-    //println!("\n#DIABLO:\n{}", diablo);
-
     measurement::get_sensors_data(&config_data,
                                   ts_ms
     );
     
-    /*
-    let ccc = measurement::get_sensors_data(&config_data);
-    println!("\n#CCC:\n{:?}", ccc);
-    */
-
     /* START
-    let sensor_output = Command::new(config_data.template.sensors.program)
-        .arg(config_data.template.sensors.param_1)
-        .output().expect("failed to execute command");
-
-    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
-    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
-    
-    if config_data.flag.debug_sensor_output {
-        println!("\n#SENSOR_OUTPUT:
-stdout: {}
-stderr: {:?}",
-                 sensor_stdout_string,
-                 sensor_stderr_string,
-        ); // xxx
-    }
-
-    // JSON
-    let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
-    //println!("\n#VALUE: {:?}", value);
-    
-    // DICT
-    /*
-    let dict = value.get("coretemp-isa-0000")
-        .and_then(|v| v.get("Core 0"))
-        .and_then(|v| v.get("temp2_input"))
-        .unwrap();
-
-    println!("\n#DICT: {}", dict);
-    */
-    
-    // LIST
-    /*
-    let sensor_value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
-    println!("\n#SENSOR_VALUE: {}", sensor_value);
-
-    let temperature_core_0 = &sensor_value["coretemp-isa-0000"]["Core 0"]["temp2_input"].to_string();
-    let temperature_core_1 = &sensor_value["coretemp-isa-0000"]["Core 1"]["temp3_input"].to_string();
-    
-    println!("\nCore 0: {}", temperature_core_0);
-    println!("\nCore 1: {}", temperature_core_1);
-    */
-
-
-    // URI
-    let uri_template = String::from(config_data.template.curl.influx_uri);
-    let mut uri = HashMap::new();
-    uri.insert("secure".to_string(), config_data.influx_default.secure);
-    uri.insert("server".to_string(), config_data.influx_default.server);
-    uri.insert("port".to_string(), config_data.influx_default.port.to_string());
-    uri.insert("org".to_string(), config_data.influx_default.org);
-    uri.insert("bucket".to_string(), config_data.influx_default.bucket);
-    uri.insert("precision".to_string(), config_data.influx_default.precision);
-    //println!("URI: {}", strfmt(&uri_template, &uri).unwrap());
-
-    // TOKEN
-    let auth_template = String::from(config_data.template.curl.influx_auth);
-    let mut auth = HashMap::new();
-    auth.insert("token".to_string(), String::from(&config_data.influx_default.token));
-
-    // LP
-    let lp_template = String::from(config_data.template.curl.influx_lp);
-
-    let mut lp = HashMap::new();
-    lp.insert("measurement".to_string(), String::from("temperature"));
-    lp.insert("host".to_string(), config_data.host);
-    lp.insert("machine_id".to_string(), String::from("spongebob"));
-    lp.insert("sensor_carrier".to_string(), String::from("cargo"));
-    lp.insert("sensor_valid".to_string(), String::from("true"));
-    lp.insert("ts".to_string(), ts_ms.to_string());
-
-    // POINTER
-    for single_sensor in &config_data.all_sensors.values {
-        let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
-        
-        println!("
-#POINTER_CFG:
-status: {s}
-name: {n}
-pointer: {p}
-value: {v}",
-                 s=single_sensor.status,
-                 n=single_sensor.name,
-                 p=single_sensor.pointer,
-                 v=pointer_value,
-        );
-
-        lp.insert("sensor_id".to_string(), single_sensor.name.to_string()); // SENSOR_ID
-        lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
-        
-
-        // INFLUX IMPORT
-        if single_sensor.status {
-            println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
-            
-            /* CURL */
-            let curl_output = Command::new(&config_data.template.curl.program)
-                .arg(&config_data.template.curl.param_1)
-                .arg(&config_data.template.curl.param_2)
-                .arg(&config_data.template.curl.param_3)
-                .arg(strfmt(&uri_template, &uri).unwrap()) // URI
-                .arg(&config_data.template.curl.param_4)
-                .arg(strfmt(&auth_template, &auth).unwrap()) // AUTH
-                .arg(&config_data.template.curl.param_5)
-                .arg(strfmt(&lp_template, &lp).unwrap()) // LINE_PROTOCOL
-                .output().expect("failed to execute command");
-
-            /*
-            let curl_output = Command::new("/usr/bin/curl")
-            .arg("-k")
-            .arg("--request")
-            .arg("POST")
-            .arg(strfmt(&uri_template, &uri).unwrap()) // URI
-            .arg("--header")
-            .arg(strfmt(&token_template, &token).unwrap()) // TOKEN
-            .arg("--data-raw")
-            .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
-            .output().expect("failed to execute command");
-             */
-        
-            //println!("\nstdout: {:?}", &output);
-            println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
-            println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
-        }
-    }
-    END */
-
 
     /* CALL DIRECTLY FROM rust as python.requests
     // https://www.reddit.com/r/rust/comments/ndrd0b/how_to_translate_this_curl_request_into_rusts/
@@ -212,27 +106,63 @@ value: {v}",
  
  
     /* CONFIG */
-    /*
-    let args: Vec<String> = env::args().collect();
-
-    let config = Config::new(&args).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
-        process::exit(1);
-    });
-     */
-
-    /*
-    let config = Config::new(env::args()).unwrap_or_else(|err| {
+    // /*
+    let config = Config::new(env::args()).unwrap_or_else(|err| { // LIB.RS
         //eprintln!("Problem parsing arguments: {}", err);
         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
         process::exit(1);
     });
     
 
+    /*
     if let Err(e) = ts::read_config(config) { //ts. je muj METYNKA
         eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
 
         process::exit(1);
     }
-     */
+    */
+    // */
+
+    /* TOML */
+    /*
+    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
+    println!("\nTOML: {} <- {:?}",
+             fookume["foookin"],
+             fookume,
+    );
+    */
+
+   
+    let toml_file = fs::read_to_string(config.filename);
+    println!("\nTOML_FILE: {:#?} <- {:?}",
+             &toml_file,
+             "",
+    );
+
+    let toml_content = r#"
+[flag]
+debug_ts = "true"
+
+[delay]
+seconds = 60
+minutes = 1
+hours = 12
+"#;
+
+    // /*
+    let content: Ccc = toml::from_str(toml_content).unwrap();
+    println!("\nTOML_CONTENT: {:?}\nTTT: {}",
+             content,
+             content.flag.debug_ts,
+    );
+    // */
+
+    // /*
+    //let toml_config: Ccc = toml::from_str(&toml_file);
+    let toml_config: Ccc = toml::from_str(&toml_file.unwrap()).unwrap();
+    //let toml_config: Result<Ccc, ::toml::de::Error> = toml::from_str(&toml_file);
+    println!("\nTOML_CONFIG: {:?}",
+             toml_config,
+    );
+    // */
 }
