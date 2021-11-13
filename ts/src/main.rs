@@ -53,6 +53,10 @@ fn main() {
     */
 
     /* SENSOR */
+    println!("\n#TEMPLATE_SENSORS: {:?}",
+             config_data.template.sensors);
+
+
     let sensor_output = Command::new("/usr/bin/sensors")
         .arg("-j")
         .output().expect("failed to execute command");
@@ -142,22 +146,25 @@ value: {v}",
         lp.insert("sensor_id".to_string(), single_sensor.name.to_string()); // SENSOR_ID
         lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
         
-        println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
 
-        /* CURL */
-        let curl_output = Command::new(&config_data.template.cmd_program)
-            .arg(&config_data.template.cmd_param_1)
-            .arg(&config_data.template.cmd_param_2)
-            .arg(&config_data.template.cmd_param_3)
-            .arg(strfmt(&uri_template, &uri).unwrap()) // URI
-            .arg(&config_data.template.cmd_param_4)
-            .arg(strfmt(&token_template, &token).unwrap()) // TOKEN
-            .arg(&config_data.template.cmd_param_5)
-            .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
-            .output().expect("failed to execute command");
+        // INFLUX IMPORT
+        if single_sensor.status {
+            println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
+            
+            /* CURL */
+            let curl_output = Command::new(&config_data.template.cmd_program)
+                .arg(&config_data.template.cmd_param_1)
+                .arg(&config_data.template.cmd_param_2)
+                .arg(&config_data.template.cmd_param_3)
+                .arg(strfmt(&uri_template, &uri).unwrap()) // URI
+                .arg(&config_data.template.cmd_param_4)
+                .arg(strfmt(&token_template, &token).unwrap()) // TOKEN
+                .arg(&config_data.template.cmd_param_5)
+                .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
+                .output().expect("failed to execute command");
 
-        /*
-        let curl_output = Command::new("/usr/bin/curl")
+            /*
+            let curl_output = Command::new("/usr/bin/curl")
             .arg("-k")
             .arg("--request")
             .arg("POST")
@@ -167,11 +174,12 @@ value: {v}",
             .arg("--data-raw")
             .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
             .output().expect("failed to execute command");
-         */
+             */
         
-        //println!("\nstdout: {:?}", &output);
-        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
-        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+            //println!("\nstdout: {:?}", &output);
+            println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+            println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+        }
     }
 
     /* CALL DIRECTLY FROM rust as python.requests

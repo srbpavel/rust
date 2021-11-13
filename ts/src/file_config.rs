@@ -14,6 +14,7 @@ pub struct Data {
     pub all_sensors: AllSensors,
 
     pub template: Template,
+    //pub template_sensors: TemplateSensors,
 }
 
 
@@ -55,6 +56,8 @@ pub struct Influx {
 
 #[derive(Debug)]
 pub struct Template {
+    pub sensors: TemplateSensors,
+
     pub cmd_program: String, // /usr/bin/curl
     pub cmd_param_1: String, // -k
     pub cmd_param_2: String, // --request
@@ -64,6 +67,13 @@ pub struct Template {
     pub influx_uri: String, // https://ruth:8086
     pub influx_token: String, // Authorization: Token {token}
     pub influx_lp: String, // temperature,host=
+}
+
+
+#[derive(Debug)]
+pub struct TemplateSensors {
+    pub cmd_program: String, // /usr/bin/sensors
+    pub cmd_param_1: String, // -j
 }
 
 
@@ -88,7 +98,7 @@ impl Data {
         let host = String::from("spongebob");
 
         // [flag]
-        let debug_config_data = false;
+        let debug_config_data = true; //false;
         let debug_ts = false;
         let debug_ts_to_dt = false;
         let debug_sensor_output = false;
@@ -146,8 +156,27 @@ impl Data {
             flag_valid_default: true,
         };
         
+        // [template_sensors]
+        let template_sensors = TemplateSensors {
+            cmd_program: String::from("/usr/bin/sensors"),
+            cmd_param_1: String::from("-j"),
+        };
+
         // [template]
+
+        let sss_sensors: TemplateSensors = TemplateSensors{
+            cmd_program: String::from("/usr/bin/sensors"),
+            cmd_param_1: String::from("-j"),
+        };
+       
         let template = Template {
+            sensors: sss_sensors,
+            /*
+            sensors: {
+                program: String::from("/usr/bin/sensors"),
+                param_1: String::from("--j"),
+            },
+            */
 
             cmd_program: String::from("/usr/bin/curl"),
 
@@ -166,7 +195,7 @@ impl Data {
             influx_lp: String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"),
         };
 
-        // [sensor]
+        // [all_sensors]
         let sensor_one = Sensor {
             status: true,
             name: String::from("0"),
@@ -179,12 +208,29 @@ impl Data {
             pointer: String::from("/coretemp-isa-0000/Core 1/temp3_input"),
         };
 
+        let sensor_three = Sensor {
+            status: true, // false,
+            name: String::from("2"),
+            pointer: String::from("/acpitz-acpi-0/temp1/temp1_input"),
+        };
+
+        let sensor_four = Sensor {
+            status: true, //false,
+            name: String::from("3"),
+            pointer: String::from("/acpitz-acpi-0/temp2/temp2_input"),
+        };
+
         /*
         let mut vs = Vec::new();
         vs.push(sensor_one);
         vs.push(sensor_two);
         */
-        let vs = vec![sensor_one, sensor_two];
+        let vs = vec![sensor_one,
+                      sensor_two,
+                      sensor_three,
+                      sensor_four,
+        ];
+        
         let all_sensors  = AllSensors {values: vs};
         
         // RETURN
@@ -197,6 +243,7 @@ impl Data {
             influx_default,
             influx_backup,
             template,
+            //template_sensors,
             all_sensors,
         }
     }
