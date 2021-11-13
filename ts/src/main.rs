@@ -1,6 +1,9 @@
-// myRUST +-50HOUR LESSON
+// MY FIRST LESSON
 mod util;
 pub use util::ts as timestamp;
+
+mod measurement;
+//pub use measurement;
 
 mod file_config;
 pub use file_config::Data;
@@ -9,17 +12,19 @@ pub use file_config::Data;
 //use std::process;
 //use ts::Config;
 
-use std::process::{Command};
+// #use std::process::{Command};
 
+/* #
 extern crate strfmt;
 use strfmt::strfmt;
 use std::collections::HashMap;
-
+*/
 
 fn main() {
     let config_data = Data::start();
+
     if config_data.flag.debug_config_data {
-        println!("\n#CONFIG_DATA:\n{:?}\n >>> {:?}",
+        println!("\n#CONFIG_DATA:\n{:#?}\n >>> {:#?}",
                  config_data,
                  config_data.all_sensors);
     }
@@ -29,36 +34,23 @@ fn main() {
     let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
 
-    /*
-    // TS to DATETIME for better visual reading
-    // https://rust-lang-nursery.github.io/rust-cookbook/datetime/parse.html
-    let debug_ts_to_dt: bool = false;
-    let ts_dt = timestamp::ts_to_datetime(ts_ms, debug_ts_to_dt);
-    println!("\nDT:       {:?}\nformated: {}",
-             ts_dt,
-             format!("{}_{:02.}_{:02.} {:02}:{:02.}:{:02.}.{:09} {} {}",
-                     ts_dt.year(),
-                     ts_dt.month(),
-                     ts_dt.day(),
-                     
-                     ts_dt.hour(),
-                     ts_dt.minute(),
-                     ts_dt.second(),
-                     ts_dt.nanosecond(),
-                     
-                     ts_dt.weekday(),
-                     ts_dt.offset(),
-             )
-    );
-    */
 
     /* SENSOR */
-    println!("\n#TEMPLATE_SENSORS: {:?}",
-             config_data.template.sensors);
+    let diablo = measurement::mmm();
+    println!("\n#DIABLO:\n{}", diablo);
 
+    measurement::get_sensors_data(&config_data,
+                                  ts_ms
+    );
+    
+    /*
+    let ccc = measurement::get_sensors_data(&config_data);
+    println!("\n#CCC:\n{:?}", ccc);
+    */
 
-    let sensor_output = Command::new("/usr/bin/sensors")
-        .arg("-j")
+    /* START
+    let sensor_output = Command::new(config_data.template.sensors.program)
+        .arg(config_data.template.sensors.param_1)
         .output().expect("failed to execute command");
 
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
@@ -70,7 +62,7 @@ stdout: {}
 stderr: {:?}",
                  sensor_stdout_string,
                  sensor_stderr_string,
-        )
+        ); // xxx
     }
 
     // JSON
@@ -101,7 +93,7 @@ stderr: {:?}",
 
 
     // URI
-    let uri_template = String::from(config_data.template.influx_uri);
+    let uri_template = String::from(config_data.template.curl.influx_uri);
     let mut uri = HashMap::new();
     uri.insert("secure".to_string(), config_data.influx_default.secure);
     uri.insert("server".to_string(), config_data.influx_default.server);
@@ -112,12 +104,12 @@ stderr: {:?}",
     //println!("URI: {}", strfmt(&uri_template, &uri).unwrap());
 
     // TOKEN
-    let token_template = String::from(config_data.template.influx_token);
-    let mut token = HashMap::new();
-    token.insert("token".to_string(), String::from(&config_data.influx_default.token));
+    let auth_template = String::from(config_data.template.curl.influx_auth);
+    let mut auth = HashMap::new();
+    auth.insert("token".to_string(), String::from(&config_data.influx_default.token));
 
     // LP
-    let lp_template = String::from(config_data.template.influx_lp);
+    let lp_template = String::from(config_data.template.curl.influx_lp);
 
     let mut lp = HashMap::new();
     lp.insert("measurement".to_string(), String::from("temperature"));
@@ -152,15 +144,15 @@ value: {v}",
             println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
             
             /* CURL */
-            let curl_output = Command::new(&config_data.template.cmd_program)
-                .arg(&config_data.template.cmd_param_1)
-                .arg(&config_data.template.cmd_param_2)
-                .arg(&config_data.template.cmd_param_3)
+            let curl_output = Command::new(&config_data.template.curl.program)
+                .arg(&config_data.template.curl.param_1)
+                .arg(&config_data.template.curl.param_2)
+                .arg(&config_data.template.curl.param_3)
                 .arg(strfmt(&uri_template, &uri).unwrap()) // URI
-                .arg(&config_data.template.cmd_param_4)
-                .arg(strfmt(&token_template, &token).unwrap()) // TOKEN
-                .arg(&config_data.template.cmd_param_5)
-                .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
+                .arg(&config_data.template.curl.param_4)
+                .arg(strfmt(&auth_template, &auth).unwrap()) // AUTH
+                .arg(&config_data.template.curl.param_5)
+                .arg(strfmt(&lp_template, &lp).unwrap()) // LINE_PROTOCOL
                 .output().expect("failed to execute command");
 
             /*
@@ -181,6 +173,8 @@ value: {v}",
             println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
         }
     }
+    END */
+
 
     /* CALL DIRECTLY FROM rust as python.requests
     // https://www.reddit.com/r/rust/comments/ndrd0b/how_to_translate_this_curl_request_into_rusts/
@@ -248,5 +242,5 @@ value: {v}",
 
         process::exit(1);
     }
-    */
+     */
 }

@@ -14,7 +14,6 @@ pub struct Data {
     pub all_sensors: AllSensors,
 
     pub template: Template,
-    //pub template_sensors: TemplateSensors,
 }
 
 
@@ -40,6 +39,7 @@ pub struct Influx {
     pub status: bool,
     pub secure: String,
     pub server: String,
+
     pub port: u16,
 
     pub bucket: String,
@@ -48,7 +48,7 @@ pub struct Influx {
     pub precision: String,
 
     pub measurement: String,
-    pub machine_id: String, // here same as host, normaly different: T4/esp32/..
+    pub machine_id: String,
     pub carrier: String,
     pub flag_valid_default: bool,
 }
@@ -57,23 +57,27 @@ pub struct Influx {
 #[derive(Debug)]
 pub struct Template {
     pub sensors: TemplateSensors,
+    pub curl: TemplateCurl,
+}
 
-    pub cmd_program: String, // /usr/bin/curl
-    pub cmd_param_1: String, // -k
-    pub cmd_param_2: String, // --request
-    pub cmd_param_3: String, // POST
-    pub cmd_param_4: String, // --header
-    pub cmd_param_5: String, // --data-raw
-    pub influx_uri: String, // https://ruth:8086
-    pub influx_token: String, // Authorization: Token {token}
-    pub influx_lp: String, // temperature,host=
+#[derive(Debug)]
+pub struct TemplateCurl {
+    pub program: String,
+    pub param_1: String,
+    pub param_2: String,
+    pub param_3: String,
+    pub param_4: String,
+    pub param_5: String,
+    pub influx_uri: String,
+    pub influx_auth: String,
+    pub influx_lp: String,
 }
 
 
 #[derive(Debug)]
 pub struct TemplateSensors {
-    pub cmd_program: String, // /usr/bin/sensors
-    pub cmd_param_1: String, // -j
+    pub program: String,
+    pub param_1: String,
 }
 
 
@@ -98,26 +102,17 @@ impl Data {
         let host = String::from("spongebob");
 
         // [flag]
-        let debug_config_data = true; //false;
-        let debug_ts = false;
-        let debug_ts_to_dt = false;
-        let debug_sensor_output = false;
-        
         let flag = Flag {
-            debug_config_data,
-            debug_ts,
-            debug_ts_to_dt,
-            debug_sensor_output,
+            debug_config_data: true, //false,
+            debug_ts: false,
+            debug_ts_to_dt: false,
+            debug_sensor_output: false,
         };
 
-        
         // [delay]
-        let second = 60;
-        let minute = 1;
-        
         let delay = Delay {
-            second,
-            minute,
+            second: 60,
+            minute: 1,
         };
         
         // [influx_default]
@@ -144,7 +139,7 @@ impl Data {
             secure: String::from("http"),
             server: String::from("jozefina"),
             port: 8086,
-
+            
             bucket: String::from("backup_test_rust"),
             token: String::from(""),
             org: String::from("foookin_paavel"),
@@ -156,43 +151,31 @@ impl Data {
             flag_valid_default: true,
         };
         
-        // [template_sensors]
-        let template_sensors = TemplateSensors {
-            cmd_program: String::from("/usr/bin/sensors"),
-            cmd_param_1: String::from("-j"),
-        };
-
         // [template]
-
-        let sss_sensors: TemplateSensors = TemplateSensors{
-            cmd_program: String::from("/usr/bin/sensors"),
-            cmd_param_1: String::from("-j"),
-        };
-       
         let template = Template {
-            sensors: sss_sensors,
-            /*
-            sensors: {
+            // FOR SENSORS
+            sensors: TemplateSensors {
                 program: String::from("/usr/bin/sensors"),
-                param_1: String::from("--j"),
+                param_1: String::from("-j"),
             },
-            */
 
-            cmd_program: String::from("/usr/bin/curl"),
+            // FOR CURL
+            curl: TemplateCurl {
+                program: String::from("/usr/bin/curl"),
+                param_1: String::from("-k"),
+                param_2: String::from("--request"),
+                param_3: String::from("POST"),
+                
+                influx_uri: String::from("{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"),
 
-            cmd_param_1: String::from("-k"),
-            cmd_param_2: String::from("--request"),
-            cmd_param_3: String::from("POST"),
+                param_4: String::from("--header"),
 
-            influx_uri: String::from("{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"),
-
-            cmd_param_4: String::from("--header"),
-
-            influx_token: String::from("Authorization: Token {token}"),
+                influx_auth: String::from("Authorization: Token {token}"),
             
-            cmd_param_5: String::from("--data-raw"),
+                param_5: String::from("--data-raw"),
 
-            influx_lp: String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"),
+                influx_lp: String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"),
+            }
         };
 
         // [all_sensors]
@@ -224,16 +207,28 @@ impl Data {
         let mut vs = Vec::new();
         vs.push(sensor_one);
         vs.push(sensor_two);
-        */
-        let vs = vec![sensor_one,
-                      sensor_two,
-                      sensor_three,
-                      sensor_four,
+         */
+
+        /*
+        let vs = vec![
+            sensor_one,
+            sensor_two,
+            sensor_three,
+            sensor_four,
         ];
-        
         let all_sensors  = AllSensors {values: vs};
+        */
+
+        let all_sensors  = AllSensors {values:
+                                       vec![
+                                           sensor_one,
+                                           sensor_two,
+                                           sensor_three,
+                                           sensor_four,
+                                       ]
+        };
+
         
-        // RETURN
         Data {
             work_dir,
             name,
@@ -243,7 +238,6 @@ impl Data {
             influx_default,
             influx_backup,
             template,
-            //template_sensors,
             all_sensors,
         }
     }
