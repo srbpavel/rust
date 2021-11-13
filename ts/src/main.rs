@@ -3,7 +3,6 @@ mod util;
 pub use util::ts as timestamp;
 
 mod measurement;
-//pub use measurement;
 
 mod file_config;
 pub use file_config::Data;
@@ -12,13 +11,6 @@ pub use file_config::Data;
 //use std::process;
 //use ts::Config;
 
-// #use std::process::{Command};
-
-/* #
-extern crate strfmt;
-use strfmt::strfmt;
-use std::collections::HashMap;
-*/
 
 fn main() {
     let config_data = Data::start();
@@ -26,7 +18,8 @@ fn main() {
     if config_data.flag.debug_config_data {
         println!("\n#CONFIG_DATA:\n{:#?}\n >>> {:#?}",
                  config_data,
-                 config_data.all_sensors);
+                 "" // config_data.all_sensors,
+        );
     }
 
     
@@ -34,10 +27,9 @@ fn main() {
     let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
 
-
     /* SENSOR */
-    let diablo = measurement::mmm();
-    println!("\n#DIABLO:\n{}", diablo);
+    //let diablo = measurement::mmm();
+    //println!("\n#DIABLO:\n{}", diablo);
 
     measurement::get_sensors_data(&config_data,
                                   ts_ms

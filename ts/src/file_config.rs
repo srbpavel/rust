@@ -8,9 +8,8 @@ pub struct Data {
 
     pub delay: Delay,
     
-    pub influx_default: Influx,
-    pub influx_backup: Influx,
-
+    pub all_influx: AllInflux,
+    
     pub all_sensors: AllSensors,
 
     pub template: Template,
@@ -24,6 +23,10 @@ pub struct Flag {
     pub debug_ts: bool,
     pub debug_ts_to_dt: bool,
     pub debug_sensor_output: bool,
+    pub debug_pointer_output: bool,
+    pub debug_influx_uri: bool,
+    pub debug_influx_lp: bool,
+    pub debug_influx_output: bool,
 }
 
 
@@ -36,6 +39,7 @@ pub struct Delay {
 
 #[derive(Debug)]
 pub struct Influx {
+    pub name: String,
     pub status: bool,
     pub secure: String,
     pub server: String,
@@ -55,10 +59,17 @@ pub struct Influx {
 
 
 #[derive(Debug)]
+pub struct AllInflux {
+    pub values: Vec<Influx>,
+}
+
+
+#[derive(Debug)]
 pub struct Template {
     pub sensors: TemplateSensors,
     pub curl: TemplateCurl,
 }
+
 
 #[derive(Debug)]
 pub struct TemplateCurl {
@@ -103,10 +114,14 @@ impl Data {
 
         // [flag]
         let flag = Flag {
-            debug_config_data: true, //false,
+            debug_config_data: false,
             debug_ts: false,
             debug_ts_to_dt: false,
             debug_sensor_output: false,
+            debug_pointer_output: false,
+            debug_influx_uri: true, // false,
+            debug_influx_lp: true, // false,
+            debug_influx_output: false,
         };
 
         // [delay]
@@ -117,7 +132,8 @@ impl Data {
         
         // [influx_default]
         let influx_default = Influx {
-            status: true,
+            name: String::from("default"),
+            status: true, //false,
             secure: String::from("https"),
             server: String::from("ruth"),
             port: 8086,
@@ -130,25 +146,34 @@ impl Data {
             measurement: String::from("temperature"),
             machine_id: String::from("spongebob"),
             carrier: String::from("cargo"),
-            flag_valid_default: true,
+            flag_valid_default: true, //false,
         };
 
         // [influx_backup]
         let influx_backup = Influx {
-            status: false,
+            name: String::from("backup"),
+            status: true, //false,
             secure: String::from("http"),
             server: String::from("jozefina"),
             port: 8086,
             
             bucket: String::from("backup_test_rust"),
-            token: String::from(""),
+            token: String::from("jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA=="),
             org: String::from("foookin_paavel"),
             precision: String::from("ms"),
 
             measurement: String::from("temperature"),
             machine_id: String::from("spongebob"),
             carrier: String::from("cargo"),
-            flag_valid_default: true,
+            flag_valid_default: true, //false,
+        };
+
+        // [all_influx]
+        let all_influx  = AllInflux {values:
+                                     vec![
+                                         influx_default,
+                                         influx_backup,
+                                       ]
         };
         
         // [template]
@@ -180,13 +205,13 @@ impl Data {
 
         // [all_sensors]
         let sensor_one = Sensor {
-            status: true,
+            status: true, //false,
             name: String::from("0"),
             pointer: String::from("/coretemp-isa-0000/Core 0/temp2_input"),
         };
 
         let sensor_two = Sensor {
-            status: true,
+            status: true, //false,
             name: String::from("1"),
             pointer: String::from("/coretemp-isa-0000/Core 1/temp3_input"),
         };
@@ -228,17 +253,15 @@ impl Data {
                                        ]
         };
 
-        
         Data {
             work_dir,
             name,
             host,
             flag,
             delay,
-            influx_default,
-            influx_backup,
             template,
             all_sensors,
+            all_influx,
         }
     }
 }
