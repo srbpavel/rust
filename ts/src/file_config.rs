@@ -88,7 +88,7 @@ impl Data {
         let host = String::from("spongebob");
 
         // [flag]
-        let debug_config_data = true; //false;
+        let debug_config_data = false;
         let debug_ts = false;
         let debug_ts_to_dt = false;
         let debug_sensor_output = false;

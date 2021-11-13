@@ -1,7 +1,4 @@
-// TIMESTAMP [MS] FOR INFLUXDB
-//
-//#[derive(Debug)]
-//
+// myRUST +-50HOUR LESSON
 mod util;
 pub use util::ts as timestamp;
 
@@ -98,8 +95,7 @@ stderr: {:?}",
     println!("\nCore 1: {}", temperature_core_1);
     */
 
-    /* CURL */
-    //
+
     // URI
     let uri_template = String::from(config_data.template.influx_uri);
     let mut uri = HashMap::new();
@@ -109,8 +105,7 @@ stderr: {:?}",
     uri.insert("org".to_string(), config_data.influx_default.org);
     uri.insert("bucket".to_string(), config_data.influx_default.bucket);
     uri.insert("precision".to_string(), config_data.influx_default.precision);
-    
-    println!("URI: {}", strfmt(&uri_template, &uri).unwrap());
+    //println!("URI: {}", strfmt(&uri_template, &uri).unwrap());
 
     // TOKEN
     let token_template = String::from(config_data.template.influx_token);
@@ -130,7 +125,6 @@ stderr: {:?}",
 
     // POINTER
     for single_sensor in &config_data.all_sensors.values {
-        //println!("single_sensor: {:?}", single_sensor);
         let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
         
         println!("
@@ -145,14 +139,12 @@ value: {v}",
                  v=pointer_value,
         );
 
-        //let sensor_id = &single_sensor.name; // SENSOR_ID
-        //lp.insert("sensor_id".to_string(), sensor_id.to_string());
         lp.insert("sensor_id".to_string(), single_sensor.name.to_string()); // SENSOR_ID
-
         lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
         
         println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
 
+        /* CURL */
         let curl_output = Command::new(&config_data.template.cmd_program)
             .arg(&config_data.template.cmd_param_1)
             .arg(&config_data.template.cmd_param_2)
@@ -182,7 +174,7 @@ value: {v}",
         println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
     }
 
-    /*
+    /* CALL DIRECTLY FROM rust as python.requests
     // https://www.reddit.com/r/rust/comments/ndrd0b/how_to_translate_this_curl_request_into_rusts/
     let client = Client::new();
     let res = client
@@ -209,14 +201,6 @@ value: {v}",
     // */
 
     /* TOML CONFIG
-    let toml_conf_port = "INFLUX_PORT = 8086".parse::<Value>().unwrap();
-    let toml_conf_host = "INFLUX_HOST = 'ruth'".parse::<Value>().unwrap();
-
-    println!("\nTOML_CONF:\n{}{}",
-             toml_conf_port,
-             toml_conf_host);
-
-
     let file_config = FileConfig {
         work_dir: "/home/conan/soft/rust/ts".to_string(),
         influx: Influx {
