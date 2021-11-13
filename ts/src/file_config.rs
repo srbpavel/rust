@@ -11,13 +11,20 @@ pub struct Data {
     pub influx_default: Influx,
     pub influx_backup: Influx,
 
+    pub all_sensors: AllSensors,
+    //pub sensor: Sensor,
+
     pub template: Template,
 }
 
 
 #[derive(Debug)]
 pub struct Flag {
+    // ALL ARE BOOL, try to define only ONCE !!!
+    pub debug_config_data: bool,
     pub debug_ts: bool,
+    pub debug_ts_to_dt: bool,
+    pub debug_sensor_output: bool,
 }
 
 
@@ -48,6 +55,18 @@ pub struct Template {
     pub curl_influx: String,
 }
 
+#[derive(Debug)]
+pub struct AllSensors {
+    pub values: Vec<Sensor>,
+}
+
+#[derive(Debug)]
+pub struct Sensor {
+    pub status: bool,
+    pub name: String, // mozna u8
+    pub pointer: String,
+}
+
 
 impl Data {
     pub fn start() -> Data {
@@ -56,10 +75,16 @@ impl Data {
         let host = String::from("spongebob");
 
         // [flag]
-        let debug_ts = true;
-
+        let debug_config_data = true; //false;
+        let debug_ts = false;
+        let debug_ts_to_dt = false;
+        let debug_sensor_output = false;
+        
         let flag = Flag {
-            debug_ts
+            debug_config_data,
+            debug_ts,
+            debug_ts_to_dt,
+            debug_sensor_output,
         };
 
         
@@ -69,7 +94,7 @@ impl Data {
         
         let delay = Delay {
             second,
-            minute
+            minute,
         };
         
         // [influx_default]
@@ -95,7 +120,7 @@ impl Data {
             org,
             precision,
             default_carrier,
-            default_valid_status
+            default_valid_status,
         };
 
         // [influx_backup]
@@ -121,7 +146,7 @@ impl Data {
             org,
             precision,
             default_carrier,
-            default_valid_status
+            default_valid_status,
         };
         
 
@@ -129,10 +154,31 @@ impl Data {
         let curl_influx = String::from("curl -k --request POST \"{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}\" --header \"Authorization: Token {token}\" --data-raw \"{measurement},host={host},Machine={machine_id},DsId={ds_id},DsCarrier={ds_carrier},DsValid={ds_valid},DsPin={ds_pin} DsDecimal={ds_decimal} {ts}\"");
         
         let template = Template {
-            curl_influx
+            curl_influx,
         };
 
+        // [sensor]
+        let sensor_one = Sensor {
+            status: true,
+            name: String::from("0"),
+            pointer: String::from("/coretemp-isa-0000/Core 0/temp2_input"),
+        };
+
+        let sensor_two = Sensor {
+            status: true,
+            name: String::from("1"),
+            pointer: String::from("/coretemp-isa-0000/Core 1/temp3_input"),
+        };
+
+        /*
+        let mut vs = Vec::new();
+        vs.push(sensor_one);
+        vs.push(sensor_two);
+        */
+        let vs = vec![sensor_one, sensor_two];
+        let all_sensors  = AllSensors {values: vs};
         
+        // RETURN
         Data {
             work_dir,
             name,
@@ -141,7 +187,9 @@ impl Data {
             delay,
             influx_default,
             influx_backup,
-            template
+            template,
+            //sensor,
+            all_sensors,
         }
     }
 }

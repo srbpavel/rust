@@ -29,7 +29,7 @@ DEFAULT_VALID_STATUS = 'true'
 
 [influx_backup]
 STATUS = false
-SECURE = 'https'
+SECURE = 'http'
 SERVER = 'jozefina'
 PORT = '8086'
 BUCKET = 'backup_test_rust'

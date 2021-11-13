@@ -12,7 +12,7 @@ pub use file_config::Data;
 //use std::process;
 //use ts::Config;
 
-use chrono::{Datelike, Timelike};
+// #use chrono::{Datelike, Timelike};
 
 use std::process::{Command};
 
@@ -25,29 +25,35 @@ extern crate strfmt;
 use strfmt::strfmt;
 use std::collections::HashMap;
 
-/*
-use toml::Value;
-
-struct FileConfig {
-    work_dir: String,
-    influx: Influx,
-}
-
-struct Influx{
-    host: String,
-    port: Option<u16>
-}
-*/
-
 
 fn main() {
-    // /*
+    let config_data = Data::start();
+    if config_data.flag.debug_config_data {
+        println!("\n#CONFIG_DATA:\n{:?}\n >>> {:?}",
+                 config_data,
+                 config_data.all_sensors);
+    }
+
+    /*
+    println!("\nCONFIG_DATA:\n{:?}\n{}\n{}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
+             config_data.work_dir,
+             config_data.name,
+             config_data.host,
+             config_data.flag,
+             config_data.delay,
+             config_data.influx_default,
+             config_data.influx_backup,
+             config_data.template,
+    );
+    */
+    
+    
     /* TIMESTAMP */
     // GET LOCAL TIMESTAMP
-    let debug_ts: bool = false;
-    let ts_ms: i64 = timestamp::ts_now(debug_ts);
-    println!("\nTS: {}", ts_ms);
+    let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
+    println!("\n#TS:\n{}", ts_ms);
 
+    /*
     // TS to DATETIME for better visual reading
     // https://rust-lang-nursery.github.io/rust-cookbook/datetime/parse.html
     let debug_ts_to_dt: bool = false;
@@ -68,21 +74,10 @@ fn main() {
                      ts_dt.offset(),
              )
     );
-    // */
-
-    let config_data = Data::start();
-    /*
-    println!("\nCONFIG_DATA:\n{:?}\n{}\n{}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
-             config_data.work_dir,
-             config_data.name,
-             config_data.host,
-             config_data.flag,
-             config_data.delay,
-             config_data.influx_default,
-             config_data.influx_backup,
-             config_data.template,
-    );
     */
+
+
+
 
     /*
     let curl_cmd = format!("curl -k --request POST \"{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}\" --header \"Authorization: Token {token}\" --data-raw \"{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} SensorDecimal={sensor_decimal} {ts}\"",
@@ -113,41 +108,71 @@ fn main() {
     );
     */
 
-    /*
-    let df_cmd = format!("touch x.x 1>1_df.log 2>2_df.log");
-
-    println!("\ndf_cmd:\n{}",
-             df_cmd
-    );
-    */
-
-
     /* SENSOR */
     let sensor_output = Command::new("/usr/bin/sensors")
         .arg("-j")
-        //.arg("|")
-        //.arg("egrep")
-        //.arg("\"Core (0|1)\"")
         .output().expect("failed to execute command");
 
-    let sensor_string = String::from_utf8_lossy(&sensor_output.stdout);
-    // println!("sensor_string: {}", sensor_string);
+    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
+    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
+    
+    if config_data.flag.debug_sensor_output {
+        println!("\n#SENSOR_OUTPUT:
+stdout: {}
+stderr: {:?}",
+                 sensor_stdout_string,
+                 sensor_stderr_string,
+        )
+    }
 
-    let sensor_value:serde_json::Value = serde_json::from_str(&sensor_string).unwrap();
-    // println!("\nsensor_value: {}", sensor_value);
+    // JSON
+    let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
+    //println!("\n#VALUE: {:?}", value);
+    
+    // DICT
+    /*
+    let dict = value.get("coretemp-isa-0000")
+        .and_then(|v| v.get("Core 0"))
+        .and_then(|v| v.get("temp2_input"))
+        .unwrap();
+
+    println!("\n#DICT: {}", dict);
+    */
+
+    // POINTER
+    /*
+    for single_sensor in &config_data.all_sensors.values {
+        //println!("single_sensor: {:?}", single_sensor);
+        println!("
+#POINTER_CFG:
+status: {s}
+name: {n}
+pointer: {p}",
+                 s=single_sensor.status,
+                 n=single_sensor.name,
+                 p=single_sensor.pointer,
+        );
+
+        let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
+        println!("\n#POINTER_VALUE: {}", pointer_value);
+    }
+    */
+    
+    
+    
+    // LIST
+    /*
+    let sensor_value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
+    println!("\n#SENSOR_VALUE: {}", sensor_value);
 
     let name_core_0 = 0;
     let name_core_1 = 1;
     let temperature_core_0 = &sensor_value["coretemp-isa-0000"]["Core 0"]["temp2_input"].to_string();
     let temperature_core_1 = &sensor_value["coretemp-isa-0000"]["Core 1"]["temp3_input"].to_string();
-
+    
     println!("\nCore 0: {}", temperature_core_0);
     println!("\nCore 1: {}", temperature_core_1);
-    
-    //let sensor_value: Value = Value::Object(serde_json::from_str(&sensor_string));
-    
-    //let sensor_data  = serde_json::from_str(&sensor_string);
-
+    */
 
     /* CURL */
     let uri_template = String::from("{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}");
@@ -175,6 +200,48 @@ fn main() {
     lp.insert("ts".to_string(), ts_ms.to_string());
 
 
+    for single_sensor in &config_data.all_sensors.values {
+        //println!("single_sensor: {:?}", single_sensor);
+        let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
+        
+        println!("
+#POINTER_CFG:
+status: {s}
+name: {n}
+pointer: {p}
+value: {v}",
+                 s=single_sensor.status,
+                 n=single_sensor.name,
+                 p=single_sensor.pointer,
+                 v=pointer_value,
+        );
+
+        let sensor_id = &single_sensor.name; // SENSOR_ID
+        lp.insert("sensor_id".to_string(), sensor_id.to_string());
+
+        let temperature_decimal = pointer_value;// TEMPERATURE_DECIMAL
+        lp.insert("temperature_decimal".to_string(), temperature_decimal.to_string());
+        
+        println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
+
+        let curl_output = Command::new("/usr/bin/curl")
+            .arg("-k")
+            .arg("--request")
+            .arg("POST")
+            .arg(strfmt(&uri_template, &uri).unwrap()) // URI
+            .arg("--header")
+            .arg(format!("Authorization: Token {token}",
+                         token=config_data.influx_default.token))
+            .arg("--data-raw")
+            .arg(strfmt(&lp_template, &lp).unwrap())// LINE_PROTOCOL
+            .output().expect("failed to execute command");
+        
+        //println!("\nstdout: {:?}", &output);
+        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+    }
+
+    /*
     for single_temp in &[(name_core_0, temperature_core_0), (name_core_1, temperature_core_1)] {
         let sensor_id = single_temp.0.to_string(); // SENSOR_ID
         lp.insert("sensor_id".to_string(), sensor_id.to_string());    
@@ -199,9 +266,8 @@ fn main() {
         //println!("\nstdout: {:?}", &output);
         println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
         println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
-        
     }
-    
+     */      
     
     
 
