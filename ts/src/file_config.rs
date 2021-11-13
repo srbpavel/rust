@@ -12,7 +12,6 @@ pub struct Data {
     pub influx_backup: Influx,
 
     pub all_sensors: AllSensors,
-    //pub sensor: Sensor,
 
     pub template: Template,
 }
@@ -41,24 +40,38 @@ pub struct Influx {
     pub secure: String,
     pub server: String,
     pub port: u16,
+
     pub bucket: String,
     pub token: String,
     pub org: String,
     pub precision: String,
-    pub default_carrier: String,
-    pub default_valid_status: String,
+
+    pub measurement: String,
+    pub machine_id: String, // here same as host, normaly different: T4/esp32/..
+    pub carrier: String,
+    pub flag_valid_default: bool,
 }
 
 
 #[derive(Debug)]
 pub struct Template {
-    pub curl_influx: String,
+    pub cmd_program: String, // /usr/bin/curl
+    pub cmd_param_1: String, // -k
+    pub cmd_param_2: String, // --request
+    pub cmd_param_3: String, // POST
+    pub cmd_param_4: String, // --header
+    pub cmd_param_5: String, // --data-raw
+    pub influx_uri: String, // https://ruth:8086
+    pub influx_token: String, // Authorization: Token {token}
+    pub influx_lp: String, // temperature,host=
 }
+
 
 #[derive(Debug)]
 pub struct AllSensors {
     pub values: Vec<Sensor>,
 }
+
 
 #[derive(Debug)]
 pub struct Sensor {
@@ -98,63 +111,59 @@ impl Data {
         };
         
         // [influx_default]
-        let status = true;
-        let secure = String::from("https");
-        let server = String::from("ruth");
-        let port = 8086;
-        let bucket = String::from("test_rust");
-        let token = String::from("riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==");
-        let org = String::from("foookin_paavel");
-        let precision = String::from("ms");
-        let default_carrier = String::from("cargo");
-        let default_valid_status = String::from("true");
-
-        
         let influx_default = Influx {
-            status,
-            secure,
-            server,
-            port,
-            bucket,
-            token,
-            org,
-            precision,
-            default_carrier,
-            default_valid_status,
+            status: true,
+            secure: String::from("https"),
+            server: String::from("ruth"),
+            port: 8086,
+            
+            bucket: String::from("test_rust"),
+            token: String::from("riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw=="),
+            org: String::from("foookin_paavel"),
+            precision: String::from("ms"),
+            
+            measurement: String::from("temperature"),
+            machine_id: String::from("spongebob"),
+            carrier: String::from("cargo"),
+            flag_valid_default: true,
         };
 
         // [influx_backup]
-        let status = false;
-        let secure = String::from("http");
-        let server = String::from("jozefina");
-        let port = 8086;
-        let bucket = String::from("backup_test_rust");
-        let token = String::from("");
-        let org = String::from("foookin_paavel");
-        let precision = String::from("ms");
-        let default_carrier = String::from("cargo");
-        let default_valid_status = String::from("true");
-
-        
         let influx_backup = Influx {
-            status,
-            secure,
-            server,
-            port,
-            bucket,
-            token,
-            org,
-            precision,
-            default_carrier,
-            default_valid_status,
+            status: false,
+            secure: String::from("http"),
+            server: String::from("jozefina"),
+            port: 8086,
+
+            bucket: String::from("backup_test_rust"),
+            token: String::from(""),
+            org: String::from("foookin_paavel"),
+            precision: String::from("ms"),
+
+            measurement: String::from("temperature"),
+            machine_id: String::from("spongebob"),
+            carrier: String::from("cargo"),
+            flag_valid_default: true,
         };
         
-
         // [template]
-        let curl_influx = String::from("curl -k --request POST \"{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}\" --header \"Authorization: Token {token}\" --data-raw \"{measurement},host={host},Machine={machine_id},DsId={ds_id},DsCarrier={ds_carrier},DsValid={ds_valid},DsPin={ds_pin} DsDecimal={ds_decimal} {ts}\"");
-        
         let template = Template {
-            curl_influx,
+
+            cmd_program: String::from("/usr/bin/curl"),
+
+            cmd_param_1: String::from("-k"),
+            cmd_param_2: String::from("--request"),
+            cmd_param_3: String::from("POST"),
+
+            influx_uri: String::from("{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"),
+
+            cmd_param_4: String::from("--header"),
+
+            influx_token: String::from("Authorization: Token {token}"),
+            
+            cmd_param_5: String::from("--data-raw"),
+
+            influx_lp: String::from("{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"),
         };
 
         // [sensor]
@@ -188,7 +197,6 @@ impl Data {
             influx_default,
             influx_backup,
             template,
-            //sensor,
             all_sensors,
         }
     }
