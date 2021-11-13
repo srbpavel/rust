@@ -21,8 +21,9 @@ use std::fs;
 use toml;
 use serde::{Serialize, Deserialize};
 
+
 #[derive(Serialize, Deserialize, Debug)]
-struct Ccc {
+struct TomlConfig {
     work_dir: String,
     name: String,
     host: String,
@@ -233,14 +234,14 @@ minutes = 1
 hours = 12
 "#;
 
-    let content: Ccc = toml::from_str(toml_content).unwrap();
+    let content: TomlConfig = toml::from_str(toml_content).unwrap();
     println!("\nTOML_CONTENT: {:?}\nTTT: {}",
              content,
              content.flag.debug_ts,
     );
     */
 
-    let toml_config: Ccc = toml::from_str(&toml_file.unwrap()).unwrap();
+    let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
     println!("\nTOML_CONFIG: {:#?}",
              toml_config,
     );

@@ -1,0 +1,94 @@
+name = 'laptop_core_temperature'
+host = 'spongebob'
+work_dir = '/home/conan/soft/rust/ts'
+
+[flag]
+debug_config_data = false
+debug_ts = false
+debug_ts_to_dt = false
+debug_sensor_output = false
+debug_pointer_output = false
+debug_influx_uri = true #false
+debug_influx_lp = true #false
+debug_influx_output = false
+
+
+[delay]
+second = 60
+minute = 1
+
+
+[all_influx]
+[all_influx.influx_default]
+name = "default"
+status = true #false
+secure = "https"
+server = "ruth"
+port = 8086
+
+bucket = "test_rust"
+token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw=="
+org = "foookin_paavel"
+precision = "ms"
+            
+measurement = "temperature"
+machine_id = "spongebob"
+carrier = "cargo"
+flag_valid_default = true #false
+
+
+[all_influx.influx_backup]
+name = "backup"
+status = true #false
+secure = "http"
+server = "jozefina"
+port = 8086
+            
+bucket = "backup_test_rust"
+token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA=="
+org = "foookin_paavel"
+precision = "ms"
+
+measurement = "temperature"
+machine_id = "spongebob"
+carrier = "cargo"
+flag_valid_default = true #false
+
+
+[template]
+[template.sensors]
+program = "/usr/bin/sensors"
+param_1 = "-j"
+
+[template.curl]
+program = "/usr/bin/curl"
+param_1 = "-k"
+param_2 = "--request"
+param_3 = "POST"
+influx_uri = "{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
+param_4 = "--header"
+influx_auth = "Authorization: Token {token}"
+param_5 = "--data-raw"
+influx_lp = "{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"
+
+
+[all_sensors]
+[all_sensors.one]
+status = true #false
+name = "0"
+pointer = "/coretemp-isa-0000/Core 0/temp2_input"
+
+[all_sensors.two]
+status=  true #false
+name = "1"
+pointer = "/coretemp-isa-0000/Core 1/temp3_input"
+
+[all_sensors.three]
+status = true #false,
+name = "2"
+pointer = "/acpitz-acpi-0/temp1/temp1_input"
+
+[all_sensors.four]
+status = true #false
+name = "3"
+pointer = "/acpitz-acpi-0/temp2/temp2_input"
