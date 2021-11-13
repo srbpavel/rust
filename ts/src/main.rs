@@ -23,21 +23,101 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Ccc {
+    work_dir: String,
+    name: String,
+    host: String,
+
     flag: Flag,
     delay: Delay,
+    all_influx: AllInflux,
+    template: Template,
+    all_sensors: AllSensors,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Flag {
-    debug_ts: String
+    debug_config_data: bool,
+    debug_ts: bool,
+    debug_ts_to_dt: bool,
+    debug_sensor_output: bool,
+    debug_pointer_output: bool,
+    debug_influx_uri: bool,
+    debug_influx_lp: bool,
+    debug_influx_output: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Delay {
-    seconds: u32,
-    minutes: u32,
-    //hours: u32,
+    second: u8,
+    minute: u8,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AllInflux {
+    influx_default: Influx,
+    influx_backup: Influx,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Influx {
+    name: String,
+    status: bool,
+    secure: String,
+    server: String,
+
+    port: u16,
+
+    bucket: String,
+    token: String,
+    org: String,
+    precision: String,
+
+    measurement: String,
+    machine_id: String,
+    carrier: String,
+    flag_valid_default: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Template {
+    curl: TemplateCurl,
+    sensors: TemplateSensors,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TemplateCurl {
+    program: String,
+    param_1: String,
+    param_2: String,
+    param_3: String,
+    param_4: String,
+    param_5: String,
+    influx_uri: String,
+    influx_auth: String,
+    influx_lp: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct TemplateSensors {
+    program: String,
+    param_1: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AllSensors {
+    one: Sensor,
+    two: Sensor,
+    three: Sensor,
+    four: Sensor,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct Sensor {
+    status: bool,
+    name: String, // mozna u8
+    pointer: String,
+}
+
 
 
 fn main() {
@@ -132,13 +212,17 @@ fn main() {
     );
     */
 
-   
+    
     let toml_file = fs::read_to_string(config.filename);
+    /*
     println!("\nTOML_FILE: {:#?} <- {:?}",
              &toml_file,
              "",
     );
+    */
+    
 
+    /*
     let toml_content = r#"
 [flag]
 debug_ts = "true"
@@ -149,20 +233,15 @@ minutes = 1
 hours = 12
 "#;
 
-    // /*
     let content: Ccc = toml::from_str(toml_content).unwrap();
     println!("\nTOML_CONTENT: {:?}\nTTT: {}",
              content,
              content.flag.debug_ts,
     );
-    // */
+    */
 
-    // /*
-    //let toml_config: Ccc = toml::from_str(&toml_file);
     let toml_config: Ccc = toml::from_str(&toml_file.unwrap()).unwrap();
-    //let toml_config: Result<Ccc, ::toml::de::Error> = toml::from_str(&toml_file);
-    println!("\nTOML_CONFIG: {:?}",
+    println!("\nTOML_CONFIG: {:#?}",
              toml_config,
     );
-    // */
 }
