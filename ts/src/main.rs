@@ -203,12 +203,13 @@ hours = 12
 
    
     /* TIMESTAMP */
-    let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
+    let ts_ms: i64 = timestamp::ts_now(new_config.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
 
     
     /* SENSOR */
-    measurement::get_sensors_data(&config_data,
+    //measurement::get_sensors_data(&config_data,
+    measurement::get_sensors_data(&new_config,
                                   ts_ms
     );
     

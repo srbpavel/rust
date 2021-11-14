@@ -386,7 +386,7 @@ impl Config {
 
 
 pub fn parse_toml_config(config: Config) -> Result<TomlConfig, Box<dyn Error>> {
-    println!("\nPARSE:\n{:}",
+    println!("\n#PARSE:\n{:}",
              config.filename,
     );
 

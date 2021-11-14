@@ -6,8 +6,11 @@ use std::collections::HashMap;
 
 pub use crate::file_config::Data;
 
+use ts::TomlConfig;
 
-pub fn get_sensors_data(config: &Data, ts_ms: i64) {
+
+//pub fn get_sensors_data(config: &Data, ts_ms: i64) {
+pub fn get_sensors_data(config: &TomlConfig, ts_ms: i64) {
     // SENSOR
     let sensor_output = Command::new(&config.template.sensors.program)
         .arg(&config.template.sensors.param_1)
