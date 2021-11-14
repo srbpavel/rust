@@ -1,14 +1,18 @@
 name = 'laptop_core_temperature'
-host = 'spongebob' # influx: host TAG
-work_dir = '/home/conan/soft/rust/ts' # future_use
+#influx: host TAG
+host = 'spongebob'
+#future_use
+work_dir = '/home/conan/soft/rust/ts'
 
 
 [flag]
-debug_config_data = false # for hardcoded conf / obsolete / to_del
+#for hardcoded conf / obsolete / to_del
+debug_config_data = false
 debug_new_config = false
 
 debug_ts = false
-debug_ts_to_dt = false # future_use
+#future_use
+debug_ts_to_dt = false
 
 debug_sensor_output = false
 debug_sensor_instances = false
@@ -21,43 +25,46 @@ debug_influx_output = false
 debug_influx_instances = false
 
 
-[delay]  # future_use
+#future_use
+[delay]
 second = 60
 minute = 1
 
 
+#vector of influx: Struct instances
 [all_influx]
-#name = "default"		-> instacnce_id
-#status = true			-> on/off
+#name: "default"		-> instance_id
+#status: true			-> on/off
 
-#secure = "https" 
-#server = "ruth"		-> ip or hostname
-#port = 8086
+#secure: 			-> http/https 
+#server: "ruth"			-> ip or hostname
+#port: 8086
 
-#bucket = "test_rust"		-> DO NOT FORGET TO CREATE
+#bucket: "test_rust"		-> DO NOT FORGET TO CREATE
 #token
-#org = "foookin_paavel"
-#precision = "ms"		-> 1636918801582 / MS format len() 13
+#org: "foookin_paavel"
+#precision: "ms"		-> 1636918801582 / MS format len() 13
 
-#measurement = "temperature"
+#measurement: "temperature"
 
-# TAGS
-#machine_id = "spongebob"	-> now same as host but normaly another machine like T4_labjack / esp32 / ...
-#carrier = "cargo" 	     	-> future_use
-#flag_valid_default = true	-> for flux filtering invalid data before delete
+#TAGS
+#machine_id: "spongebob"	-> now same as host but normaly another machine like T4_labjack / esp32 / ...
+#carrier: "cargo" 	     	-> future_use
+#flag_valid_default:  true	-> for flux filtering invalid data before delete
 
-# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+#DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {name = "default", status = true, secure = "https", server = "ruth", port = 8086, bucket = "test_rust", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
        {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_test_rust", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true}]
 
 
+#vector of sensor: Struct instances
 [all_sensors]
-# status: on/off
-# name: influx: SensorId TAG
-# pointer: json path / influx: TemperatureDecimal FIELD
+#status: on/off
+#name: influx SensorId TAG
+#pointer: json path / influx TemperatureDecimal FIELD
 
-# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+#DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
        {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
