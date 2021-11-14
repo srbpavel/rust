@@ -9,12 +9,12 @@ mod measurement;
 
 // CONFIG_HARD_CODED STRUCT
 mod file_config;
-pub use file_config::Data;
+pub use file_config::Data; // HARDCODED Struct
 
 // CONFIG_ARG
 use std::env;
 use std::process;
-use ts::Config;
+use ts::Config; // METYNKA Config Struct + Impl <- ARGUMENTS
 
 // CONFIG TOML 
 use std::fs;
@@ -24,16 +24,23 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct TomlConfig {
+    // ROOT
     work_dir: String,
     name: String,
     host: String,
 
+    // STRUCT
     flag: Flag,
     delay: Delay,
-    all_influx: AllInflux,
     template: Template,
+
+    // VEC
+    all_influx: AllInflux,
     all_sensors: AllSensors,
+
+    //all_horses: AllHorses,
 }
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Flag {
@@ -47,17 +54,23 @@ struct Flag {
     debug_influx_output: bool,
 }
 
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Delay {
     second: u8,
     minute: u8,
 }
 
+
 #[derive(Serialize, Deserialize, Debug)]
 struct AllInflux {
-    influx_default: Influx,
-    influx_backup: Influx,
+    /*
+    default: Influx,
+    backup: Influx,
+     */
+    values: Vec<Influx>,
 }
+
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Influx {
@@ -65,7 +78,6 @@ pub struct Influx {
     status: bool,
     secure: String,
     server: String,
-
     port: u16,
 
     bucket: String,
@@ -79,11 +91,13 @@ pub struct Influx {
     flag_valid_default: bool,
 }
 
+
 #[derive(Serialize, Deserialize, Debug)]
 struct Template {
     curl: TemplateCurl,
     sensors: TemplateSensors,
 }
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct TemplateCurl {
@@ -98,12 +112,15 @@ struct TemplateCurl {
     influx_lp: String,
 }
 
+
 #[derive(Serialize, Deserialize, Debug)]
 struct TemplateSensors {
     program: String,
     param_1: String,
 }
 
+
+/*
 #[derive(Serialize, Deserialize, Debug)]
 struct AllSensors {
     one: Sensor,
@@ -111,6 +128,8 @@ struct AllSensors {
     three: Sensor,
     four: Sensor,
 }
+*/
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Sensor {
@@ -120,22 +139,135 @@ struct Sensor {
 }
 
 
+#[derive(Serialize, Deserialize, Debug)]
+struct AllSensors {
+    //values: [i32; 3],
+    //values: Vec<i32>,
+    values: Vec<Sensor>,
+}
+
 
 fn main() {
     let config_data = Data::start();
 
     if config_data.flag.debug_config_data {
-        println!("\n#CONFIG_DATA:\n{:#?}\n >>> {:#?}",
+        println!("\n#CONFIG_DATA:\n{:#?}",
                  config_data,
-                 "" // config_data.all_sensors,
         );
     }
 
+    /* CONFIG */
+    //
+    let config = Config::new(env::args()).unwrap_or_else(|err| { // LIB.RS
+        //eprintln!("Problem parsing arguments: {}", err);
+        eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
+        process::exit(1);
+    });
+    
+    /* TOML */
+    /* CONFIG Struct EXAMPLE
+    //
+    let file_config = FileConfig {
+        work_dir: "/home/conan/soft/rust/ts".to_string(),
+        influx: Influx {
+            host: "ruth".to_string(),
+            port: Some(8086),
+        },
+    };
+
+    println!("\nFILE_CONFIG:\n{}\n{}:{}",
+             &file_config.work_dir,
+             &file_config.influx.host,
+             &file_config.influx.port.unwrap());
+    */
+
+    /*
+    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
+    println!("\nTOML: {} <- {:?}",
+             fookume["foookin"],
+             fookume,
+    );
+    */
+    
+    let toml_file = fs::read_to_string(config.filename);
+    /*
+    println!("\nTOML_FILE: {:#?} <- {:?}",
+             &toml_file,
+             "",
+    );
+    */
+    
+    /*
+    let toml_content = r#"
+[flag]
+debug_ts = "true"
+
+[delay]
+seconds = 60
+minutes = 1
+hours = 12
+"#;
+
+    let content: TomlConfig = toml::from_str(toml_content).unwrap();
+    println!("\nTOML_CONTENT: {:?}\nTTT: {}",
+             content,
+             content.flag.debug_ts,
+    );
+    */
+
+    let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
+
+    println!("\nTOML_CONFIG::\nINFLUX\n{i:#?}\nSENSOR\n{s:?}",
+             s =toml_config.all_sensors,
+             i = toml_config.all_influx,
+    );
+
+    // ALL_INFLUX
+    for single_influx in toml_config.all_influx.values {
+        if single_influx.status {
+            println!("INFLUX [true]: {}",
+                     single_influx.name);
+        }
+        else {
+            println!("INFLUX [false]: {}",
+                     single_influx.name);
+        }
+    }
+
+    // ALL_SENSOR
+    for single_sensor in toml_config.all_sensors.values {
+        if single_sensor.status {
+            println!("SENSOR [true]: {}",
+                     single_sensor.name);
+        }
+        else {
+            println!("SENSOR [false]: {}",
+                     single_sensor.name);
+        }
+    }
+        
+    /*
+    println!("\nTOML_CONFIG: {:#?}",
+             toml_config,
+    );
+    */
+
+
+    /* EGREP */
+    /*
+    if let Err(e) = ts::read_config(config) { //ts. je muj METYNKA
+        eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
+
+        process::exit(1);
+    }
+    */
+    
     
     /* TIMESTAMP */
     let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
 
+    
     /* SENSOR */
     measurement::get_sensors_data(&config_data,
                                   ts_ms
@@ -169,80 +301,4 @@ fn main() {
 
     // */
 
-    /* TOML CONFIG
-    let file_config = FileConfig {
-        work_dir: "/home/conan/soft/rust/ts".to_string(),
-        influx: Influx {
-            host: "ruth".to_string(),
-            port: Some(8086),
-        },
-    };
-
-    println!("\nFILE_CONFIG:\n{}\n{}:{}",
-             &file_config.work_dir,
-             &file_config.influx.host,
-             &file_config.influx.port.unwrap());
-    */
-
- 
- 
-    /* CONFIG */
-    // /*
-    let config = Config::new(env::args()).unwrap_or_else(|err| { // LIB.RS
-        //eprintln!("Problem parsing arguments: {}", err);
-        eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
-        process::exit(1);
-    });
-    
-
-    /*
-    if let Err(e) = ts::read_config(config) { //ts. je muj METYNKA
-        eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
-
-        process::exit(1);
-    }
-    */
-    // */
-
-    /* TOML */
-    /*
-    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
-    println!("\nTOML: {} <- {:?}",
-             fookume["foookin"],
-             fookume,
-    );
-    */
-
-    
-    let toml_file = fs::read_to_string(config.filename);
-    /*
-    println!("\nTOML_FILE: {:#?} <- {:?}",
-             &toml_file,
-             "",
-    );
-    */
-    
-
-    /*
-    let toml_content = r#"
-[flag]
-debug_ts = "true"
-
-[delay]
-seconds = 60
-minutes = 1
-hours = 12
-"#;
-
-    let content: TomlConfig = toml::from_str(toml_content).unwrap();
-    println!("\nTOML_CONTENT: {:?}\nTTT: {}",
-             content,
-             content.flag.debug_ts,
-    );
-    */
-
-    let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
-    println!("\nTOML_CONFIG: {:#?}",
-             toml_config,
-    );
 }
