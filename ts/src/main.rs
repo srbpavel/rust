@@ -16,135 +16,8 @@ use std::env;
 use std::process;
 use ts::Config; // METYNKA Config Struct + Impl <- ARGUMENTS
 
-// CONFIG TOML 
-use std::fs;
-use toml;
-use serde::{Serialize, Deserialize};
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TomlConfig {
-    // ROOT
-    work_dir: String,
-    name: String,
-    host: String,
-
-    // STRUCT
-    flag: Flag,
-    delay: Delay,
-    template: Template,
-
-    // VEC
-    all_influx: AllInflux,
-    all_sensors: AllSensors,
-
-    //all_horses: AllHorses,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Flag {
-    debug_config_data: bool,
-    debug_ts: bool,
-    debug_ts_to_dt: bool,
-    debug_sensor_output: bool,
-    debug_pointer_output: bool,
-    debug_influx_uri: bool,
-    debug_influx_lp: bool,
-    debug_influx_output: bool,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Delay {
-    second: u8,
-    minute: u8,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct AllInflux {
-    /*
-    default: Influx,
-    backup: Influx,
-     */
-    values: Vec<Influx>,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Influx {
-    name: String,
-    status: bool,
-    secure: String,
-    server: String,
-    port: u16,
-
-    bucket: String,
-    token: String,
-    org: String,
-    precision: String,
-
-    measurement: String,
-    machine_id: String,
-    carrier: String,
-    flag_valid_default: bool,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Template {
-    curl: TemplateCurl,
-    sensors: TemplateSensors,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TemplateCurl {
-    program: String,
-    param_1: String,
-    param_2: String,
-    param_3: String,
-    param_4: String,
-    param_5: String,
-    influx_uri: String,
-    influx_auth: String,
-    influx_lp: String,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct TemplateSensors {
-    program: String,
-    param_1: String,
-}
-
-
-/*
-#[derive(Serialize, Deserialize, Debug)]
-struct AllSensors {
-    one: Sensor,
-    two: Sensor,
-    three: Sensor,
-    four: Sensor,
-}
-*/
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct Sensor {
-    status: bool,
-    name: String, // mozna u8
-    pointer: String,
-}
-
-
-#[derive(Serialize, Deserialize, Debug)]
-struct AllSensors {
-    //values: [i32; 3],
-    //values: Vec<i32>,
-    values: Vec<Sensor>,
-}
+// CONFIG TOML
+//mod config;
 
 
 fn main() {
@@ -156,13 +29,75 @@ fn main() {
         );
     }
 
-    /* CONFIG */
+    /* CONFIG ARG */
     //
     let config = Config::new(env::args()).unwrap_or_else(|err| { // LIB.RS
         //eprintln!("Problem parsing arguments: {}", err);
         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
         process::exit(1);
     });
+
+
+    /* TOML CONFIG */
+    /*
+    if let Err(e) = ts::parse_toml_config(config) { //ts. je muj METYNKA
+        eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
+
+        process::exit(1);
+    }
+    */
+
+    let new_config = ts::parse_toml_config(config).unwrap(); // pac REF
+
+    if new_config.flag.debug_new_config {
+        println!("\nNEW_CONFIG: {:#?}",
+                 new_config,
+        );
+    }
+
+    /*
+    println!("\nTOML_CONFIG::\nINFLUX\n{i:#?}\nSENSOR\n{s:?}",
+             s = new_config.all_sensors,
+             i = new_config.all_influx,
+    );
+    */
+
+    // ALL_INFLUX
+    if new_config.flag.debug_influx_instances {
+        for single_influx in &new_config.all_influx.values {
+            if single_influx.status {
+                println!("INFLUX [true]: {}",
+                         single_influx.name);
+            }
+            else {
+                println!("INFLUX [false]: {}",
+                         single_influx.name);
+            }
+        }
+    }
+
+    // ALL_SENSOR
+    if new_config.flag.debug_sensor_instances {
+        for single_sensor in &new_config.all_sensors.values {
+            if single_sensor.status {
+                println!("SENSOR [true]: {}",
+                         single_sensor.name);
+            }
+            else {
+                println!("SENSOR [false]: {}",
+                         single_sensor.name);
+            }
+        }
+    }
+    // */
+    
+    
+    /* CONFIR.RS */
+    //let toml_config = config::parse_toml_config(&config);
+    //config::parse_toml_config(&config);
+
+    //XXX parse_toml_config(&config.filename);
+    
     
     /* TOML */
     /* CONFIG Struct EXAMPLE
@@ -189,7 +124,8 @@ fn main() {
     );
     */
     
-    let toml_file = fs::read_to_string(config.filename);
+    // #RS let toml_file = fs::read_to_string(config.filename);
+    
     /*
     println!("\nTOML_FILE: {:#?} <- {:?}",
              &toml_file,
@@ -215,6 +151,7 @@ hours = 12
     );
     */
 
+    /* #RS TOML START
     let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
 
     println!("\nTOML_CONFIG::\nINFLUX\n{i:#?}\nSENSOR\n{s:?}",
@@ -245,6 +182,8 @@ hours = 12
                      single_sensor.name);
         }
     }
+    #RS TOML END */
+    
         
     /*
     println!("\nTOML_CONFIG: {:#?}",
@@ -261,8 +200,8 @@ hours = 12
         process::exit(1);
     }
     */
-    
-    
+
+   
     /* TIMESTAMP */
     let ts_ms: i64 = timestamp::ts_now(config_data.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
