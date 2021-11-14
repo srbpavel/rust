@@ -1,58 +1,69 @@
 name = 'laptop_core_temperature'
-host = 'spongebob'
-work_dir = '/home/conan/soft/rust/ts'
+host = 'spongebob' # influx: host TAG
+work_dir = '/home/conan/soft/rust/ts' # future_use
+
 
 [flag]
-debug_config_data = false
+debug_config_data = false # for hardcoded conf / obsolete / to_del
+debug_new_config = false
+
 debug_ts = false
-debug_ts_to_dt = false
+debug_ts_to_dt = false # future_use
+
 debug_sensor_output = false
+debug_sensor_instances = false
+
 debug_pointer_output = false
-debug_influx_uri = true #false
-debug_influx_lp = true #false
+
+debug_influx_uri = true # false
+debug_influx_lp = true # false
 debug_influx_output = false
+debug_influx_instances = false
 
 
-[delay]
+[delay]  # future_use
 second = 60
 minute = 1
 
 
 [all_influx]
-[all_influx.influx_default]
-name = "default"
-status = true #false
-secure = "https"
-server = "ruth"
-port = 8086
+#name = "default"		-> instacnce_id
+#status = true			-> on/off
 
-bucket = "test_rust"
-token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw=="
-org = "foookin_paavel"
-precision = "ms"
-            
-measurement = "temperature"
-machine_id = "spongebob"
-carrier = "cargo"
-flag_valid_default = true #false
+#secure = "https" 
+#server = "ruth"		-> ip or hostname
+#port = 8086
+
+#bucket = "test_rust"		-> DO NOT FORGET TO CREATE
+#token
+#org = "foookin_paavel"
+#precision = "ms"		-> 1636918801582 / MS format len() 13
+
+#measurement = "temperature"
+
+# TAGS
+#machine_id = "spongebob"	-> now same as host but normaly another machine like T4_labjack / esp32 / ...
+#carrier = "cargo" 	     	-> future_use
+#flag_valid_default = true	-> for flux filtering invalid data before delete
+
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+values = [
+       {name = "default", status = true, secure = "https", server = "ruth", port = 8086, bucket = "test_rust", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+       {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_test_rust", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true}]
 
 
-[all_influx.influx_backup]
-name = "backup"
-status = true #false
-secure = "http"
-server = "jozefina"
-port = 8086
-            
-bucket = "backup_test_rust"
-token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA=="
-org = "foookin_paavel"
-precision = "ms"
+[all_sensors]
+# status: on/off
+# name: influx: SensorId TAG
+# pointer: json path / influx: TemperatureDecimal FIELD
 
-measurement = "temperature"
-machine_id = "spongebob"
-carrier = "cargo"
-flag_valid_default = true #false
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+values = [
+       {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
+       {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
+       {status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
+       {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
+]
 
 
 [template]
@@ -70,25 +81,3 @@ param_4 = "--header"
 influx_auth = "Authorization: Token {token}"
 param_5 = "--data-raw"
 influx_lp = "{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"
-
-
-[all_sensors]
-[all_sensors.one]
-status = true #false
-name = "0"
-pointer = "/coretemp-isa-0000/Core 0/temp2_input"
-
-[all_sensors.two]
-status=  true #false
-name = "1"
-pointer = "/coretemp-isa-0000/Core 1/temp3_input"
-
-[all_sensors.three]
-status = true #false,
-name = "2"
-pointer = "/acpitz-acpi-0/temp1/temp1_input"
-
-[all_sensors.four]
-status = true #false
-name = "3"
-pointer = "/acpitz-acpi-0/temp2/temp2_input"
