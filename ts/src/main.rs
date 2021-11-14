@@ -8,8 +8,10 @@ pub use util::ts as timestamp;
 mod measurement;
 
 // CONFIG_HARD_CODED STRUCT
+/*
 mod file_config;
 pub use file_config::Data; // HARDCODED Struct
+*/
 
 // CONFIG_ARG
 use std::env;
@@ -21,6 +23,7 @@ use ts::Config; // METYNKA Config Struct + Impl <- ARGUMENTS
 
 
 fn main() {
+    /* TO DEL -> HARDCODED
     let config_data = Data::start();
 
     if config_data.flag.debug_config_data {
@@ -28,6 +31,7 @@ fn main() {
                  config_data,
         );
     }
+    */
 
     /* CONFIG ARG */
     //

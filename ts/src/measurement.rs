@@ -4,7 +4,9 @@ extern crate strfmt;
 use strfmt::strfmt;
 use std::collections::HashMap;
 
+/* TO DEL -> HARDCODED
 pub use crate::file_config::Data;
+*/
 
 use ts::TomlConfig;
 
