@@ -138,13 +138,11 @@ value: {v}",
                         .output().expect("failed to execute command");
 
                     if config.flag.debug_influx_output {
-                        
                         println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
                         println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
                     }
                 }
             }
         }
-        
     }
 }

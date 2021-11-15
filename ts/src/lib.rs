@@ -5,9 +5,11 @@ use std::env;
 use toml;
 use serde::{Serialize, Deserialize};
 
+use std::process;
+
 
 pub struct CmdArgs {
-    // DO NOT forget to chance ARG_COUNT verification 
+    // when modified DO NOT forget to change ARG_COUNT verification -> learn to count struct descendants
     pub query: String,
     pub filename: String,
     pub case_sensitive: bool,
@@ -34,7 +36,6 @@ pub struct TomlConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
-    // ### pub debug_config_data: bool,
     pub debug_new_config: bool,
     
     pub debug_ts: bool,
@@ -120,7 +121,7 @@ pub struct TemplateSensors {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
     pub status: bool,
-    pub name: String, // mozna u8
+    pub name: String,
     pub pointer: String,
 }
 
@@ -189,7 +190,7 @@ Trust me.";
 
 
 pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
-    // CASE SENSITIVE
+    // NOT CASE SENSITIVE
     
     data
         .lines()
@@ -212,8 +213,8 @@ pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 
 
 pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
-    // NOT CASE SENSITIVE
-    
+    // CASE SENSITIVE
+
     data
         .lines()
         .filter(|line| line.contains(query))
@@ -274,7 +275,7 @@ impl CmdArgs {
         println!("#COMMAND: {:#?}",
                  args);
 
-        const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 as also PROGRAM
+        const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 PROGRAM
         
         if args.len() < ARG_COUNT {
             return Err("not enough arguments")
@@ -304,16 +305,23 @@ impl CmdArgs {
          */
 
         let case_sensitive = match args.next() {
-            // Some(arg) => if vec!["true", "false"].contains(&&arg.to_lowercase()[..]) {
-            // Some(arg) => if vec!["true", "false"].contains(&&*arg.to_lowercase()) {
+            /* LONG WAY
             Some(arg) => if vec!["true", "false"].contains(&arg.to_lowercase().as_str()) {
+                //arg.to_lowercase().parse::<bool>().unwrap()
                 arg.to_lowercase().parse::<bool>().unwrap()
             } else {
                 return Err("CASE SENSITIVE not true/false BOOL")
             },
             None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
+            */
+
+            Some(arg) => arg.to_lowercase().parse::<bool>().unwrap_or_else(|err| {
+                eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
+                process::exit(1);
+            }),
+            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
         };
-        
+
         return Ok(CmdArgs {query, filename, case_sensitive});
     }
 }

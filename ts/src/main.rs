@@ -31,7 +31,6 @@ fn main() {
         if new_config.flag.debug_egrep {
             if let Err(e) = metynka::read_config(cmd_args) {
                 eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
-                
                 process::exit(1);
             }
         }
