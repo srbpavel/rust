@@ -5,7 +5,7 @@ use std::process;
 // LIB.RS
 use ts as metynka;
 
-// TS
+// /UTIL/TS
 mod util;
 pub use util::ts as timestamp;
 

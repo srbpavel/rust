@@ -82,23 +82,23 @@ pub fn prepare_sensor_format(config: &TomlConfig,
 
 
 pub fn prepare_influx_format(config: &TomlConfig,
-                             influx_instance: &Influx) -> (String, String) {
+                             influx_inst: &Influx) -> (String, String) {
 
     // URI
     let uri_template = String::from(&config.template.curl.influx_uri);
     let mut uri_data = HashMap::new();
     
-    uri_data.insert("secure".to_string(), String::from(&influx_instance.secure));
-    uri_data.insert("server".to_string(), String::from(&influx_instance.server));
-    uri_data.insert("port".to_string(), String::from(&influx_instance.port.to_string()));
-    uri_data.insert("org".to_string(), String::from(&influx_instance.org));
-    uri_data.insert("bucket".to_string(), String::from(&influx_instance.bucket));
-    uri_data.insert("precision".to_string(), String::from(&influx_instance.precision));
+    uri_data.insert("secure".to_string(), String::from(&influx_inst.secure));
+    uri_data.insert("server".to_string(), String::from(&influx_inst.server));
+    uri_data.insert("port".to_string(), String::from(&influx_inst.port.to_string()));
+    uri_data.insert("org".to_string(), String::from(&influx_inst.org));
+    uri_data.insert("bucket".to_string(), String::from(&influx_inst.bucket));
+    uri_data.insert("precision".to_string(), String::from(&influx_inst.precision));
 
     // AUTH
     let auth_template = String::from(&config.template.curl.influx_auth);
     let mut auth_data = HashMap::new();
-    auth_data.insert("token".to_string(), String::from(&influx_instance.token));
+    auth_data.insert("token".to_string(), String::from(&influx_inst.token));
 
     (strfmt(&uri_template, &uri_data).unwrap(),
      strfmt(&auth_template, &auth_data).unwrap())
@@ -106,33 +106,9 @@ pub fn prepare_influx_format(config: &TomlConfig,
 
 
 pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64) {
-    /*
-    let sensor_output = Command::new(&config.template.sensors.program)
-        .arg(&config.template.sensors.param_1)
-        .output().expect("failed to execute command");
-
-    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
-    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
-    */
-
-    /*
-    if config.flag.debug_sensor_output {
-        println!("\n#SENSOR:
-stdout: {}
-stderr: {}",
-                 sensor_stdout_string,
-                 sensor_stderr_string,
-        );
-    }
-    */
-
-    // JSON xxx
-    // let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
-
-    // OS_CMD -> LM-SENSORS
+    // OS_CMD <- LM-SENSORS
     let sensors_json = os_call_sensors(&config);
 
-    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
@@ -152,11 +128,8 @@ stderr: {}",
 
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
-                // JSON POINTER xxx
-                //let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
+                // JSON POINTER
                 let pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
-
-
                 
                 if config.flag.debug_pointer_output {
                     println!("
@@ -176,7 +149,6 @@ value: {v}",
                     let single_sensor_lp = prepare_sensor_format(&config,
                                                                  &single_influx,
                                                                  &single_sensor,
-                                                                 //&value,
                                                                  &sensors_json,
                                                                  &ts_ms);
 
@@ -185,7 +157,7 @@ value: {v}",
                     }
 
 
-                    // OS_CMD -> CURL
+                    // OS_CMD <- CURL
                     os_call_curl(&config,
                                  &influx_uri,
                                  &influx_auth,
