@@ -6,8 +6,6 @@ work_dir = '/home/conan/soft/rust/ts'
 
 
 [flag]
-#for hardcoded conf / obsolete / to_del
-debug_config_data = false
 debug_new_config = false
 
 debug_ts = false
@@ -20,9 +18,13 @@ debug_sensor_instances = false
 debug_pointer_output = false
 
 debug_influx_uri = true # false
+debug_influx_auth = false
 debug_influx_lp = true # false
 debug_influx_output = false
 debug_influx_instances = false
+
+run_egrep = false
+debug_egrep = true # false
 
 
 #future_use
