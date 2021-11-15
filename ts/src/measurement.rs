@@ -125,6 +125,7 @@ stderr: {}",
     for single_influx in &config.all_influx.values {
         if single_influx.status {
 
+            /*
             // URI
             let uri_template = String::from(&config.template.curl.influx_uri);
             let mut uri = HashMap::new();
@@ -146,25 +147,26 @@ stderr: {}",
             let auth_template = String::from(&config.template.curl.influx_auth);
             let mut auth = HashMap::new();
             auth.insert("token".to_string(), String::from(&single_influx.token));
-
+            */
 
             // URI + AUTH
-            /*
+            /* OBSOLETE
             prepare_influx_data(&config,
                                 &single_influx);
             */
 
             let (influx_uri, influx_auth) = prepare_influx_format(&config,
-                                                                  &single_influx);
+                                                                    &single_influx);
             
             if config.flag.debug_influx_uri {
-                println!("\n### URI:\n{}", influx_uri);
+                println!("\n### URI:\n{}", &influx_uri);
             }
             
             if config.flag.debug_influx_auth {
-                println!("\n### AUTH:\n{}", influx_auth);
+                println!("\n### AUTH:\n{}", &influx_auth);
             }
-            
+
+            /*
             // LP
             let lp_template = String::from(&config.template.curl.influx_lp);
 
@@ -175,7 +177,8 @@ stderr: {}",
             lp.insert("sensor_carrier".to_string(), String::from(&single_influx.carrier));
             lp.insert("sensor_valid".to_string(), String::from(&single_influx.flag_valid_default.to_string()));
             lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
-    
+            */
+            
             // JSON POINTER
             // /*
             if config.flag.debug_influx_lp {
@@ -186,6 +189,7 @@ stderr: {}",
             for single_sensor in &config.all_sensors.values {
                 let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
 
+                
                 if config.flag.debug_pointer_output {
                     println!("
 #POINTER_CFG:
@@ -199,9 +203,11 @@ value: {v}",
                              v=pointer_value,
                     );
                 }
-            
+
+                /*
                 lp.insert("sensor_id".to_string(), single_sensor.name.to_string()); // SENSOR_ID
                 lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
+                */
 
                 // INFLUX default + backup + ...
                 if single_sensor.status {
@@ -233,11 +239,20 @@ value: {v}",
                         .arg(&config.template.curl.param_1)
                         .arg(&config.template.curl.param_2)
                         .arg(&config.template.curl.param_3)
-                        .arg(strfmt(&uri_template, &uri).unwrap()) // URI
+
+                        //.arg(strfmt(&uri_template, &uri).unwrap()) // URI
+                        .arg(&influx_uri) // #URI
+                        
                         .arg(&config.template.curl.param_4)
-                        .arg(strfmt(&auth_template, &auth).unwrap()) // AUTH
+
+                        //.arg(strfmt(&auth_template, &auth).unwrap()) // AUTH
+                        .arg(&influx_auth) // #AUTH
+
                         .arg(&config.template.curl.param_5)
-                        .arg(strfmt(&lp_template, &lp).unwrap()) // LINE_PROTOCOL
+
+                        //.arg(strfmt(&lp_template, &lp).unwrap()) // LINE_PROTOCOL
+                        .arg(&single_sensor_lp) // #LINE_PROTOCOL
+                        
                         .output().expect("failed to execute command");
 
                     if config.flag.debug_influx_output {
