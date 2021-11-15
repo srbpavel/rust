@@ -245,16 +245,15 @@ pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
     fs::File::open(&config.filename)?.read_to_string(&mut data)?;
     */
     
-    let results = if config.case_sensitive {
-        search(&config.query, &data)
-    } else {
-        search_case_insensitive(&config.query, &data)
+    let results = match config.case_sensitive {
+        true => search(&config.query, &data),
+        false => search_case_insensitive(&config.query, &data)
     };
 
     let mut count: u8 = 0;
     let count_closure = |x: u8| -> u8 { x + 1 };
 
-    println!("\n#EGREP:\nfile: {f}\nquery: {q}\ncase_sensitive: {cs}\n",
+    println!("\n#EGREP:\nfile: {f}\nquery: {q}\ncase_sensitive: {cs}\n\nRESULTS:",
              f=&config.filename,
              q=&config.query,
              cs=config.case_sensitive);

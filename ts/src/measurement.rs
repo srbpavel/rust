@@ -9,6 +9,54 @@ use ts::Influx;
 use ts::Sensor;
 
 
+pub fn os_call_sensors(config: &TomlConfig) -> serde_json::Value {
+    let sensor_output = Command::new(&config.template.sensors.program)
+        .arg(&config.template.sensors.param_1)
+        .output().expect("failed to execute command");
+    
+    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
+    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
+
+    if config.flag.debug_sensor_output {
+        println!("\n#SENSOR:
+stdout: {}
+stderr: {}",
+                 sensor_stdout_string,
+                 sensor_stderr_string,
+        );
+    }
+
+    // JSON 
+    let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
+
+    return value
+}
+
+
+pub fn os_call_curl(config: &TomlConfig,
+                   influx_uri: &String,
+                   influx_auth: &String,
+                   single_sensor_lp: &String) {
+
+    let curl_output = Command::new(&config.template.curl.program)
+        .arg(&config.template.curl.param_1)
+        .arg(&config.template.curl.param_2)
+        .arg(&config.template.curl.param_3)
+        .arg(influx_uri) // #URI
+        .arg(&config.template.curl.param_4)
+        .arg(influx_auth) // #AUTH
+        .arg(&config.template.curl.param_5)
+        .arg(single_sensor_lp) // #LINE_PROTOCOL
+        .output().expect("failed to execute command");
+
+    if config.flag.debug_influx_output {
+        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+    
+    }
+}
+
+
 pub fn prepare_sensor_format(config: &TomlConfig,
                              influx_inst: &Influx,
                              sensor_inst: &Sensor,
@@ -58,14 +106,16 @@ pub fn prepare_influx_format(config: &TomlConfig,
 
 
 pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64) {
-    // SENSOR
+    /*
     let sensor_output = Command::new(&config.template.sensors.program)
         .arg(&config.template.sensors.param_1)
         .output().expect("failed to execute command");
 
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
+    */
 
+    /*
     if config.flag.debug_sensor_output {
         println!("\n#SENSOR:
 stdout: {}
@@ -74,10 +124,15 @@ stderr: {}",
                  sensor_stderr_string,
         );
     }
+    */
 
-    // JSON 
-    let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
+    // JSON xxx
+    // let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
 
+    // OS_CMD -> LM-SENSORS
+    let sensors_json = os_call_sensors(&config);
+
+    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
@@ -97,9 +152,12 @@ stderr: {}",
 
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
-                // JSON POINTER
-                let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
+                // JSON POINTER xxx
+                //let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
+                let pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
 
+
+                
                 if config.flag.debug_pointer_output {
                     println!("
 #POINTER_CFG:
@@ -118,29 +176,20 @@ value: {v}",
                     let single_sensor_lp = prepare_sensor_format(&config,
                                                                  &single_influx,
                                                                  &single_sensor,
-                                                                 &value,
+                                                                 //&value,
+                                                                 &sensors_json,
                                                                  &ts_ms);
 
                     if config.flag.debug_influx_lp {
                         println!("{}", single_sensor_lp);
                     }
-                    
-                    // CURL
-                    let curl_output = Command::new(&config.template.curl.program)
-                        .arg(&config.template.curl.param_1)
-                        .arg(&config.template.curl.param_2)
-                        .arg(&config.template.curl.param_3)
-                        .arg(&influx_uri) // #URI
-                        .arg(&config.template.curl.param_4)
-                        .arg(&influx_auth) // #AUTH
-                        .arg(&config.template.curl.param_5)
-                        .arg(&single_sensor_lp) // #LINE_PROTOCOL
-                        .output().expect("failed to execute command");
 
-                    if config.flag.debug_influx_output {
-                        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
-                        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
-                    }
+
+                    // OS_CMD -> CURL
+                    os_call_curl(&config,
+                                 &influx_uri,
+                                 &influx_auth,
+                                 &single_sensor_lp);
                 }
             }
         }
