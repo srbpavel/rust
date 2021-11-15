@@ -126,7 +126,7 @@ pub struct Sensor {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllSensors {
     //values: [i32; 3], // fixed array with three int's
-    //values: Vec<i32>, // unlimited vector
+    //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Sensor>,
 }
 
@@ -196,7 +196,6 @@ pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 
     /*
     let query = query.to_lowercase();
-
     let mut results = Vec::new();
 
     for line in data.lines() {
@@ -238,7 +237,7 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
     let data = fs::read_to_string(&config.filename)?;
 
-    /* TROSKU JINE VOLANI
+    /*
     let mut data = String::new();
     fs::File::open(&config.filename)?.read_to_string(&mut data)?;
     */
@@ -258,7 +257,7 @@ pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
              cs=config.case_sensitive);
     
     for line in results {
-        count = count_closure(count); // INSTEAD count += 1; just to learn with closure
+        count = count_closure(count); // INSTEAD count += 1;
         println!("[{i:?}]: {l}",
                  l=line.trim(),
                  i=count);
@@ -273,7 +272,7 @@ impl CmdArgs {
         println!("#COMMAND: {:#?}",
                  args);
 
-        const ARG_COUNT: usize = 4; // struct CmdArgs members + 1 as also PROGRAM
+        const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 as also PROGRAM
         
         if args.len() < ARG_COUNT {
             return Err("not enough arguments")
@@ -283,17 +282,17 @@ impl CmdArgs {
 
         let _program = match args.next() { // FUTURE_USE
             Some(arg) => arg,
-            None => return Err("Should never fail"),
+            None => return Err("should never fail"),
         };
 
         let query = match args.next() {
             Some(arg) => arg,
-            None => return Err("Didn't get a QUERY string [keyword]"),
+            None => return Err("no QUERY string [keyword] cmd_argument"),
         };
 
         let filename = match args.next() {
             Some(arg) => arg,
-            None => return Err("Didn't get a FILE NAME [path]"),
+            None => return Err("no FILE NAME [path] cmd_argument"),
         };
 
         /* ENV
@@ -310,7 +309,7 @@ impl CmdArgs {
             } else {
                 return Err("CASE SENSITIVE not true/false BOOL")
             },
-            None => return Err("Didn't get a CASE SENSITIVE"), // probably will never happen ?
+            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
         };
         
         return Ok(CmdArgs {query, filename, case_sensitive});
@@ -324,13 +323,13 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
     let toml_file = fs::read_to_string(&cmd_args.filename);
     let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
 
-    Ok(toml_config)
-
     /*
     let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
     println!("\nTOML: {} <- {:?}",
              fookume["foookin"],
              fookume,
     );
-    */
+     */
+
+    Ok(toml_config)
 }

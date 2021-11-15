@@ -4,11 +4,11 @@ extern crate strfmt;
 use strfmt::strfmt;
 use std::collections::HashMap;
 
+use ts::TomlConfig;
+
 /* TO DEL -> HARDCODED
 pub use crate::file_config::Data;
 */
-
-use ts::TomlConfig;
 
 
 //pub fn get_sensors_data(config: &Data, ts_ms: i64) {
@@ -33,7 +33,7 @@ stderr: {}",
     // JSON 
     let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
 
-    // json_DICT
+    // JSON_DICT
     /*
     let dict = value.get("coretemp-isa-0000")
         .and_then(|v| v.get("Core 0"))
@@ -43,7 +43,7 @@ stderr: {}",
     println!("\n#DICT: {}", dict);
     */
 
-    // json_LIST
+    // JSON_LIST
     /*
     let temperature_core_0 = &value["coretemp-isa-0000"]["Core 0"]["temp2_input"].to_string();
     println!("\nLIST: {}", temperature_core_0);
@@ -51,14 +51,11 @@ stderr: {}",
     
     // INFLUX
     for single_influx in &config.all_influx.values {
-        println!("\n#INFLUX:
-NAME: {}
-STATUS: {}
-SERVER: {}",
-                 &single_influx.name,
-                 &single_influx.status,
-                 &single_influx.server,
-        );  
+        println!("\n#INFLUX:\nNAME: {n} SERVER: {se} STATUS: {st}",
+                 n=&single_influx.name,
+                 st=&single_influx.status,
+                 se=&single_influx.server,
+        );
 
         if single_influx.status {
         
@@ -74,7 +71,7 @@ SERVER: {}",
             uri.insert("precision".to_string(), String::from(&single_influx.precision));
 
             if config.flag.debug_influx_uri {
-                println!("\nURI: {}", strfmt(&uri_template, &uri).unwrap());
+                println!("\nURI:\n{}", strfmt(&uri_template, &uri).unwrap());
             }
 
             // TOKEN
@@ -94,6 +91,10 @@ SERVER: {}",
             lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
     
             // JSON POINTER
+            if config.flag.debug_influx_lp {
+                println!("\nLINE_PROTOCOL:");
+            }
+
             for single_sensor in &config.all_sensors.values {
                 let pointer_value = &value.pointer(&single_sensor.pointer).unwrap();
                 if config.flag.debug_pointer_output {
@@ -116,7 +117,7 @@ value: {v}",
                 // INFLUX default + backup + ...
                 if single_sensor.status {
                     if config.flag.debug_influx_lp {
-                        println!("\nLINE_PROTOCOL: {}", strfmt(&lp_template, &lp).unwrap());
+                        println!("{}", strfmt(&lp_template, &lp).unwrap());
                     }
                     // CURL
                     let curl_output = Command::new(&config.template.curl.program)
