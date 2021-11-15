@@ -34,7 +34,7 @@ pub struct TomlConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
-    pub debug_config_data: bool,
+    // ### pub debug_config_data: bool,
     pub debug_new_config: bool,
     
     pub debug_ts: bool,
@@ -51,6 +51,7 @@ pub struct Flag {
     pub debug_influx_output: bool,
     pub debug_influx_instances: bool,
 
+    pub run_egrep: bool,
     pub debug_egrep: bool,
 }
 

@@ -27,14 +27,16 @@ fn main() {
     });
 
     // EGREP
-    if new_config.flag.debug_egrep {
-        if let Err(e) = metynka::read_config(cmd_args) {
-            eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
-            
-            process::exit(1);
+    if new_config.flag.run_egrep {
+        if new_config.flag.debug_egrep {
+            if let Err(e) = metynka::read_config(cmd_args) {
+                eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
+                
+                process::exit(1);
+            }
         }
     }
-
+    
     // TIMESTAMP
     let ts_ms: i64 = timestamp::ts_now(new_config.flag.debug_ts);
     println!("\n#TS:\n{}", ts_ms);
@@ -68,7 +70,7 @@ fn main() {
     }
     
     // SENSOR
-    measurement::get_sensors_data(&new_config,
-                                  ts_ms
+    measurement::parse_sensors_data(&new_config,
+                                    ts_ms
     );
 }
