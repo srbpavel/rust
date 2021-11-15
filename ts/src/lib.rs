@@ -314,86 +314,57 @@ pub struct Config {
 
 
 impl Config {
-    // Result<OK Config, ERROR &str>
-    // pub fn new(args: &[String]) -> Result<Config, &str> { // Config {
-    pub fn new(mut args: env::Args) -> Result<Config, &'static str> { // Config {
-
-        const ARG_COUNT: usize = 4;
-        
-        if args.len() < ARG_COUNT {
-            //panic!("NOT ENOUGH ARGUMENTS");
-            return Err("not enough arguments") // ERR_MSG
-        }
-
-        args.next(); // we ignore first call as there is program name
-        /*
-        let program = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Didn't get a query string [keyword]"),
-        };
-        */
-
-        // /* DEBUG // cargo call is with relative path 'target/debug/ts' different then rustc
+    pub fn new(mut args: env::Args) -> Result<Config, &'static str> {
         println!("#COMMAND: {:#?}",
                  args);
-        // */
 
-        /*
-        let query = args[1].clone();
-        let filename = args[2].clone();
-        // PARAM as faster changing
-        let case_sensitive: bool = args[3].clone().parse().unwrap();
-        // let case_sensitive = args[3].clone().parse::<bool>().unwrap();
-        // let case_sensitive = String::from(args[3].clone()).parse().unwrap();
-        // let case_sensitive = String::from(args[3].clone()).parse::<bool>().unwrap();
-        */
+        const ARG_COUNT: usize = 4; // struct Config members + 1 as also PROGRAM
+        
+        if args.len() < ARG_COUNT {
+            return Err("not enough arguments")
+        } else if args.len() > ARG_COUNT {
+            return Err("too many arguments")
+        }
 
-        /* ENV
-        // $export CASE_INSENSITIVE=1
-        // $unset CASE_INSENSITIVE
-        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
-        */
+        let _program = match args.next() { // FUTURE_USE
+            Some(arg) => arg,
+            None => return Err("Should never fail"),
+        };
 
         let query = match args.next() {
             Some(arg) => arg,
-            None => return Err("Didn't get a query string [keyword]"),
+            None => return Err("Didn't get a QUERY string [keyword]"),
         };
 
         let filename = match args.next() {
             Some(arg) => arg,
-            None => return Err("Didn't get a file name [path]"),
+            None => return Err("Didn't get a FILE NAME [path]"),
         };
 
+        /* ENV
+        // terminal: $ export CASE_INSENSITIVE=1
+        // terminla: $ unset CASE_INSENSITIVE
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+         */
         let case_sensitive = match args.next() {
-            Some(arg) => arg.parse::<bool>().unwrap(),
-            None => return Err("Didn't get a case sensitive [bool]"),
+            Some(arg) => if String::from(&arg) == "true" || String::from(&arg) == "false" {
+                arg.parse::<bool>().unwrap()
+            } else {
+                return Err("CASE SENSITIVE not true/false BOOL")
+            },
+            None => return Err("Didn't get a CASE SENSITIVE"), // probably will never happen ?
         };
         
-        
-        /* DEBUG
-        println!("#COMMAND ARGS:\n[1]: {}\n[2]: {}\n[3]: {}",
-                 query,
-                 filename,
-                 case_sensitive);
-        */
-        
-        //Config { query, filename }
-        //Ok(Config { query, filename }) // return Config as RESULT;
         return Ok(Config {query, filename, case_sensitive});
     }
-
 }
 
 
 pub fn parse_toml_config(config: Config) -> Result<TomlConfig, Box<dyn Error>> {
-    println!("\n#PARSE:\n{:}",
-             config.filename,
-    );
+    println!("\n#PARSE:\n{:}", config.filename);
 
     let toml_file = fs::read_to_string(config.filename);
     let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
 
-    //Ok(()
     Ok(toml_config)
 }
-

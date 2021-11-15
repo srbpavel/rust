@@ -7,40 +7,19 @@ pub use util::ts as timestamp;
 // SENSORS
 mod measurement;
 
-// CONFIG_HARD_CODED STRUCT
-/*
-mod file_config;
-pub use file_config::Data; // HARDCODED Struct
-*/
-
 // CONFIG_ARG
 use std::env;
 use std::process;
-use ts::Config; // METYNKA Config Struct + Impl <- ARGUMENTS
-
-// CONFIG TOML
-//mod config;
+//use ts::Config; // METYNKA Config Struct + Impl <- ARGUMENTS
+use ts as metynka; // METYNKA Config Struct + Impl <- ARGUMENTS
 
 
 fn main() {
-    /* TO DEL -> HARDCODED
-    let config_data = Data::start();
-
-    if config_data.flag.debug_config_data {
-        println!("\n#CONFIG_DATA:\n{:#?}",
-                 config_data,
-        );
-    }
-    */
-
     /* CONFIG ARG */
-    //
-    let config = Config::new(env::args()).unwrap_or_else(|err| { // LIB.RS
-        //eprintln!("Problem parsing arguments: {}", err);
-        eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err); //err RETURN_MSG from Config::new
+    let config = metynka::Config::new(env::args()).unwrap_or_else(|err| {
+         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
         process::exit(1);
     });
-
 
     /* TOML CONFIG */
     /*
@@ -51,6 +30,12 @@ fn main() {
     }
     */
 
+    let new_config = ts::parse_toml_config(config).unwrap_or_else(|err| { // LIB.RS
+        eprintln!("\nEXIT: reading file\nREASON >>> {}", err);
+        process::exit(1);
+    });
+
+    /*
     let new_config = ts::parse_toml_config(config).unwrap(); // pac REF
 
     if new_config.flag.debug_new_config {
@@ -58,6 +43,7 @@ fn main() {
                  new_config,
         );
     }
+    */
 
     /*
     println!("\nTOML_CONFIG::\nINFLUX\n{i:#?}\nSENSOR\n{s:?}",
