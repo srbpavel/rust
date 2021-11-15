@@ -1,12 +1,17 @@
 use std::fs;
 use std::error::Error;
 use std::env;
-// use std::io::Read;
 
-// TOML CONFIG
-//use std::fs;
 use toml;
 use serde::{Serialize, Deserialize};
+
+
+pub struct CmdArgs {
+    // DO NOT forget to chance ARG_COUNT verification 
+    pub query: String,
+    pub filename: String,
+    pub case_sensitive: bool,
+}
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -45,6 +50,7 @@ pub struct Flag {
     pub debug_influx_output: bool,
     pub debug_influx_instances: bool,
 
+    pub debug_egrep: bool,
 }
 
 
@@ -57,10 +63,6 @@ pub struct Delay {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllInflux {
-    /*
-    default: Influx,
-    backup: Influx,
-     */
     pub values: Vec<Influx>,
 }
 
@@ -113,17 +115,6 @@ pub struct TemplateSensors {
 }
 
 
-/*
-#[derive(Serialize, Deserialize, Debug)]
-struct AllSensors {
-    one: Sensor,
-    two: Sensor,
-    three: Sensor,
-    four: Sensor,
-}
-*/
-
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
     pub status: bool,
@@ -134,7 +125,7 @@ pub struct Sensor {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllSensors {
-    //values: [i32; 3], // three int's
+    //values: [i32; 3], // fixed array with three int's
     //values: Vec<i32>, // unlimited vector
     pub values: Vec<Sensor>,
 }
@@ -196,14 +187,15 @@ Trust me.";
 
 
 pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
+    // CASE SENSITIVE
+    
     data
         .lines()
         .filter(|line| line.to_lowercase().contains(&query.to_lowercase()))
         .collect()
 
     /*
-    // changes String -> &str slice
-    let query = query.to_lowercase(); //oproti me pouzivaji & az pri volani .contains(&query)
+    let query = query.to_lowercase();
 
     let mut results = Vec::new();
 
@@ -218,8 +210,9 @@ pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 }
 
 
-// <'a> lifetime
 pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
+    // NOT CASE SENSITIVE
+    
     data
         .lines()
         .filter(|line| line.contains(query))
@@ -228,9 +221,8 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
     /*
     let mut results = Vec::new();
 
-    // MY_SHADOW // let query = &query.to_lowercase(); // QUERY TO lower_case
     for line in data.lines() {
-        // MY LOWER_CASE // if line.to_lowercase().contains(query) { // DATA LINE TO lower_case
+        // MY LOWER_CASE 
         if line.contains(query) { // DATA LINE TO lower_case
             results.push(line);
         }
@@ -243,46 +235,14 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 }
 
 
-pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
-    // sice namem PANIC! ale nevypisuju filename parametr jako pro .unwrap_or_else(|err|    
+pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
     let data = fs::read_to_string(&config.filename)?;
 
-    /*
-    //let toml_config: TomlConfig = toml::from_str(&data.unwrap()).unwrap();
-    let toml_config: TomlConfig = toml::from_str(&data).unwrap();
-    println!("\nTOML_CONFIG::\nINFLUX\n{i:#?}\nSENSOR\n{s:?}",
-             s =toml_config.all_sensors,
-             i = toml_config.all_influx,
-    );
-    */
-    
     /* TROSKU JINE VOLANI
     let mut data = String::new();
     fs::File::open(&config.filename)?.read_to_string(&mut data)?;
     */
     
-    /*
-    let data = fs::read_to_string(&config.filename)
-        .expect(&format!("ERROR reading file: {}", &config.filename)); // zatim nevim proc &format!
-    */
-
-    //
-    /* DEBUG
-    println!("\n###DATA_START [{f}]:\n{d}\n###DATA_END\n",
-             d=data,
-             f=config.filename);
-    //
-    */
-
-    /*
-    let mut count: u8 = 0;
-    for line in search(&config.query, &data) {
-        count += 1;
-        println!("[{i}] result_line: {l}",
-                 l=line,
-                 i=count);
-     */
-
     let results = if config.case_sensitive {
         search(&config.query, &data)
     } else {
@@ -290,14 +250,17 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
     };
 
     let mut count: u8 = 0;
-    //let count_closure = |x| x + 1;
-    // let count_closure = |x: u8| -> u8 { x + 1 };
+    let count_closure = |x: u8| -> u8 { x + 1 };
 
+    println!("\n#EGREP:\nfile: {f}\nquery: {q}\ncase_sensitive: {cs}\n",
+             f=&config.filename,
+             q=&config.query,
+             cs=config.case_sensitive);
+    
     for line in results {
-        count += 1;
-        //count = count_closure(count);
-        println!("[{i:?}] result_line: {l}",
-                 l=line,
+        count = count_closure(count); // INSTEAD count += 1; just to learn with closure
+        println!("[{i:?}]: {l}",
+                 l=line.trim(),
                  i=count);
     }
     
@@ -305,20 +268,12 @@ pub fn read_config(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 
-pub struct Config {
-    // do not forget to chance ARG_COUNT verification 
-    pub query: String,
-    pub filename: String,
-    pub case_sensitive: bool,
-}
-
-
-impl Config {
-    pub fn new(mut args: env::Args) -> Result<Config, &'static str> {
+impl CmdArgs {
+    pub fn new(mut args: env::Args) -> Result<CmdArgs, &'static str> {
         println!("#COMMAND: {:#?}",
                  args);
 
-        const ARG_COUNT: usize = 4; // struct Config members + 1 as also PROGRAM
+        const ARG_COUNT: usize = 4; // struct CmdArgs members + 1 as also PROGRAM
         
         if args.len() < ARG_COUNT {
             return Err("not enough arguments")
@@ -346,25 +301,36 @@ impl Config {
         // terminla: $ unset CASE_INSENSITIVE
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
          */
+
         let case_sensitive = match args.next() {
-            Some(arg) => if String::from(&arg) == "true" || String::from(&arg) == "false" {
-                arg.parse::<bool>().unwrap()
+            // Some(arg) => if vec!["true", "false"].contains(&&arg.to_lowercase()[..]) {
+            // Some(arg) => if vec!["true", "false"].contains(&&*arg.to_lowercase()) {
+            Some(arg) => if vec!["true", "false"].contains(&arg.to_lowercase().as_str()) {
+                arg.to_lowercase().parse::<bool>().unwrap()
             } else {
                 return Err("CASE SENSITIVE not true/false BOOL")
             },
             None => return Err("Didn't get a CASE SENSITIVE"), // probably will never happen ?
         };
         
-        return Ok(Config {query, filename, case_sensitive});
+        return Ok(CmdArgs {query, filename, case_sensitive});
     }
 }
 
 
-pub fn parse_toml_config(config: Config) -> Result<TomlConfig, Box<dyn Error>> {
-    println!("\n#PARSE:\n{:}", config.filename);
+pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error>> {
+    println!("\n#PARSE file_config -> TOML:\n{:}", &cmd_args.filename);
 
-    let toml_file = fs::read_to_string(config.filename);
+    let toml_file = fs::read_to_string(&cmd_args.filename);
     let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
 
     Ok(toml_config)
+
+    /*
+    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
+    println!("\nTOML: {} <- {:?}",
+             fookume["foookin"],
+             fookume,
+    );
+    */
 }
