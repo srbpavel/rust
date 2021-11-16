@@ -52,6 +52,10 @@ pub struct Flag {
     pub debug_influx_output: bool,
     pub debug_influx_instances: bool,
 
+    pub run_flux_verify_record: bool,
+    pub debug_flux_query: bool,
+    pub debug_flux_result: bool, 
+        
     pub run_egrep: bool,
     pub debug_egrep: bool,
 }
@@ -94,22 +98,35 @@ pub struct Influx {
 pub struct Template {
     pub curl: TemplateCurl,
     pub sensors: TemplateSensors,
+    pub flux: TemplateFlux,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TemplateFlux {
+    pub query_verify_record: String,
+    pub query_verify_record_range_start: String,
 }
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateCurl {
     pub program: String,
-    pub param_1: String,
-    pub param_2: String,
-    pub param_3: String,
-    pub param_4: String,
-    pub param_5: String,
 
+    pub param_insecure: String,
+    pub param_request: String,
+    pub param_post: String,
+    pub param_header: String,
+    pub param_data: String,
+    
+    pub influx_uri_api: String,
     pub influx_uri_write: String,
     pub influx_uri_query: String,
 
     pub influx_auth: String,
+    pub influx_accept: String,
+    pub influx_content: String,
+
     pub influx_lp: String,
 }
 

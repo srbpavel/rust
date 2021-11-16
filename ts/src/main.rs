@@ -39,7 +39,7 @@ fn main() {
     // TIMESTAMP
     //let ts_ms: i64 = timestamp::ts_now(new_config.flag.debug_ts);
     let dt = timestamp::ts_now(new_config.flag.debug_ts);
-    println!("\n#TS:\n{:#?}", dt);
+    println!("\n#TS:\n{:#?}\n", dt);
     //let ts_ms: i64 = dt.ts;
 
 

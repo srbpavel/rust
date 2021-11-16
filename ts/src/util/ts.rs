@@ -25,8 +25,8 @@ pub fn ts_now(debug: bool) -> Dt {
                                       &format!("{:09}", local.nanosecond())[0..3],
     );
 
-    println!("\n#DATE_TIME_INFLUX_FORMAT: {}", local_influx_format);
-    
+    //println!("\n#DATE_TIME_INFLUX_FORMAT: {}", local_influx_format);
+
     if debug {
         let local_formated = format!("{}_{:02.}_{:02.} {:02}:{:02.}:{:02.}.{:09} {} {}",
                                      local.year(),

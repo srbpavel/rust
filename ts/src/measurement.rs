@@ -21,28 +21,28 @@ pub fn os_call_curl_flux(config: &TomlConfig,
                          influx_query: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
-        .arg(&config.template.curl.param_1) // -k
-        .arg(&config.template.curl.param_2) // --request 
-        .arg(&config.template.curl.param_3) // --POST
+        .arg(&config.template.curl.param_insecure)
+        .arg(&config.template.curl.param_request)
+        .arg(&config.template.curl.param_post)
         .arg(influx_uri) // #URI
-        .arg(&config.template.curl.param_4) // --header
+        .arg(&config.template.curl.param_header)
         .arg(influx_auth) // #AUTH
-        .arg(&config.template.curl.param_4) // --header
+        .arg(&config.template.curl.param_header)
         .arg(influx_header_accept)
-        .arg(&config.template.curl.param_4) // --header
+        .arg(&config.template.curl.param_header)
         .arg(influx_header_content)
-        .arg(&config.template.curl.param_5) // --data-raw
+        .arg(&config.template.curl.param_data)
         .arg(influx_query) // #QUERY
         .output().expect("failed to execute command");
 
-    //if config.flag.debug_influx_output {
-    println!("#QUERY_RESULT:\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
-    //println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
-    //}
+    if config.flag.debug_flux_result {
+        // NO stderr for now
+        println!("\n#QUERY_RESULT:stdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+    }
 }
 
 
-pub fn os_call_sensors(config: &TomlConfig) -> serde_json::Value {
+pub fn os_call_sensors(config: &TomlConfig) -> String {
     let sensor_output = Command::new(&config.template.sensors.program)
         .arg(&config.template.sensors.param_1)
         .output().expect("failed to execute command");
@@ -59,10 +59,7 @@ stderr: {}",
         );
     }
 
-    // JSON 
-    let value: serde_json::Value = serde_json::from_str(&sensor_stdout_string).unwrap();
-
-    return value
+    return sensor_stdout_string.to_string()
 }
 
 
@@ -72,13 +69,13 @@ pub fn os_call_curl(config: &TomlConfig,
                    single_sensor_lp: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
-        .arg(&config.template.curl.param_1)
-        .arg(&config.template.curl.param_2)
-        .arg(&config.template.curl.param_3)
+        .arg(&config.template.curl.param_insecure)
+        .arg(&config.template.curl.param_request)
+        .arg(&config.template.curl.param_post)
         .arg(influx_uri) // #URI
-        .arg(&config.template.curl.param_4)
+        .arg(&config.template.curl.param_header)
         .arg(influx_auth) // #AUTH
-        .arg(&config.template.curl.param_5)
+        .arg(&config.template.curl.param_data)
         .arg(single_sensor_lp) // #LINE_PROTOCOL
         .output().expect("failed to execute command");
 
@@ -107,6 +104,7 @@ pub fn prepare_sensor_format(config: &TomlConfig,
     lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
     
     let pointer_value = &sensor_value.pointer(&sensor_inst.pointer).unwrap();
+    
     lp.insert("sensor_id".to_string(), sensor_inst.name.to_string()); // SENSOR_ID
     lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
 
@@ -115,10 +113,14 @@ pub fn prepare_sensor_format(config: &TomlConfig,
 
 
 pub fn prepare_influx_format(config: &TomlConfig,
-                             influx_inst: &Influx) -> (String, String, String) {
+                             influx_inst: &Influx) -> (String, String, String, String, String) {
 
     // URI_WRITE 
-    let uri_template = String::from(&config.template.curl.influx_uri_write);
+    let uri_write_template = String::from(format!("{}{}",
+                                                  &config.template.curl.influx_uri_api,
+                                                  &config.template.curl.influx_uri_write,
+    ));
+    
     let mut uri_data = HashMap::new();
     
     uri_data.insert("secure".to_string(), String::from(&influx_inst.secure));
@@ -129,7 +131,11 @@ pub fn prepare_influx_format(config: &TomlConfig,
     uri_data.insert("precision".to_string(), String::from(&influx_inst.precision));
 
     // URI_QUERY
-    let uri_query_template = String::from(&config.template.curl.influx_uri_query);
+    let uri_query_template = String::from(format!("{}{}",
+                                                  &config.template.curl.influx_uri_api,
+                                                  &config.template.curl.influx_uri_query,
+    ));
+    
     let mut uri_query_data = HashMap::new();
 
     uri_query_data.insert("secure".to_string(), String::from(&influx_inst.secure));
@@ -142,23 +148,37 @@ pub fn prepare_influx_format(config: &TomlConfig,
     let mut auth_data = HashMap::new();
     auth_data.insert("token".to_string(), String::from(&influx_inst.token));
 
-    (strfmt(&uri_template, &uri_data).unwrap(),
+    // ACCEPT
+    let accept_template = String::from(&config.template.curl.influx_accept);
+
+    // CONTENT
+    let content_template = String::from(&config.template.curl.influx_content);
+
+    (strfmt(&uri_write_template, &uri_data).unwrap(),
      strfmt(&uri_query_template, &uri_query_data).unwrap(),
      strfmt(&auth_template, &auth_data).unwrap(),
+     accept_template,
+     content_template,
     )
 }
 
 
-//pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64) {
-//pub fn parse_sensors_data(config: &TomlConfig, dt: &Dt) {
 pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
     // OS_CMD <- LM-SENSORS
-    let sensors_json = os_call_sensors(&config);
+    let sensors_stdout = os_call_sensors(&config);
 
+    // JSON 
+    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
+    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
-            let (influx_uri_write, influx_uri_query, influx_auth) = prepare_influx_format(&config, &single_influx);
+
+            let (influx_uri_write,
+                 influx_uri_query,
+                 influx_auth,
+                 influx_accept,
+                 influx_content ) = prepare_influx_format(&config, &single_influx);
             
             if config.flag.debug_influx_uri {
                 println!("\n#URI:\n{}\n{}", &influx_uri_write, &influx_uri_query);
@@ -168,9 +188,11 @@ pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
+            /*
             if config.flag.debug_influx_lp {
                 println!("\n#LINE_PROTOCOL:");
             }
+            */
 
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
@@ -200,9 +222,8 @@ value: {v}",
                                                                  &ts_ms);
 
                     if config.flag.debug_influx_lp {
-                        println!("{}", single_sensor_lp);
+                        println!("\n#LINE_PROTOCOL:\n{}", single_sensor_lp);
                     }
-
 
                     // OS_CMD <- CURL
                     os_call_curl(&config,
@@ -212,26 +233,29 @@ value: {v}",
 
 
                     // OS_CMD <- FLUX_QUERY
-                    //let influx_uri_query = String::from("https://ruth:8086/api/v2/query?org=foookin_paavel"); // dynamic as default + backup
-
-                    let influx_header_accept = String::from("Accept: application/csv");
-
-                    let influx_header_content = String::from("Content-type: application/vnd.flux");
-                        
-                    let influx_query = String::from(format!("from(bucket: \"{bucket}\") |> range(start: -1h) |> filter(fn: (r) => r[\"_measurement\"] == \"temperature\") |> filter(fn: (r) => r[\"SensorId\"] == \"{sensor_id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"SensorCarrier\", \"SensorValid\", \"_field\"]) |> limit(n:1) |> group()",
+                    let influx_query = String::from(format!("from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"SensorId\"] == \"{sensor_id}\") |> filter(fn: (r) => r[\"_value\"] == {temperature_decimal}) |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"SensorCarrier\", \"SensorValid\", \"_field\"]) |> limit(n:1) |> group()",
+                                                            start=&config.template.flux.query_verify_record_range_start,
+                                                            measurement=&single_influx.measurement,
                                                             bucket=&single_influx.bucket,
                                                             sensor_id=single_sensor.name,
+                                                            temperature_decimal=pointer_value, // NO NEED TO FILTER _field as have only one for now
                                                             dtif=dtif));
-                    //2021-11-16T07:55:02.107Z
 
-                    println!("\n#FLUX_QUERY:\n{}", influx_query);
-                    
-                    os_call_curl_flux(&config,
-                                      &influx_uri_query,
-                                      &influx_auth,
-                                      &influx_header_accept,
-                                      &influx_header_content,
-                                      &influx_query);
+                    if config.flag.debug_flux_query {
+                        println!("\n#QUERY:\n{}",
+                                 influx_query,
+                                 //&config.template.flux.query_verify_record
+                        );
+                    }
+
+                    if config.flag.run_flux_verify_record {
+                        os_call_curl_flux(&config,
+                                          &influx_uri_query,
+                                          &influx_auth,
+                                          &influx_accept,
+                                          &influx_content,
+                                          &influx_query);
+                    }
                 }
             }
         }
