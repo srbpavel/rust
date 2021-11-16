@@ -9,6 +9,40 @@ use ts::Influx;
 use ts::Sensor;
 
 
+// /*
+#[derive(Debug)]
+pub struct Record {
+    pub ts: i64,
+    pub temperature_decimal: String,
+    pub carrier: String,
+    pub id: String,
+    pub valid: String,
+    pub machine: String,
+    pub measurement: String,
+    pub host: String,
+}
+// */
+
+
+pub fn prepare_csv_record_format(config: &TomlConfig,
+                                 record: &Record) -> String {
+
+    let csv_record_template = String::from(&config.template.csv.csv_annotated);
+
+    let mut csv_record = HashMap::new();
+    csv_record.insert("measurement".to_string(), String::from(&record.measurement));
+    csv_record.insert("host".to_string(), String::from(&record.host));
+    csv_record.insert("machine".to_string(), String::from(&record.machine));
+    csv_record.insert("sensor_carrier".to_string(), String::from(&record.carrier));
+    csv_record.insert("sensor_valid".to_string(), String::from(&record.valid.to_string()));
+    csv_record.insert("ts".to_string(), String::from(&record.ts.to_string()));
+    csv_record.insert("sensor_id".to_string(), record.id.to_string()); // SENSOR_ID
+    csv_record.insert("temperature_decimal".to_string(), String::from(&record.temperature_decimal.to_string())); // TEMPERATURE_DECIMAL
+
+    return strfmt(&csv_record_template, &csv_record).unwrap()
+}
+
+
 pub fn prepare_flux_query_format(config: &TomlConfig,
                                  single_influx: &Influx,
                                  single_sensor: &Sensor,
@@ -189,10 +223,13 @@ pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
 
     // JSON 
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-    
+
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
+
+            // RESULT_LIST
+            let mut result_list = Vec::new();
 
             let (influx_uri_write,
                  influx_uri_query,
@@ -242,6 +279,22 @@ value: {v}",
                         println!("\n#LINE_PROTOCOL:\n{}", single_sensor_lp);
                     }
 
+                    // RECORD
+                    let single_record = Record {
+                        ts: ts_ms,
+                        temperature_decimal: json_pointer_value.to_string(),
+                        carrier: single_influx.carrier.to_string(),
+                        id: single_sensor.name.to_string(),
+                        valid: single_influx.flag_valid_default.to_string(),
+                        machine: single_influx.machine_id.to_string(),
+                        measurement: single_influx.measurement.to_string(),
+                        host: config.host.to_string(),
+                    };
+
+                    //println!("\n#RECORD:\n{:#?}", single_record);
+
+                    result_list.push(single_record);
+                
                     // OS_CMD <- CURL
                     os_call_curl(&config,
                                  &influx_uri_write,
@@ -272,6 +325,26 @@ value: {v}",
                                           &influx_query);
                     }
                 }
+            }
+
+            println!("\n#CSV_ANNOTATED:\n{}\n{}",
+                     &config.template.csv.annotated_datatype,
+                     &config.template.csv.annotated_header,
+            );
+
+            /*
+            println!("{}",
+                     &config.template.csv.csv_annotated,
+            );
+            */
+            
+            //println!("\n#RESULT_LIST:");
+            for v in result_list {
+                let csv_record = prepare_csv_record_format(&config,
+                                                           &v,
+                );
+                //println!("{:#?}", v);
+                println!("{}", csv_record);
             }
         }
     }

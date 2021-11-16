@@ -97,9 +97,18 @@ pub struct Influx {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Template {
+    pub csv: TemplateCsv,
     pub curl: TemplateCurl,
     pub sensors: TemplateSensors,
     pub flux: TemplateFlux,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TemplateCsv {
+    pub annotated_datatype: String,
+    pub annotated_header: String,
+    pub csv_annotated: String,
 }
 
 
