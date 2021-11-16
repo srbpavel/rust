@@ -42,7 +42,6 @@ fn main() {
     println!("\n#TS:\n{:#?}\n", dt);
     //let ts_ms: i64 = dt.ts;
 
-
     // DEBUG: ALL_INFLUX
     if new_config.flag.debug_influx_instances {
         for single_influx in &new_config.all_influx.values {

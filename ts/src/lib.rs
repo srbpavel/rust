@@ -53,6 +53,7 @@ pub struct Flag {
     pub debug_influx_instances: bool,
 
     pub run_flux_verify_record: bool,
+    pub add_flux_query_verify_record_suffix: bool,   
     pub debug_flux_query: bool,
     pub debug_flux_result: bool, 
         
@@ -106,6 +107,7 @@ pub struct Template {
 pub struct TemplateFlux {
     pub query_verify_record: String,
     pub query_verify_record_range_start: String,
+    pub query_verify_record_suffix: String,
 }
 
 

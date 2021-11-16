@@ -9,8 +9,31 @@ use ts::Influx;
 use ts::Sensor;
 
 
-//mod ts::util;
-//pub use ts::util::ts::Dt;
+pub fn prepare_flux_query_format(config: &TomlConfig,
+                                 single_influx: &Influx,
+                                 single_sensor: &Sensor,
+                                 temperature_decimal: String,
+                                 dtif: &String) -> String {
+
+    let flux_template = match config.flag.add_flux_query_verify_record_suffix {
+        true => format!("{}{}",
+                String::from(&config.template.flux.query_verify_record),
+                String::from(&config.template.flux.query_verify_record_suffix),
+        ),
+        false => String::from(&config.template.flux.query_verify_record)
+    };    
+    
+    let mut flux = HashMap::new();
+
+    flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
+    flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
+    flux.insert("measurement".to_string(), String::from(&single_influx.measurement));
+    flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
+    flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
+    flux.insert("dtif".to_string(), String::from(dtif)); // RFC3339 date_time format -> 2021-11-16T13:20:10.233Z
+    
+    return strfmt(&flux_template, &flux).unwrap()
+}
 
 
 pub fn os_call_curl_flux(config: &TomlConfig,
@@ -90,7 +113,7 @@ pub fn os_call_curl(config: &TomlConfig,
 pub fn prepare_sensor_format(config: &TomlConfig,
                              influx_inst: &Influx,
                              sensor_inst: &Sensor,
-                             sensor_value: &serde_json::Value,
+                             temperature_decimal: String,
                              ts_ms: &i64) -> String {
 
     let lp_template = String::from(&config.template.curl.influx_lp);
@@ -102,11 +125,8 @@ pub fn prepare_sensor_format(config: &TomlConfig,
     lp.insert("sensor_carrier".to_string(), String::from(&influx_inst.carrier));
     lp.insert("sensor_valid".to_string(), String::from(&influx_inst.flag_valid_default.to_string()));
     lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
-    
-    let pointer_value = &sensor_value.pointer(&sensor_inst.pointer).unwrap();
-    
     lp.insert("sensor_id".to_string(), sensor_inst.name.to_string()); // SENSOR_ID
-    lp.insert("temperature_decimal".to_string(), pointer_value.to_string()); // TEMPERATURE_DECIMAL
+    lp.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // TEMPERATURE_DECIMAL
 
     return strfmt(&lp_template, &lp).unwrap()
 }
@@ -188,16 +208,10 @@ pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
-            /*
-            if config.flag.debug_influx_lp {
-                println!("\n#LINE_PROTOCOL:");
-            }
-            */
-
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
                 // JSON POINTER
-                let pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
+                let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
                 
                 if config.flag.debug_pointer_output {
                     println!("
@@ -209,7 +223,7 @@ value: {v}",
                              s=single_sensor.status,
                              n=single_sensor.name,
                              p=single_sensor.pointer,
-                             v=pointer_value,
+                             v=json_pointer_value,
                     );
                 }
 
@@ -217,7 +231,10 @@ value: {v}",
                     let single_sensor_lp = prepare_sensor_format(&config,
                                                                  &single_influx,
                                                                  &single_sensor,
-                                                                 &sensors_json,
+
+                                                                 //&sensors_json,
+                                                                 json_pointer_value.to_string(),
+
                                                                  //&dt.ts);
                                                                  &ts_ms);
 
@@ -233,21 +250,19 @@ value: {v}",
 
 
                     // OS_CMD <- FLUX_QUERY
-                    let influx_query = String::from(format!("from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"SensorId\"] == \"{sensor_id}\") |> filter(fn: (r) => r[\"_value\"] == {temperature_decimal}) |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"SensorCarrier\", \"SensorValid\", \"_field\"]) |> limit(n:1) |> group()",
-                                                            start=&config.template.flux.query_verify_record_range_start,
-                                                            measurement=&single_influx.measurement,
-                                                            bucket=&single_influx.bucket,
-                                                            sensor_id=single_sensor.name,
-                                                            temperature_decimal=pointer_value, // NO NEED TO FILTER _field as have only one for now
-                                                            dtif=dtif));
+                    let influx_query = prepare_flux_query_format(
+                        &config,
+                        &single_influx,
+                        &single_sensor,
+                        json_pointer_value.to_string(),
+                        &dtif);
 
                     if config.flag.debug_flux_query {
                         println!("\n#QUERY:\n{}",
                                  influx_query,
-                                 //&config.template.flux.query_verify_record
                         );
                     }
-
+                    
                     if config.flag.run_flux_verify_record {
                         os_call_curl_flux(&config,
                                           &influx_uri_query,
