@@ -23,6 +23,11 @@ debug_influx_lp = true # false
 debug_influx_output = false
 debug_influx_instances = false
 
+run_flux_verify_record = false
+add_flux_query_verify_record_suffix = true # false
+debug_flux_query = false
+debug_flux_result = true # false
+
 run_egrep = false
 debug_egrep = true # false
 
@@ -43,7 +48,7 @@ minute = 1
 #port: 8086
 
 #bucket: "test_rust"		-> DO NOT FORGET TO CREATE
-#token
+#token	 			-> TOKEN
 #org: "foookin_paavel"
 #precision: "ms"		-> 1636918801582 / MS format len() 13
 
@@ -82,11 +87,36 @@ param_1 = "-j"
 
 [template.curl]
 program = "/usr/bin/curl"
-param_1 = "-k"
-param_2 = "--request"
-param_3 = "POST"
-influx_uri = "{secure}://{server}:{port}/api/v2/write?org={org}&bucket={bucket}&precision={precision}"
-param_4 = "--header"
+param_insecure = "--insecure"
+param_request = "--request"
+param_post = "POST"
+param_header = "--header"
+param_data = "--data-raw"
+
+influx_uri_api = "{secure}://{server}:{port}/api/v2/"
+influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
+influx_uri_query = "query?org={org}"
+
 influx_auth = "Authorization: Token {token}"
-param_5 = "--data-raw"
+influx_accept = "Accept: application/csv"
+influx_content = "Content-type: application/vnd.flux"
+
 influx_lp = "{measurement},host={host},Machine={machine_id},SensorId={sensor_id},SensorCarrier={sensor_carrier},SensorValid={sensor_valid} TemperatureDecimal={temperature_decimal} {ts}"
+
+[template.flux]
+query_verify_record_range_start = "-1h"
+
+query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"SensorId\"] == \"{sensor_id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"SensorCarrier\", \"SensorValid\", \"_field\"]) |> limit(n:1) |> group()"
+
+query_verify_record_suffix = " |> count()"
+
+
+#/usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group()'
+
+#,result,table,_time,_value,Machine,SensorId
+#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
+
+#/usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group() |> count()'
+
+#,result,table,_value
+#,_result,0,1
