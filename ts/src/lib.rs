@@ -105,7 +105,10 @@ pub struct TemplateCurl {
     pub param_3: String,
     pub param_4: String,
     pub param_5: String,
-    pub influx_uri: String,
+
+    pub influx_uri_write: String,
+    pub influx_uri_query: String,
+
     pub influx_auth: String,
     pub influx_lp: String,
 }
