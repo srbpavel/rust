@@ -1,18 +1,15 @@
 use chrono::{DateTime, Utc, Local, NaiveDateTime, Datelike, Timelike};
 
+
 #[derive(Debug)]
 pub struct Dt {
     pub ts: i64,
-    //pub local: DateTime,
     pub local_influx_format: String,
     pub today_file_name: String,
 }
 
 
-//pub fn ts_now(debug: bool) -> i64 {
 pub fn ts_now(debug: bool) -> Dt {
-    // MOZNA VRACET Struct { datetime, ts }
-
     let local = Local::now();
     let ts: i64 = local.timestamp_millis();
 
@@ -32,9 +29,12 @@ pub fn ts_now(debug: bool) -> Dt {
                                   local.day(),
     );
 
-    //println!("\n#DATE_TIME_INFLUX_FORMAT: {}", local_influx_format);
+    let dt = Dt {ts, local_influx_format, today_file_name};
 
     if debug {
+        println!("\n#DATE_TIME:\n{:#?}", dt);
+
+        /*
         let local_formated = format!("{}_{:02.}_{:02.} {:02}:{:02.}:{:02.}.{:09} {} {}",
                                      local.year(),
                                      local.month(),
@@ -60,10 +60,10 @@ ms:     {l_ts_ms}",
 		 l_ts_ms=ts,
                  l_formated=local_formated
         );
+        */
     }
-    //return ts
-    //return Dt {ts, local, local_influx_format};
-    return Dt {ts, local_influx_format, today_file_name};
+    
+    return dt;
 }
 
 

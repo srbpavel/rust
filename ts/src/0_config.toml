@@ -7,7 +7,7 @@ work_dir = '/home/conan/soft/rust/ts'
 [flag]
 debug_new_config = false
 
-debug_ts = false
+debug_ts = true # false
 # future_use
 debug_ts_to_dt = false
 
@@ -25,7 +25,7 @@ debug_influx_instances = false
 # query influx to verify write was successfull
 run_flux_verify_record = false
 # add |> count() to [template.flux].query_verify_record
-add_flux_query_verify_record_suffix = true # false
+add_flux_query_verify_record_suffix = false
 
 debug_flux_query = false
 debug_flux_result = true # false
@@ -33,6 +33,8 @@ debug_flux_result = true # false
 # search for QUERY in this CONFIG_FILE
 run_egrep = false
 debug_egrep = true # false
+
+debug_backup = true #false
 
 
 # future_use
@@ -92,7 +94,7 @@ values = [
 # BACKUP DATA in CSV_ANNOTATED format
 [template.csv]
 annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
-# HAVE TO BE same as TAGs/FIELDs [template.curl].influx_lp otherwise you can make mistake / LEARN + FIX
+# HAVE TO BE same as TAGs/FIELDs [template.curl].influx_lp otherwise you can make mistake writing by hand / LEARN + FIX
 # Machine
 # SensorId
 # SensorCarrier
@@ -103,7 +105,7 @@ csv_annotated = '{measurement},{host},{machine},{sensor_id},{sensor_carrier},{se
 
 # IMPORT_from_backup -> EXPORT -> compare/verify
 #
-# @spongebob$ scp -P 11472 /home/conan/soft/rust/ts/csv/2021_11_17_laptop_core_temperature.csv conan@ruth:/home/conan/soft/docker/dck_influxdb_2_0/dck_influxdb_volume/rust/
+# spongebob$ scp -P 11472 /home/conan/soft/rust/ts/csv/2021_11_17_laptop_core_temperature.csv conan@ruth:/home/conan/soft/docker/dck_influxdb_2_0/dck_influxdb_volume/rust/
 #
 # ruth$ head -n5 /home/conan/soft/docker/dck_influxdb_2_0/dck_influxdb_volume/rust/2021_11_17_laptop_core_temperature.csv 
 # #datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number
@@ -112,7 +114,8 @@ csv_annotated = '{measurement},{host},{machine},{sensor_id},{sensor_carrier},{se
 # temperature,spongebob,spongebob,1,cargo,true,69.0,1637135171004
 # temperature,spongebob,spongebob,2,cargo,true,51.0,1637135171004
 #
-# @ruth$ docker container exec -i -t dck_influxdb influx write --bucket import_test_rust --precision ms --format csv --file /var/lib/influxdb2/rust/2021_11_17_laptop_core_temperature.csv --skip-verify
+# ruth$ docker container exec -i -t dck_influxdb influx write --bucket import_test_rust --precision ms --format csv --file /var/lib/influxdb2/rust/2021_11_17_laptop_core_temperature.csv --skip-verify
+#
 # ruth$ docker container exec -i -t dck_influxdb influx query 'from(bucket:"import_test_rust") |> range(start:-1y) |> drop(columns:["_start", "_stop"])' --raw --skip-verify | head -n 10
 #
 # #group,false,false,false,false,true,true,true,true,true,true,true
@@ -125,7 +128,6 @@ csv_annotated = '{measurement},{host},{machine},{sensor_id},{sensor_carrier},{se
 # ,,0,2021-11-17T07:50:02.449Z,74,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
 # ,,0,2021-11-17T07:51:32.246Z,75,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
 #,,0,2021-11-17T07:52:12.813Z,74,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
-#
 #
 # CSV data CAN NOT BE WRITTEN via API -> only LINE_PROTOCOL format
 #
@@ -142,10 +144,14 @@ csv_annotated = '{measurement},{host},{machine},{sensor_id},{sensor_carrier},{se
 #
 
 [template.sensors]
+# $dpkg -l|egrep lm-sensors
+# ii  lm-sensors                            1:3.6.0-7                              amd64        utilities to read temperature/voltage/fan sensors
 program = "/usr/bin/sensors"
 param_1 = "-j"
 
 [template.curl]
+# $ dpkg -l|egrep curl
+# ii  curl                                  7.74.0-1.3+b1                          amd64        command line tool for transferring data with URL syntax
 program = "/usr/bin/curl"
 param_insecure = "--insecure"
 param_request = "--request"
@@ -166,6 +172,7 @@ influx_lp = "{measurement},host={host},Machine={machine_id},SensorId={sensor_id}
 [template.flux]
 query_verify_record_range_start = "-1h"
 
+# drop few collumns for better reading
 query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"SensorId\"] == \"{sensor_id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"SensorCarrier\", \"SensorValid\", \"_field\"]) |> limit(n:1) |> group()"
 
 query_verify_record_suffix = " |> count()"
