@@ -231,6 +231,8 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
+//#[allow(unused_must_use)]
+#[allow(unused_variables)]
 pub fn parse_sensors_data(config: &TomlConfig,
                           ts_ms: i64,
                           dtif: String,
@@ -343,111 +345,31 @@ value: {v}",
                     }
                 }
             }
-
-            /*
-            match full_path.exists() {
-                true => (),
-                false => println!("\n#will create: {}", full_path.display()),
-            };
-             */
-
-            /* // START 
-            if !full_path.exists() {
-                println!("\n#!!! WILL CREATE DIR: {}", full_path.display());
-                fs::create_dir_all(&full_path); // TEST !Err !panic
-                
-            } else { println!("\n#DIR READY: {}", full_path.display()); }
-            
-            let today_file_name = full_path.join(format!("{}_{}.csv",
-                                                         today_file_name,
-                                                         &config.name,
-            ));
-            
-            if !today_file_name.exists() {
-                println!("\n#!!! WILL WRITE HEADER: {}", today_file_name.display());
-
-                let file = match File::create(&today_file_name) {
-                    Err(why) => panic!("couldn't create {}: {}",
-                                       &today_file_name.display(),
-                                       why),
-                    Ok(file) => file,
-                };
-
-                /* 
-                match file.write_all(String::from(&config.template.csv.annotated_datatype).as_bytes()) {
-                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
-                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
-                }
-
-                // DESTROY ORIGINAL FILE 
-                match file.write_all(String::from(&config.template.csv.annotated_header).as_bytes()) {
-                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
-                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
-                }
-                 */
-
-                let mut file = fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open(&today_file_name)
-                    .unwrap();
-
-                writeln!(file, "{}", &config.template.csv.annotated_datatype);
-                writeln!(file, "{}", &config.template.csv.annotated_header); 
-                
-                //file.write_all(&config.template.csv.annotated_datatype.as_bytes());
-                //file.write_all(&config.template.csv.annotated_header.as_bytes());
-
-                
-            } else {
-                println!("\n# WILL WRITE JUST DATA: {}", today_file_name.display());
-            }
-            
-            println!("\n#FILE_NAME:\n{}\n{}\nPATH: {:?}\nTODAY: {:#?}",
-                     &config.work_dir,
-                     &config.backup.dir,
-                     full_path,
-                     today_file_name,
-            );
-
-            println!("\n#CSV_ANNOTATED:\n{}\n{}",
-                     &config.template.csv.annotated_datatype,
-                     &config.template.csv.annotated_header,
-            );
-
-            // CSV ANNOTATED
-
-            let mut file = fs::OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open(&today_file_name)
-                .unwrap();
-
-            */ // END
-
         }
     }
 
+    /*
+    match full_path.exists() {
+        true => (),
+        false => println!("\n#will create: {}", full_path.display()),
+    };
+    */
+    
     // BACK_UP file WRITE 
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
-
-    // START 
+    // DIR CREATE if not EXISTS
     if !full_path.exists() {
-        println!("\n#!!! WILL CREATE DIR: {}", full_path.display());
         fs::create_dir_all(&full_path); // TEST !Err !panic
-                
-    } else { println!("\n#DIR READY: {}", full_path.display()); }
+    }
 
-    
     let today_file_name = full_path.join(format!("{}_{}.csv",
                                                  today_file_name,
                                                  &config.name,
     ));
 
+    // FILE CREATE or WRITE
     if !today_file_name.exists() {
-        println!("\n#!!! WILL WRITE HEADER: {}", today_file_name.display());
-
         let file = match File::create(&today_file_name) {
             Err(why) => panic!("couldn't create {}: {}",
                                &today_file_name.display(),
@@ -455,68 +377,39 @@ value: {v}",
             Ok(file) => file,
         };
 
-                /* 
-                match file.write_all(String::from(&config.template.csv.annotated_datatype).as_bytes()) {
-                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
-                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
-                }
-
-                // DESTROY ORIGINAL FILE 
-                match file.write_all(String::from(&config.template.csv.annotated_header).as_bytes()) {
-                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
-                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
-                }
-                 */
-
-        let mut file = fs::OpenOptions::new()
+        let mut file = fs::OpenOptions::new() // LEARN BETTER SOLUTION -> LESS CODE
             .write(true)
             .append(true)
             .open(&today_file_name)
             .unwrap();
 
         writeln!(file, "{}", &config.template.csv.annotated_datatype);
-        writeln!(file, "{}", &config.template.csv.annotated_header); 
-                
-        //file.write_all(&config.template.csv.annotated_datatype.as_bytes());
-        //file.write_all(&config.template.csv.annotated_header.as_bytes());
+        writeln!(file, "{}", &config.template.csv.annotated_header);
 
-                
-    } else {
-        println!("\n# WILL WRITE JUST DATA: {}", today_file_name.display());
+        println!("\n#CSV_ANNOTATED:\n{}\n{}",
+                 &config.template.csv.annotated_datatype,
+                 &config.template.csv.annotated_header,
+        );
     }
-            
-    println!("\n#FILE_NAME:\n{}\n{}\nPATH: {:?}\nTODAY: {:#?}",
-             &config.work_dir,
-             &config.backup.dir,
-             full_path,
-             today_file_name,
-    );
-
-    println!("\n#CSV_ANNOTATED:\n{}\n{}",
-             &config.template.csv.annotated_datatype,
-             &config.template.csv.annotated_header,
-    );
+    else {
+        println!("\n#CSV_ANNOTATED:");
+    } 
 
     // CSV ANNOTATED
-    
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
         .open(&today_file_name)
         .unwrap();
     
-
-    // RESULT_LIST outside single_influx
-    println!("\n#RESULT_LIST:");
-
+    // RESULT_LIST
     for v in result_list {
         let csv_record = prepare_csv_record_format(&config,
                                                    &v,
         );
+        
         println!("{}", &csv_record);
         
-        //fs::write(&today_file_name, &csv_record).expect("Unable to write file");
-        //file.write_all(&csv_record.as_bytes());
         writeln!(file, "{}", &csv_record);
     }
 }
