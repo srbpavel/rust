@@ -1,4 +1,4 @@
-#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number,double
+#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number
 m,host,Machine,SensorId,SensorCarrier,SensorValid,Temperature,time
 temperature,spongebob,spongebob,0,cargo,true,58.0,1637081701930
 temperature,spongebob,spongebob,1,cargo,true,53.0,1637081701930

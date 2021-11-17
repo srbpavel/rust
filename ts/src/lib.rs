@@ -27,7 +27,8 @@ pub struct TomlConfig {
     pub flag: Flag,
     pub delay: Delay,
     pub template: Template,
-
+    pub backup: Backup,
+    
     // VEC
     pub all_influx: AllInflux,
     pub all_sensors: AllSensors,
@@ -59,6 +60,12 @@ pub struct Flag {
         
     pub run_egrep: bool,
     pub debug_egrep: bool,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Backup {
+    pub dir: String,
 }
 
 

@@ -37,10 +37,8 @@ fn main() {
     }
     
     // TIMESTAMP
-    //let ts_ms: i64 = timestamp::ts_now(new_config.flag.debug_ts);
     let dt = timestamp::ts_now(new_config.flag.debug_ts);
     println!("\n#TS:\n{:#?}\n", dt);
-    //let ts_ms: i64 = dt.ts;
 
     // DEBUG: ALL_INFLUX
     if new_config.flag.debug_influx_instances {
@@ -75,5 +73,6 @@ fn main() {
                                     //ts_ms,
                                     dt.ts,
                                     dt.local_influx_format,
+                                    dt.today_file_name,
     );
 }

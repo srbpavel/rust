@@ -5,6 +5,7 @@ pub struct Dt {
     pub ts: i64,
     //pub local: DateTime,
     pub local_influx_format: String,
+    pub today_file_name: String,
 }
 
 
@@ -23,6 +24,12 @@ pub fn ts_now(debug: bool) -> Dt {
                                       local.minute(),
                                       local.second(),
                                       &format!("{:09}", local.nanosecond())[0..3],
+    );
+
+    let today_file_name = format!("{:04}_{:02.}_{:02.}",
+                                  local.year(),
+                                  local.month(),
+                                  local.day(),
     );
 
     //println!("\n#DATE_TIME_INFLUX_FORMAT: {}", local_influx_format);
@@ -56,7 +63,7 @@ ms:     {l_ts_ms}",
     }
     //return ts
     //return Dt {ts, local, local_influx_format};
-    return Dt {ts, local_influx_format};
+    return Dt {ts, local_influx_format, today_file_name};
 }
 
 

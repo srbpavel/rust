@@ -8,8 +8,15 @@ use ts::TomlConfig;
 use ts::Influx;
 use ts::Sensor;
 
+use std::path::Path;
+use std::fs;
+use std::fs::File;
+//use std::io::prelude::*; // K CEMU ?
+use std::io::Write;
+//use std::fs::OpenOptions;
 
-// /*
+
+// CSV
 #[derive(Debug)]
 pub struct Record {
     pub ts: i64,
@@ -21,23 +28,33 @@ pub struct Record {
     pub measurement: String,
     pub host: String,
 }
-// */
+
+
+/*
+impl PartialEq for Record
+{
+    fn eq(&self, other: &Self) -> bool {
+        //self.ts == other.ts && self.id.eq(&other.id)
+        self.id.eq(&String::from(&other.id))
+    }
+}
+*/
 
 
 pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &Record) -> String {
 
     let csv_record_template = String::from(&config.template.csv.csv_annotated);
-
     let mut csv_record = HashMap::new();
+
     csv_record.insert("measurement".to_string(), String::from(&record.measurement));
     csv_record.insert("host".to_string(), String::from(&record.host));
     csv_record.insert("machine".to_string(), String::from(&record.machine));
     csv_record.insert("sensor_carrier".to_string(), String::from(&record.carrier));
     csv_record.insert("sensor_valid".to_string(), String::from(&record.valid.to_string()));
     csv_record.insert("ts".to_string(), String::from(&record.ts.to_string()));
-    csv_record.insert("sensor_id".to_string(), record.id.to_string()); // SENSOR_ID
-    csv_record.insert("temperature_decimal".to_string(), String::from(&record.temperature_decimal.to_string())); // TEMPERATURE_DECIMAL
+    csv_record.insert("sensor_id".to_string(), record.id.to_string());
+    csv_record.insert("temperature_decimal".to_string(), String::from(&record.temperature_decimal.to_string()));
 
     return strfmt(&csv_record_template, &csv_record).unwrap()
 }
@@ -64,7 +81,7 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
     flux.insert("measurement".to_string(), String::from(&single_influx.measurement));
     flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
     flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
-    flux.insert("dtif".to_string(), String::from(dtif)); // RFC3339 date_time format -> 2021-11-16T13:20:10.233Z
+    flux.insert("dtif".to_string(), String::from(dtif)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
     
     return strfmt(&flux_template, &flux).unwrap()
 }
@@ -159,8 +176,8 @@ pub fn prepare_sensor_format(config: &TomlConfig,
     lp.insert("sensor_carrier".to_string(), String::from(&influx_inst.carrier));
     lp.insert("sensor_valid".to_string(), String::from(&influx_inst.flag_valid_default.to_string()));
     lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
-    lp.insert("sensor_id".to_string(), sensor_inst.name.to_string()); // SENSOR_ID
-    lp.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // TEMPERATURE_DECIMAL
+    lp.insert("sensor_id".to_string(), sensor_inst.name.to_string());
+    lp.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string()));
 
     return strfmt(&lp_template, &lp).unwrap()
 }
@@ -217,7 +234,11 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
-pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
+pub fn parse_sensors_data(config: &TomlConfig,
+                          ts_ms: i64,
+                          dtif: String,
+                          today_file_name: String) {
+    
     // OS_CMD <- LM-SENSORS
     let sensors_stdout = os_call_sensors(&config);
 
@@ -229,8 +250,9 @@ pub fn parse_sensors_data(config: &TomlConfig, ts_ms: i64, dtif: String) {
         if single_influx.status {
 
             // RESULT_LIST
-            let mut result_list = Vec::new();
-
+            //let mut result_list = Vec::new();
+            let mut result_list:Vec<Record> = Vec::new();
+            
             let (influx_uri_write,
                  influx_uri_query,
                  influx_auth,
@@ -268,10 +290,7 @@ value: {v}",
                     let single_sensor_lp = prepare_sensor_format(&config,
                                                                  &single_influx,
                                                                  &single_sensor,
-
-                                                                 //&sensors_json,
                                                                  json_pointer_value.to_string(),
-
                                                                  //&dt.ts);
                                                                  &ts_ms);
 
@@ -291,8 +310,14 @@ value: {v}",
                         host: config.host.to_string(),
                     };
 
-                    //println!("\n#RECORD:\n{:#?}", single_record);
-
+                    // WRITE -> Vec<Record>
+                    /*
+                    if result_list.contains(&single_record) { 
+                        println!("iam_there");
+                    } else {
+                        println!("not_here");
+                        result_list.push(single_record) } 
+                    */
                     result_list.push(single_record);
                 
                     // OS_CMD <- CURL
@@ -327,24 +352,98 @@ value: {v}",
                 }
             }
 
+            let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
+
+            /*
+            match full_path.exists() {
+                true => (),
+                false => println!("\n#will create: {}", full_path.display()),
+            };
+             */
+
+            /* // START 
+            if !full_path.exists() {
+                println!("\n#!!! WILL CREATE DIR: {}", full_path.display());
+                fs::create_dir_all(&full_path); // TEST !Err !panic
+                
+            } else { println!("\n#DIR READY: {}", full_path.display()); }
+            
+            let today_file_name = full_path.join(format!("{}_{}.csv",
+                                                         today_file_name,
+                                                         &config.name,
+            ));
+            
+            if !today_file_name.exists() {
+                println!("\n#!!! WILL WRITE HEADER: {}", today_file_name.display());
+
+                let file = match File::create(&today_file_name) {
+                    Err(why) => panic!("couldn't create {}: {}",
+                                       &today_file_name.display(),
+                                       why),
+                    Ok(file) => file,
+                };
+
+                /* 
+                match file.write_all(String::from(&config.template.csv.annotated_datatype).as_bytes()) {
+                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
+                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
+                }
+
+                // DESTROY ORIGINAL FILE 
+                match file.write_all(String::from(&config.template.csv.annotated_header).as_bytes()) {
+                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
+                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
+                }
+                 */
+
+                let mut file = fs::OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(&today_file_name)
+                    .unwrap();
+
+                writeln!(file, "{}", &config.template.csv.annotated_datatype);
+                writeln!(file, "{}", &config.template.csv.annotated_header); 
+                
+                //file.write_all(&config.template.csv.annotated_datatype.as_bytes());
+                //file.write_all(&config.template.csv.annotated_header.as_bytes());
+
+                
+            } else {
+                println!("\n# WILL WRITE JUST DATA: {}", today_file_name.display());
+            }
+            
+            println!("\n#FILE_NAME:\n{}\n{}\nPATH: {:?}\nTODAY: {:#?}",
+                     &config.work_dir,
+                     &config.backup.dir,
+                     full_path,
+                     today_file_name,
+            );
+
             println!("\n#CSV_ANNOTATED:\n{}\n{}",
                      &config.template.csv.annotated_datatype,
                      &config.template.csv.annotated_header,
             );
 
-            /*
-            println!("{}",
-                     &config.template.csv.csv_annotated,
-            );
-            */
-            
-            //println!("\n#RESULT_LIST:");
+            // CSV ANNOTATED
+
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open(&today_file_name)
+                .unwrap();
+
+            */ // END
+        
             for v in result_list {
                 let csv_record = prepare_csv_record_format(&config,
                                                            &v,
                 );
-                //println!("{:#?}", v);
-                println!("{}", csv_record);
+                println!("{}", &csv_record);
+
+                //fs::write(&today_file_name, &csv_record).expect("Unable to write file");
+                //file.write_all(&csv_record.as_bytes());
+                /* writeln!(file, "{}", &csv_record); */
             }
         }
     }
