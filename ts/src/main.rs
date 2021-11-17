@@ -38,33 +38,32 @@ fn main() {
     
     // DT Struct
     let dt = timestamp::ts_now(new_config.flag.debug_ts);
-    //println!("\n#TS:\n{:#?}\n", dt);
 
     // DEBUG: ALL_INFLUX
     if new_config.flag.debug_influx_instances {
         for single_influx in &new_config.all_influx.values {
-            if single_influx.status {
-                println!("INFLUX [true]: {}",
-                         single_influx.name);
-            }
-            else {
-                println!("INFLUX [false]: {}",
-                         single_influx.name);
-            }
+            let status = match single_influx.status {
+                true => "true",
+                false => "false",
+            };
+
+            println!("INFLUX [{}]: {}",
+                     status,
+                     single_influx.name);
         }
     }
 
     // DEBUG: ALL_SENSOR
     if new_config.flag.debug_sensor_instances {
         for single_sensor in &new_config.all_sensors.values {
-            if single_sensor.status {
-                println!("SENSOR [true]: {}",
-                         single_sensor.name);
-            }
-            else {
-                println!("SENSOR [false]: {}",
-                         single_sensor.name);
-            }
+            let status = match single_sensor.status {
+                true => "true",
+                false => "false",
+            };
+
+            println!("SENSOR [{}]: {}",
+                     status,
+                     single_sensor.name);
         }
     }
     

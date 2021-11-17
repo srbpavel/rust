@@ -143,7 +143,7 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
                                  single_influx: &Influx,
                                  single_sensor: &Sensor,
                                  temperature_decimal: String,
-                                 local_influx_format: &String) -> String {
+                                 utc_influx_format: &String) -> String {
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
@@ -159,7 +159,7 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
     flux.insert("measurement".to_string(), String::from(&single_influx.measurement));
     flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
     flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
-    flux.insert("dtif".to_string(), String::from(local_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+    flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
   
     return strfmt(&flux_template, &flux).unwrap()
 }
@@ -402,7 +402,7 @@ value: {v}",
                         &single_influx,
                         &single_sensor,
                         json_pointer_value.to_string(),
-                        &dt.local_influx_format);
+                        &dt.utc_influx_format);
 
                     if config.flag.debug_flux_query {
                         println!("\n#QUERY:\n{}",
