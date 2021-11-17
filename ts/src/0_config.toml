@@ -1,7 +1,6 @@
 name = 'laptop_core_temperature'
-#influx: host TAG
+# influx: host TAG
 host = 'spongebob'
-#future_use
 work_dir = '/home/conan/soft/rust/ts'
 
 
@@ -9,7 +8,7 @@ work_dir = '/home/conan/soft/rust/ts'
 debug_new_config = false
 
 debug_ts = false
-#future_use
+# future_use
 debug_ts_to_dt = false
 
 debug_sensor_output = false
@@ -19,26 +18,35 @@ debug_pointer_output = false
 
 debug_influx_uri = true # false
 debug_influx_auth = false
-debug_influx_lp = true # false
+debug_influx_lp = false
 debug_influx_output = false
 debug_influx_instances = false
 
+# query influx to verify write was successfull
 run_flux_verify_record = false
+# add |> count() to [template.flux].query_verify_record
 add_flux_query_verify_record_suffix = true # false
+
 debug_flux_query = false
 debug_flux_result = true # false
 
+# search for QUERY in this CONFIG_FILE
 run_egrep = false
 debug_egrep = true # false
 
 
-#future_use
+# future_use
 [delay]
 second = 60
 minute = 1
 
+# we backup always, no flag to turn off
+[backup]
+dir = "csv"
+file_extension = ".csv"
 
-#vector of influx: Struct instances
+
+# vector of influx: Struct instances
 [all_influx]
 #name: "default"		-> instance_id
 #status: true			-> on/off
@@ -59,19 +67,19 @@ minute = 1
 #carrier: "cargo" 	     	-> future_use
 #flag_valid_default:  true	-> for flux filtering invalid data before delete
 
-#DO NOT BREAK LINES IN Struct AS IT WILL !panic
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {name = "default", status = true, secure = "https", server = "ruth", port = 8086, bucket = "test_rust", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
        {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_test_rust", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", measurement = "temperature", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true}]
 
 
-#vector of sensor: Struct instances
+# vector of sensor: Struct instances
 [all_sensors]
 #status: on/off
 #name: influx SensorId TAG
 #pointer: json path / influx TemperatureDecimal FIELD
 
-#DO NOT BREAK LINES IN Struct AS IT WILL !panic
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
        {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
@@ -81,6 +89,58 @@ values = [
 
 
 [template]
+# BACKUP DATA in CSV_ANNOTATED format
+[template.csv]
+annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
+# HAVE TO BE same as TAGs/FIELDs [template.curl].influx_lp otherwise you can make mistake / LEARN + FIX
+# Machine
+# SensorId
+# SensorCarrier
+# SensorValid
+# TemperatureDecimal
+annotated_header = "m,host,Machine,SensorId,SensorCarrier,SensorValid,TemperatureDecimal,time"
+csv_annotated = '{measurement},{host},{machine},{sensor_id},{sensor_carrier},{sensor_valid},{temperature_decimal},{ts}'
+
+# IMPORT_from_backup -> EXPORT -> compare/verify
+#
+# @spongebob$ scp -P 11472 /home/conan/soft/rust/ts/csv/2021_11_17_laptop_core_temperature.csv conan@ruth:/home/conan/soft/docker/dck_influxdb_2_0/dck_influxdb_volume/rust/
+#
+# ruth$ head -n5 /home/conan/soft/docker/dck_influxdb_2_0/dck_influxdb_volume/rust/2021_11_17_laptop_core_temperature.csv 
+# #datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number
+# m,host,Machine,SensorId,SensorCarrier,SensorValid,TemperatureDecimal,time
+# temperature,spongebob,spongebob,0,cargo,true,75.0,1637135171004
+# temperature,spongebob,spongebob,1,cargo,true,69.0,1637135171004
+# temperature,spongebob,spongebob,2,cargo,true,51.0,1637135171004
+#
+# @ruth$ docker container exec -i -t dck_influxdb influx write --bucket import_test_rust --precision ms --format csv --file /var/lib/influxdb2/rust/2021_11_17_laptop_core_temperature.csv --skip-verify
+# ruth$ docker container exec -i -t dck_influxdb influx query 'from(bucket:"import_test_rust") |> range(start:-1y) |> drop(columns:["_start", "_stop"])' --raw --skip-verify | head -n 10
+#
+# #group,false,false,false,false,true,true,true,true,true,true,true
+# #datatype,string,long,dateTime:RFC3339,double,string,string,string,string,string,string,string
+# #default,_result,,,,,,,,,,
+# ,result,table,_time,_value,Machine,SensorCarrier,SensorId,SensorValid,_field,_measurement,host
+# ,,0,2021-11-17T07:46:11.004Z,75,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+# ,,0,2021-11-17T07:46:14.094Z,73,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+# ,,0,2021-11-17T07:47:16.864Z,73,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+# ,,0,2021-11-17T07:50:02.449Z,74,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+# ,,0,2021-11-17T07:51:32.246Z,75,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+#,,0,2021-11-17T07:52:12.813Z,74,spongebob,cargo,0,true,TemperatureDecimal,temperature,spongebob
+#
+#
+# CSV data CAN NOT BE WRITTEN via API -> only LINE_PROTOCOL format
+#
+# https://docs.influxdata.com/influxdb/v2.1/write-data/developer-tools/api/
+#
+# SINGLE_RECORD
+# $ curl --insecure --request POST "https://ruth:8086/api/v2/write?org=foookin_paavel&bucket=import_test_rust&precision=ms" --header "Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==" --header "Content-Type: text/plain; charset=utf-8" --header "Accept: application/json" --data-binary 'temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=61.0 1637082830396'
+#
+# MULTIPLE RECORDS -> --data-binary $'' and \n
+# $ curl --insecure --request POST "https://ruth:8086/api/v2/write?org=foookin_paavel&bucket=import_test_rust&precision=ms" --header "Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==" --header "Content-Type: text/plain; charset=utf-8" --header "Accept: application/json" --data-binary $'temperature,host=spongebob,Machine=spongebob,SensorId=2,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=48.0 1637083201622\ntemperature,host=spongebob,Machine=spongebob,SensorId=3,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=55.0 1637083201622'
+#
+# QUERY
+# from(bucket: "import_test_rust") |> range(start: -24h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> drop(columns:["_start", "_stop", "host", "_measurement"]) |> sort(columns: ["_time"], desc:true) |> limit(n:20)
+#
+
 [template.sensors]
 program = "/usr/bin/sensors"
 param_1 = "-j"
@@ -110,13 +170,26 @@ query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> fi
 
 query_verify_record_suffix = " |> count()"
 
-
-#/usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group()'
-
+#
+# INFLUX API query CALL via CURL
+#
+#$ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -7d) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier","SensorValid", "_field"]) |> limit(n:1)'
+#
+# RESULT
+#
 #,result,table,_time,_value,Machine,SensorId
 #,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
-
-#/usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group() |> count()'
-
+#
+# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group()'
+#
+# RESULT |> group()
+#
+#,result,table,_time,_value,Machine,SensorId
+#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
+#
+# RESULT |> count()
+#
+# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group() |> count()'
+#
 #,result,table,_value
 #,_result,0,1
