@@ -38,6 +38,74 @@ impl PartialEq for Record
 }
 
 
+pub fn backup_data(config: &TomlConfig,
+                   result_list: Vec<Record>,
+                   today_file_name: String) {
+
+    // START
+        
+    // BACK_UP file WRITE 
+    let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
+
+    // DIR CREATE if not EXISTS
+    if !full_path.exists() {
+        fs::create_dir_all(&full_path); // TEST !Err !panic
+    }
+
+    let today_file_name = full_path.join(format!("{}_{}.csv",
+                                                 today_file_name,
+                                                 &config.name,
+    ));
+
+    // FILE CREATE or WRITE
+    if !today_file_name.exists() {
+        let file = match File::create(&today_file_name) {
+            Err(why) => panic!("couldn't create {}: {}",
+                               &today_file_name.display(),
+                               why),
+            Ok(file) => file,
+        };
+
+        let mut file = fs::OpenOptions::new() // LEARN BETTER SOLUTION -> LESS CODE
+            .write(true)
+            .append(true)
+            .open(&today_file_name)
+            .unwrap();
+
+        writeln!(file, "{}", &config.template.csv.annotated_datatype);
+        writeln!(file, "{}", &config.template.csv.annotated_header);
+
+        println!("\n#CSV_ANNOTATED:\n{}\n{}",
+                 &config.template.csv.annotated_datatype,
+                 &config.template.csv.annotated_header,
+        );
+    }
+    else {
+        println!("\n#CSV_ANNOTATED:");
+    } 
+
+    // CSV ANNOTATED
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(&today_file_name)
+        .unwrap();
+    
+    // RESULT_LIST
+    for v in result_list {
+        let csv_record = prepare_csv_record_format(&config,
+                                                   &v,
+        );
+        
+        println!("{}", &csv_record);
+        
+        writeln!(file, "{}", &csv_record);
+
+     // END
+    }
+}
+
+
 pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &Record) -> String {
 
@@ -354,7 +422,14 @@ value: {v}",
         false => println!("\n#will create: {}", full_path.display()),
     };
     */
-    
+
+    // BACKUP
+    backup_data(&config,
+                result_list,
+                today_file_name)
+
+    /* // START
+        
     // BACK_UP file WRITE 
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
@@ -411,5 +486,7 @@ value: {v}",
         println!("{}", &csv_record);
         
         writeln!(file, "{}", &csv_record);
+
     }
+    */ // END
 }
