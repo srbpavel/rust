@@ -1,3 +1,4 @@
+use std::process;
 use std::process::{Command};
 
 extern crate strfmt;
@@ -11,9 +12,7 @@ use ts::Sensor;
 use std::path::Path;
 use std::fs;
 use std::fs::File;
-//use std::io::prelude::*; // K CEMU ?
 use std::io::Write;
-//use std::fs::OpenOptions;
 
 
 // CSV
@@ -30,6 +29,7 @@ pub struct Record {
 }
 
 
+// STRUCT compare via contains
 impl PartialEq for Record
 {
     fn eq(&self, other: &Self) -> bool {
@@ -42,14 +42,14 @@ pub fn backup_data(config: &TomlConfig,
                    result_list: Vec<Record>,
                    today_file_name: String) {
 
-    // START
-        
-    // BACK_UP file WRITE 
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
     // DIR CREATE if not EXISTS
     if !full_path.exists() {
-        fs::create_dir_all(&full_path); // TEST !Err !panic
+        fs::create_dir_all(&full_path).unwrap_or_else(|err| {
+            eprintln!("\nEXIT: CREATE DIR failed\nREASON: >>> {}", err);
+            process::exit(1);
+        });
     }
 
     let today_file_name = full_path.join(format!("{}_{}.csv",
@@ -57,32 +57,43 @@ pub fn backup_data(config: &TomlConfig,
                                                  &config.name,
     ));
 
-    // FILE CREATE or WRITE
+    // FILE CREATE or APPEND
+    println!("\n#CSV_ANNOTATED:");
+
     if !today_file_name.exists() {
-        let file = match File::create(&today_file_name) {
-            Err(why) => panic!("couldn't create {}: {}",
-                               &today_file_name.display(),
-                               why),
+
+        let mut file = match File::create(&today_file_name) {
+        //let mut file = match File::create("/root/rust_text.info") { // learn to TEST this
+            Err(why) => {
+                eprintln!("couldn't create {}: {}",
+                         &today_file_name.display(),
+                         why);
+                
+                fs::OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(&today_file_name)
+                    .unwrap()
+            },
+            
             Ok(file) => file,
         };
 
-        let mut file = fs::OpenOptions::new() // LEARN BETTER SOLUTION -> LESS CODE
-            .write(true)
-            .append(true)
-            .open(&today_file_name)
-            .unwrap();
+        writeln!(file, "{}", &config.template.csv.annotated_datatype).unwrap_or_else(|err| {
+            eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+            process::exit(1);
+        });
 
-        writeln!(file, "{}", &config.template.csv.annotated_datatype);
-        writeln!(file, "{}", &config.template.csv.annotated_header);
+        writeln!(file, "{}", &config.template.csv.annotated_header).unwrap_or_else(|err| {
+            eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+            process::exit(1);
+        });
 
-        println!("\n#CSV_ANNOTATED:\n{}\n{}",
+        println!("{}\n{}",
                  &config.template.csv.annotated_datatype,
                  &config.template.csv.annotated_header,
         );
     }
-    else {
-        println!("\n#CSV_ANNOTATED:");
-    } 
 
     // CSV ANNOTATED
     let mut file = fs::OpenOptions::new()
@@ -92,16 +103,17 @@ pub fn backup_data(config: &TomlConfig,
         .unwrap();
     
     // RESULT_LIST
-    for v in result_list {
+    for single_record in result_list {
         let csv_record = prepare_csv_record_format(&config,
-                                                   &v,
+                                                   &single_record,
         );
         
         println!("{}", &csv_record);
         
-        writeln!(file, "{}", &csv_record);
-
-     // END
+        writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+            eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+            process::exit(1);
+        });
     }
 }
 
@@ -336,6 +348,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
+
                 // JSON POINTER
                 let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
                 
@@ -377,7 +390,7 @@ value: {v}",
                         host: config.host.to_string(),
                     };
 
-                    // WRITE -> Vec<Record>
+                    // RECORD -> Vec<Record>
                     if !result_list.contains(&single_record) { 
                         result_list.push(single_record)
                     }
@@ -411,82 +424,14 @@ value: {v}",
                                           &influx_content,
                                           &influx_query);
                     }
-                }
-            }
-        }
-    }
-
-    /*
-    match full_path.exists() {
-        true => (),
-        false => println!("\n#will create: {}", full_path.display()),
-    };
-    */
+                } /* single_sensor.status */
+            } /* all_sensors.values */
+        } /* single_influx.status*/
+    } /* all_influx.values */
 
     // BACKUP
     backup_data(&config,
                 result_list,
                 today_file_name)
 
-    /* // START
-        
-    // BACK_UP file WRITE 
-    let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
-
-    // DIR CREATE if not EXISTS
-    if !full_path.exists() {
-        fs::create_dir_all(&full_path); // TEST !Err !panic
-    }
-
-    let today_file_name = full_path.join(format!("{}_{}.csv",
-                                                 today_file_name,
-                                                 &config.name,
-    ));
-
-    // FILE CREATE or WRITE
-    if !today_file_name.exists() {
-        let file = match File::create(&today_file_name) {
-            Err(why) => panic!("couldn't create {}: {}",
-                               &today_file_name.display(),
-                               why),
-            Ok(file) => file,
-        };
-
-        let mut file = fs::OpenOptions::new() // LEARN BETTER SOLUTION -> LESS CODE
-            .write(true)
-            .append(true)
-            .open(&today_file_name)
-            .unwrap();
-
-        writeln!(file, "{}", &config.template.csv.annotated_datatype);
-        writeln!(file, "{}", &config.template.csv.annotated_header);
-
-        println!("\n#CSV_ANNOTATED:\n{}\n{}",
-                 &config.template.csv.annotated_datatype,
-                 &config.template.csv.annotated_header,
-        );
-    }
-    else {
-        println!("\n#CSV_ANNOTATED:");
-    } 
-
-    // CSV ANNOTATED
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(&today_file_name)
-        .unwrap();
-    
-    // RESULT_LIST
-    for v in result_list {
-        let csv_record = prepare_csv_record_format(&config,
-                                                   &v,
-        );
-        
-        println!("{}", &csv_record);
-        
-        writeln!(file, "{}", &csv_record);
-
-    }
-    */ // END
 }

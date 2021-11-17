@@ -14,7 +14,7 @@ mod measurement;
 
 
 fn main() {
-    // ARGS
+    // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
          eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
         process::exit(1);
@@ -70,9 +70,9 @@ fn main() {
     
     // SENSOR
     measurement::parse_sensors_data(&new_config,
-                                    //ts_ms,
                                     dt.ts,
                                     dt.local_influx_format,
                                     dt.today_file_name,
+                                    //ts_ms,
     );
 }
