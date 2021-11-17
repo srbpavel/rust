@@ -316,12 +316,12 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // OS_CMD <- LM-SENSORS
     let sensors_stdout = os_call_sensors(&config);
 
-    // JSON 
-    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-
     // RESULT_LIST
     let mut result_list:Vec<Record> = Vec::new();
     
+    // JSON 
+    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
+
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
@@ -334,7 +334,11 @@ pub fn parse_sensors_data(config: &TomlConfig,
                  influx_content ) = prepare_influx_format(&config, &single_influx); // TUPLE OF 5
             
             if config.flag.debug_influx_uri {
-                println!("\n#URI:\n{}\n{}", &influx_uri_write, &influx_uri_query);
+                println!("\n#URI<{n}>:\n{w}\n{q}",
+                         n=single_influx.name,
+                         w=&influx_uri_write,
+                         q=&influx_uri_query
+                );
             }
             
             if config.flag.debug_influx_auth {
@@ -344,9 +348,10 @@ pub fn parse_sensors_data(config: &TomlConfig,
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
 
-                // JSON POINTER
+                // JSON single POINTER
                 let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
-                
+
+                // DEBUG true/false SENSORS
                 if config.flag.debug_pointer_output {
                     println!("
 #POINTER_CFG:

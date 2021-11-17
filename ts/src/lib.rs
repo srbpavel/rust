@@ -311,7 +311,7 @@ pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
 
 impl CmdArgs {
     pub fn new(mut args: env::Args) -> Result<CmdArgs, &'static str> {
-        println!("#COMMAND: {:#?}",
+        println!("\n#COMMAND: {:#?}",
                  args);
 
         const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 PROGRAM
