@@ -30,15 +30,12 @@ pub struct Record {
 }
 
 
-/*
 impl PartialEq for Record
 {
     fn eq(&self, other: &Self) -> bool {
-        //self.ts == other.ts && self.id.eq(&other.id)
-        self.id.eq(&String::from(&other.id))
+        self.id.eq(&other.id)
     }
 }
-*/
 
 
 pub fn prepare_csv_record_format(config: &TomlConfig,
@@ -245,14 +242,14 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // JSON 
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
 
+    // RESULT_LIST
+    let mut result_list:Vec<Record> = Vec::new();
+    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
 
-            // RESULT_LIST
-            //let mut result_list = Vec::new();
-            let mut result_list:Vec<Record> = Vec::new();
-            
+            // ARGS for CURL
             let (influx_uri_write,
                  influx_uri_query,
                  influx_auth,
@@ -311,14 +308,9 @@ value: {v}",
                     };
 
                     // WRITE -> Vec<Record>
-                    /*
-                    if result_list.contains(&single_record) { 
-                        println!("iam_there");
-                    } else {
-                        println!("not_here");
-                        result_list.push(single_record) } 
-                    */
-                    result_list.push(single_record);
+                    if !result_list.contains(&single_record) { 
+                        result_list.push(single_record)
+                    }
                 
                     // OS_CMD <- CURL
                     os_call_curl(&config,
@@ -351,8 +343,6 @@ value: {v}",
                     }
                 }
             }
-
-            let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
             /*
             match full_path.exists() {
@@ -434,17 +424,99 @@ value: {v}",
                 .unwrap();
 
             */ // END
-        
-            for v in result_list {
-                let csv_record = prepare_csv_record_format(&config,
-                                                           &v,
-                );
-                println!("{}", &csv_record);
 
-                //fs::write(&today_file_name, &csv_record).expect("Unable to write file");
-                //file.write_all(&csv_record.as_bytes());
-                /* writeln!(file, "{}", &csv_record); */
-            }
         }
+    }
+
+    // BACK_UP file WRITE 
+    let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
+
+
+    // START 
+    if !full_path.exists() {
+        println!("\n#!!! WILL CREATE DIR: {}", full_path.display());
+        fs::create_dir_all(&full_path); // TEST !Err !panic
+                
+    } else { println!("\n#DIR READY: {}", full_path.display()); }
+
+    
+    let today_file_name = full_path.join(format!("{}_{}.csv",
+                                                 today_file_name,
+                                                 &config.name,
+    ));
+
+    if !today_file_name.exists() {
+        println!("\n#!!! WILL WRITE HEADER: {}", today_file_name.display());
+
+        let file = match File::create(&today_file_name) {
+            Err(why) => panic!("couldn't create {}: {}",
+                               &today_file_name.display(),
+                               why),
+            Ok(file) => file,
+        };
+
+                /* 
+                match file.write_all(String::from(&config.template.csv.annotated_datatype).as_bytes()) {
+                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
+                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
+                }
+
+                // DESTROY ORIGINAL FILE 
+                match file.write_all(String::from(&config.template.csv.annotated_header).as_bytes()) {
+                    Err(why) => panic!("couldn't write to {}: {}", &today_file_name.display(), why),
+                    Ok(_) => println!("successfully wrote to {}", &today_file_name.display())
+                }
+                 */
+
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&today_file_name)
+            .unwrap();
+
+        writeln!(file, "{}", &config.template.csv.annotated_datatype);
+        writeln!(file, "{}", &config.template.csv.annotated_header); 
+                
+        //file.write_all(&config.template.csv.annotated_datatype.as_bytes());
+        //file.write_all(&config.template.csv.annotated_header.as_bytes());
+
+                
+    } else {
+        println!("\n# WILL WRITE JUST DATA: {}", today_file_name.display());
+    }
+            
+    println!("\n#FILE_NAME:\n{}\n{}\nPATH: {:?}\nTODAY: {:#?}",
+             &config.work_dir,
+             &config.backup.dir,
+             full_path,
+             today_file_name,
+    );
+
+    println!("\n#CSV_ANNOTATED:\n{}\n{}",
+             &config.template.csv.annotated_datatype,
+             &config.template.csv.annotated_header,
+    );
+
+    // CSV ANNOTATED
+    
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(&today_file_name)
+        .unwrap();
+    
+
+    // RESULT_LIST outside single_influx
+    println!("\n#RESULT_LIST:");
+
+    for v in result_list {
+        let csv_record = prepare_csv_record_format(&config,
+                                                   &v,
+        );
+        println!("{}", &csv_record);
+        
+        //fs::write(&today_file_name, &csv_record).expect("Unable to write file");
+        //file.write_all(&csv_record.as_bytes());
+        writeln!(file, "{}", &csv_record);
     }
 }
