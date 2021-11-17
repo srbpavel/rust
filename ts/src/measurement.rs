@@ -5,17 +5,26 @@ extern crate strfmt;
 use strfmt::strfmt;
 use std::collections::HashMap;
 
-use ts::TomlConfig;
-use ts::Influx;
-use ts::Sensor;
-
 use std::path::Path;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 
 
-// CSV
+/*
+mod util;
+pub use util::ts as timestamp;
+*/
+
+//mod util;
+//pub use util::ts::{Dt};
+pub use crate::util::ts::{Dt};
+
+use ts::TomlConfig;
+use ts::Influx;
+use ts::Sensor;
+
+// BACKUP CVS 
 #[derive(Debug)]
 pub struct Record {
     pub ts: i64,
@@ -40,7 +49,7 @@ impl PartialEq for Record
 
 pub fn backup_data(config: &TomlConfig,
                    result_list: Vec<Record>,
-                   today_file_name: String) {
+                   dt: &Dt) {
 
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
@@ -53,29 +62,30 @@ pub fn backup_data(config: &TomlConfig,
     }
 
     let today_file_name = full_path.join(format!("{}_{}.csv",
-                                                 today_file_name,
+                                                 //today_file_name,
+                                                 &dt.today_file_name,
                                                  &config.name,
     ));
 
     // FILE CREATE or APPEND
-    println!("\n#CSV_ANNOTATED:");
-
+    if config.flag.debug_backup {
+        println!("\n#CSV_ANNOTATED:");
+    }
+    
     if !today_file_name.exists() {
 
-        let mut file = match File::create(&today_file_name) {
-        //let mut file = match File::create("/root/rust_text.info") { // learn to TEST this
+        let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
             Err(why) => {
-                eprintln!("couldn't create {}: {}",
+                eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
                          &today_file_name.display(),
                          why);
                 
                 fs::OpenOptions::new()
                     .write(true)
                     .append(true)
-                    .open(&today_file_name)
+                    .open(&today_file_name) // NO NEED TO TEST AS CREATED
                     .unwrap()
             },
-            
             Ok(file) => file,
         };
 
@@ -89,13 +99,14 @@ pub fn backup_data(config: &TomlConfig,
             process::exit(1);
         });
 
-        println!("{}\n{}",
-                 &config.template.csv.annotated_datatype,
-                 &config.template.csv.annotated_header,
-        );
+        if config.flag.debug_backup {
+            println!("{}\n{}",
+                     &config.template.csv.annotated_datatype,
+                     &config.template.csv.annotated_header,
+            );
+        }
     }
 
-    // CSV ANNOTATED
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
@@ -107,8 +118,10 @@ pub fn backup_data(config: &TomlConfig,
         let csv_record = prepare_csv_record_format(&config,
                                                    &single_record,
         );
-        
-        println!("{}", &csv_record);
+
+        if config.flag.debug_backup {
+            println!("{}", &csv_record);
+        }
         
         writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
             eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
@@ -141,7 +154,7 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
                                  single_influx: &Influx,
                                  single_sensor: &Sensor,
                                  temperature_decimal: String,
-                                 dtif: &String) -> String {
+                                 dt: &Dt) -> String {
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
@@ -158,8 +171,10 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
     flux.insert("measurement".to_string(), String::from(&single_influx.measurement));
     flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
     flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
-    flux.insert("dtif".to_string(), String::from(dtif)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
-    
+
+    //flux.insert("dtif".to_string(), String::from(dtif)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+    flux.insert("dtif".to_string(), String::from(&dt.local_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+  
     return strfmt(&flux_template, &flux).unwrap()
 }
 
@@ -242,7 +257,7 @@ pub fn prepare_sensor_format(config: &TomlConfig,
                              influx_inst: &Influx,
                              sensor_inst: &Sensor,
                              temperature_decimal: String,
-                             ts_ms: &i64) -> String {
+                             dt: &Dt) -> String {
 
     let lp_template = String::from(&config.template.curl.influx_lp);
 
@@ -252,7 +267,11 @@ pub fn prepare_sensor_format(config: &TomlConfig,
     lp.insert("machine_id".to_string(), String::from(&influx_inst.machine_id));
     lp.insert("sensor_carrier".to_string(), String::from(&influx_inst.carrier));
     lp.insert("sensor_valid".to_string(), String::from(&influx_inst.flag_valid_default.to_string()));
-    lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
+
+    //lp.insert("ts".to_string(), String::from(ts_ms.to_string()));
+    lp.insert("ts".to_string(), String::from(&dt.ts.to_string()));
+
+    
     lp.insert("sensor_id".to_string(), sensor_inst.name.to_string());
     lp.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string()));
 
@@ -314,9 +333,10 @@ pub fn prepare_influx_format(config: &TomlConfig,
 //#[allow(unused_must_use)]
 #[allow(unused_variables)]
 pub fn parse_sensors_data(config: &TomlConfig,
-                          ts_ms: i64,
-                          dtif: String,
-                          today_file_name: String) {
+                          dt: &Dt) {
+                          //ts_ms: i64,
+                          //dtif: String,
+                          //today_file_name: String) {
     
     // OS_CMD <- LM-SENSORS
     let sensors_stdout = os_call_sensors(&config);
@@ -371,8 +391,8 @@ value: {v}",
                                                                  &single_influx,
                                                                  &single_sensor,
                                                                  json_pointer_value.to_string(),
-                                                                 //&dt.ts);
-                                                                 &ts_ms);
+                                                                 &dt);
+                                                                 //&ts_ms);
 
                     if config.flag.debug_influx_lp {
                         println!("\n#LINE_PROTOCOL:\n{}", single_sensor_lp);
@@ -380,7 +400,10 @@ value: {v}",
 
                     // RECORD
                     let single_record = Record {
-                        ts: ts_ms,
+
+                        //ts: ts_ms,
+                        ts: dt.ts,
+                        
                         temperature_decimal: json_pointer_value.to_string(),
                         carrier: single_influx.carrier.to_string(),
                         id: single_sensor.name.to_string(),
@@ -408,7 +431,8 @@ value: {v}",
                         &single_influx,
                         &single_sensor,
                         json_pointer_value.to_string(),
-                        &dtif);
+                        //&dtif);
+                        &dt);
 
                     if config.flag.debug_flux_query {
                         println!("\n#QUERY:\n{}",
@@ -432,6 +456,7 @@ value: {v}",
     // BACKUP
     backup_data(&config,
                 result_list,
-                today_file_name)
+                //today_file_name)
+                &dt)
 
 }

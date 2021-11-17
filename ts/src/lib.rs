@@ -60,6 +60,8 @@ pub struct Flag {
         
     pub run_egrep: bool,
     pub debug_egrep: bool,
+
+    pub debug_backup: bool,
 }
 
 

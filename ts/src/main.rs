@@ -70,9 +70,9 @@ fn main() {
     
     // SENSOR
     measurement::parse_sensors_data(&new_config,
-                                    dt.ts,
-                                    dt.local_influx_format,
-                                    dt.today_file_name,
-                                    //ts_ms,
+                                    &dt,
+                                    //dt.ts,
+                                    //dt.local_influx_format,
+                                    //dt.today_file_name,
     );
 }
