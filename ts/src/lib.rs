@@ -105,13 +105,15 @@ pub struct Influx {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Template {
-    pub csv: TemplateCsv,
+    //pub csv: TemplateCsv,
     pub curl: TemplateCurl,
-    pub sensors: TemplateSensors,
+    //pub sensors: TemplateSensors,
+    pub temperature: TemplateTemperature,
     pub flux: TemplateFlux,
 }
 
 
+/*
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateCsv {
     pub tag_machine: String,
@@ -128,6 +130,7 @@ pub struct TemplateCsv {
     pub generic_lp: String,
     pub generic_query_verify_record: String,
 }
+*/
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -158,14 +161,32 @@ pub struct TemplateCurl {
 
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TemplateSensors {
+//pub struct TemplateSensors {
+pub struct TemplateTemperature {
+    pub measurement: String,
+
     pub program: String,
-    pub param_1: String,
+    pub args: Vec<String>,
+
+    pub tag_machine: String,
+    pub tag_id: String,
+    pub tag_carrier: String,
+    pub tag_valid: String,
+
+    pub field: String,
+
+    pub annotated_datatype: String,
+    pub annotated_header: String,
+    pub csv_annotated: String,
+
+    pub generic_lp: String,
+    pub generic_query_verify_record: String,
 }
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
+    pub group: String,
     pub status: bool,
     pub name: String,
     pub pointer: String,
@@ -177,7 +198,7 @@ pub struct AllSensors {
     //values: [i32; 3], // fixed array with three int's
     //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Sensor>,
-    pub measurement: String,
+    //pub measurement: String,
 }
 
 

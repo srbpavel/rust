@@ -14,8 +14,10 @@ use std::io::Write;
 
 pub use crate::util::ts::{Dt};
 
-use ts::TomlConfig;
+//use ts::TomlConfig;
+//use ts::TemplateTemperature;
 use ts::Influx;
+use ts::*;
 
 
 // BACKUP CVS 
@@ -152,7 +154,7 @@ pub fn backup_data(config: &TomlConfig,
             Ok(file) => file,
         };
 
-        writeln!(file, "{}", &config.template.csv.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
+        writeln!(file, "{}", &config.template.temperature.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
             eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             process::exit(1);
         });
@@ -164,7 +166,7 @@ pub fn backup_data(config: &TomlConfig,
 
         if config.flag.debug_backup {
             println!("{}\n{}",
-                     &config.template.csv.annotated_datatype,
+                     &config.template.temperature.annotated_datatype,
                      csv_header,
             );
         }
@@ -172,7 +174,7 @@ pub fn backup_data(config: &TomlConfig,
     else {
         if config.flag.debug_backup {
             println!("{}\n{}",
-                     &config.template.csv.annotated_datatype,
+                     &config.template.temperature.annotated_datatype,
                      csv_header,
             );
         }
@@ -204,13 +206,13 @@ pub fn backup_data(config: &TomlConfig,
 
 pub fn prepare_csv_header_format(config: &TomlConfig) -> String {
 
-    let csv_header_template = String::from(&config.template.csv.annotated_header);
+    let csv_header_template = String::from(&config.template.temperature.annotated_header);
     let mut csv_header = HashMap::new();
-    csv_header.insert("tag_machine".to_string(), &config.template.csv.tag_machine);
-    csv_header.insert("tag_carrier".to_string(), &config.template.csv.tag_carrier);
-    csv_header.insert("tag_valid".to_string(), &config.template.csv.tag_valid);
-    csv_header.insert("tag_id".to_string(), &config.template.csv.tag_id);
-    csv_header.insert("field".to_string(), &config.template.csv.field);
+    csv_header.insert("tag_machine".to_string(), &config.template.temperature.tag_machine);
+    csv_header.insert("tag_carrier".to_string(), &config.template.temperature.tag_carrier);
+    csv_header.insert("tag_valid".to_string(), &config.template.temperature.tag_valid);
+    csv_header.insert("tag_id".to_string(), &config.template.temperature.tag_id);
+    csv_header.insert("field".to_string(), &config.template.temperature.field);
 
     return strfmt(&csv_header_template, &csv_header).unwrap()
 }
@@ -219,7 +221,7 @@ pub fn prepare_csv_header_format(config: &TomlConfig) -> String {
 pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &Record) -> String {
 
-    let csv_record_template = String::from(&config.template.csv.csv_annotated);
+    let csv_record_template = String::from(&config.template.temperature.csv_annotated);
     let mut csv_record = HashMap::new();
     csv_record.insert("measurement".to_string(), String::from(&record.measurement));
     csv_record.insert("host".to_string(), String::from(&record.host));
@@ -241,20 +243,20 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
-                String::from(&config.template.csv.generic_query_verify_record),
+                String::from(&config.template.temperature.generic_query_verify_record),
                 String::from(&config.template.flux.query_verify_record_suffix),
         ),
-        false => String::from(&config.template.csv.generic_query_verify_record)
+        false => String::from(&config.template.temperature.generic_query_verify_record)
     };    
     
     let mut flux = HashMap::new();
-    flux.insert("tag_carrier".to_string(), String::from(&config.template.csv.tag_carrier));
-    flux.insert("tag_valid".to_string(), String::from(&config.template.csv.tag_valid));
-    flux.insert("tag_id".to_string(), String::from(&config.template.csv.tag_id));
+    flux.insert("tag_carrier".to_string(), String::from(&config.template.temperature.tag_carrier));
+    flux.insert("tag_valid".to_string(), String::from(&config.template.temperature.tag_valid));
+    flux.insert("tag_id".to_string(), String::from(&config.template.temperature.tag_id));
     
     flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-    flux.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
+    flux.insert("measurement".to_string(), String::from(&config.template.temperature.measurement));
 
     // COMPARE only id + time
     flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
@@ -294,8 +296,17 @@ pub fn os_call_curl_flux(config: &TomlConfig,
 
 
 pub fn os_call_sensors(config: &TomlConfig) -> String {
-    let sensor_output = Command::new(&config.template.sensors.program)
-        .arg(&config.template.sensors.param_1)
+    
+    //let sensor_output = Command::new(&config.template.sensors.program)
+    let sensor_output = Command::new(&config.template.temperature.program)
+    //let sensor_output = Command::new(&program)
+
+        //.arg(&config.template.sensors.param_1)
+        //.args(&config.template.sensors.args)
+        .args(&config.template.temperature.args)
+        //.args(&args)
+
+
         .output().expect("failed to execute command");
     
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
@@ -342,13 +353,13 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
                                  //influx_inst: &Influx, // TO DEL
                                  generic_record: &Record)  -> String {
 
-    let generic_lp_template = String::from(&config.template.csv.generic_lp);
+    let generic_lp_template = String::from(&config.template.temperature.generic_lp);
     let mut generic_lp = HashMap::new();
-    generic_lp.insert("tag_machine".to_string(), String::from(&config.template.csv.tag_machine));
-    generic_lp.insert("tag_carrier".to_string(), String::from(&config.template.csv.tag_carrier));
-    generic_lp.insert("tag_valid".to_string(), String::from(&config.template.csv.tag_valid));
-    generic_lp.insert("tag_id".to_string(), String::from(&config.template.csv.tag_id));
-    generic_lp.insert("field".to_string(), String::from(&config.template.csv.field));
+    generic_lp.insert("tag_machine".to_string(), String::from(&config.template.temperature.tag_machine));
+    generic_lp.insert("tag_carrier".to_string(), String::from(&config.template.temperature.tag_carrier));
+    generic_lp.insert("tag_valid".to_string(), String::from(&config.template.temperature.tag_valid));
+    generic_lp.insert("tag_id".to_string(), String::from(&config.template.temperature.tag_id));
+    generic_lp.insert("field".to_string(), String::from(&config.template.temperature.field));
     
     generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
     generic_lp.insert("host".to_string(), String::from(&generic_record.host));
@@ -463,10 +474,29 @@ pub fn parse_sensors_data(config: &TomlConfig,
             println!("\n#MEM @ GENERIC_LP:\n{:#?}", mem_generic_lp);
             */
             // CMD_GENERIC -> END
+
+            let mut group_temperature = Vec::new();
+            let mut group_memory = Vec::new();
+
+            for v in &config.all_sensors.values {
+                if v.group == "temperature" && v.status {
+                    //println!("TEMP: {}", v.group);
+                    group_temperature.push(v);
+                }
+                else if v.group == "memory" && v.status {
+                    //println!("MEM: {}", v.group);
+                    group_memory.push(v);
+                }
+            }
+            
+            println!("\n#TEMP: {:?}", group_temperature);
+            println!("\n#MEM: {:?}", group_memory);
+            
             
             // SENSOR INSTANCES
-            for single_sensor in &config.all_sensors.values {
-
+            //for single_sensor in &config.all_sensors.values {
+            for single_sensor in group_temperature {
+                
                 // JSON single POINTER
                 let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
 
@@ -494,7 +524,7 @@ value: {v}",
                         id: single_sensor.name.to_string(),
                         valid: single_influx.flag_valid_default.to_string(),
                         machine: single_influx.machine_id.to_string(),
-                        measurement: config.all_sensors.measurement.to_string(),
+                        measurement: config.template.temperature.measurement.to_string(),
                         host: config.host.to_string(),
                     };
 
