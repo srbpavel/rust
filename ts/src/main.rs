@@ -19,26 +19,40 @@ use std::process::*;
 
 fn main() {
     // -> START --> CMD ARGS 
-    let cmd_cat = Command::new("/bin/cat")
-        .arg("/proc/meminfo")
+    let cmd_program = "/bin/cat";
+    let cmd_args = vec!["/proc/meminfo"];
+    let cmd = Command::new(&cmd_program)
+        .args(&cmd_args)
         .stdout(Stdio::piped()).spawn().unwrap();
-        
-    let cmd_jq = Command::new("jq")
-        .args(["--slurp",
-               "--raw-input",
-               "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"
-        ])
-        .stdin(cmd_cat.stdout.unwrap())
+
+    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
+             cmd_program,
+             cmd_args,
+    );
+    
+    let cmd_pipe_program = "jq";
+    let cmd_pipe_args = vec!["--slurp",
+                             "--raw-input",
+                             "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"];
+
+    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
+             cmd_pipe_program,
+             cmd_pipe_args,
+    );
+
+    let cmd_pipe = Command::new(cmd_pipe_program)
+        .args(cmd_pipe_args)
+        .stdin(cmd.stdout.unwrap())
         .output().expect("failed to execute command");
+    
+    //println!("\n#CMD_pipe:stdout: {:#?}", String::from_utf8_lossy(&cmd_pipe.stdout));
+    //println!("\n#CMD_pipe:stdERR: {:#?}", String::from_utf8_lossy(&cmd_pipe.stderr));
 
-    //println!("\n#CMD_Jq:stdout: {:#?}", String::from_utf8_lossy(&cmd_jq.stdout));
-    //println!("\n#CMD_Jq:stdERR: {:#?}", String::from_utf8_lossy(&cmd_jq.stderr));
-
-    let mem_info_json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&cmd_jq.stdout)).unwrap();
+    let mem_info_json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&cmd_pipe.stdout)).unwrap();
     //println!("\n#JSON:\n{:?}", mem_info_json);
 
-    let json_pointer_value: i64 = mem_info_json.pointer("/MemTotal").unwrap().as_str().unwrap().parse().unwrap();
-    println!("\n#POINTER:\nMemInfo[i64]: {} kB",
+    let json_pointer_value: i64 = mem_info_json.pointer("/MemFree").unwrap().as_str().unwrap().parse().unwrap();
+    println!("\n#POINTER:\nMemFree[i64]: {} kB",
              json_pointer_value);
     // <- END
 
