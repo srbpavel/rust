@@ -233,7 +233,43 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
     return strfmt(&csv_record_template, &csv_record).unwrap()
 }
 
+//xxx
+pub fn prepare_generic_flux_query_format(config: &TomlConfig,
+                                         single_influx: &Influx,
+                                         //single_sensor: &Sensor,
+                                         generic_record: &Record,
+                                         //temperature_decimal: String,
+                                         utc_influx_format: &String) -> String {
 
+    let flux_template = match config.flag.add_flux_query_verify_record_suffix {
+        true => format!("{}{}",
+                String::from(&config.template.csv.generic_query_verify_record),
+                String::from(&config.template.flux.query_verify_record_suffix),
+        ),
+        false => String::from(&config.template.csv.generic_query_verify_record)
+    };    
+    
+    let mut flux = HashMap::new();
+
+    flux.insert("tag_carrier".to_string(), String::from(&config.template.csv.tag_carrier));
+    flux.insert("tag_valid".to_string(), String::from(&config.template.csv.tag_valid));
+    flux.insert("tag_id".to_string(), String::from(&config.template.csv.tag_id));
+    
+    flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
+    flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
+    flux.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
+
+    flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
+
+    // PODLE ME NEFILTRUJU PODLE _value
+    //flux.insert("value".to_string(), String::from(&generic_record.value.to_string())); // NO NEED TO FILTER _field as we have only one for now
+
+    flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+  
+    return strfmt(&flux_template, &flux).unwrap()
+}
+
+/* TO DEL -> GENERIC
 pub fn prepare_flux_query_format(config: &TomlConfig,
                                  single_influx: &Influx,
                                  single_sensor: &Sensor,
@@ -261,7 +297,7 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
   
     return strfmt(&flux_template, &flux).unwrap()
 }
-
+*/
 
 pub fn os_call_curl_flux(config: &TomlConfig,
                          influx_uri: &String,
@@ -337,6 +373,34 @@ pub fn os_call_curl(config: &TomlConfig,
 }
 
 
+pub fn prepare_generic_lp_format(config: &TomlConfig,
+                                 influx_inst: &Influx,
+                                 generic_record: &Record)  -> String {
+
+    // println!("GENERIC_LP: {:#?}", &config.template.csv.generic_lp); 
+    
+    let generic_lp_template = String::from(&config.template.csv.generic_lp);
+    let mut generic_lp = HashMap::new();
+
+    generic_lp.insert("tag_machine".to_string(), String::from(&config.template.csv.tag_machine));
+    generic_lp.insert("tag_carrier".to_string(), String::from(&config.template.csv.tag_carrier));
+    generic_lp.insert("tag_valid".to_string(), String::from(&config.template.csv.tag_valid));
+    generic_lp.insert("tag_id".to_string(), String::from(&config.template.csv.tag_id));
+    generic_lp.insert("field".to_string(), String::from(&config.template.csv.field));
+    
+    generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
+    generic_lp.insert("host".to_string(), String::from(&generic_record.host));
+    generic_lp.insert("machine_id".to_string(), String::from(&generic_record.machine));
+    generic_lp.insert("sensor_carrier".to_string(), String::from(&generic_record.carrier));
+    generic_lp.insert("sensor_valid".to_string(), String::from(&generic_record.valid));
+    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
+    generic_lp.insert("sensor_id".to_string(), String::from(&generic_record.id));
+    generic_lp.insert("temperature_decimal".to_string(), String::from(&generic_record.value.to_string()));
+
+    return strfmt(&generic_lp_template, &generic_lp).unwrap()
+}
+
+/* TO_DEL -> generic LP
 pub fn prepare_sensor_format(config: &TomlConfig,
                              influx_inst: &Influx,
                              sensor_inst: &Sensor,
@@ -356,6 +420,7 @@ pub fn prepare_sensor_format(config: &TomlConfig,
 
     return strfmt(&lp_template, &lp).unwrap()
 }
+*/
 
 
 pub fn prepare_influx_format(config: &TomlConfig,
@@ -410,7 +475,7 @@ pub fn prepare_influx_format(config: &TomlConfig,
 //#[allow(unused_variables)]
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
-    
+
     // OS_CMD <- LM-SENSORS
     let sensors_stdout = os_call_sensors(&config);
 
@@ -447,7 +512,17 @@ pub fn parse_sensors_data(config: &TomlConfig,
             let generic_record = cmd_generic(&config,
                                              &single_influx,
                                              dt);
-            println!("\n#GENERIC_RECORD:\n{:#?}", generic_record);
+
+            // println!("\n#GENERIC_RECORD:\n{:#?}", generic_record);
+
+            /*
+            let generic_lp = prepare_generic_lp_format(&config,
+                                                       &single_influx,
+                                                       &generic_record);
+
+            println!("\n#GENERIC_LP:\n{:#?}", generic_lp);
+            */
+            
             // CMD_GENERIC -> END
             
             // SENSOR INSTANCES
@@ -472,6 +547,7 @@ value: {v}",
                 }
 
                 if single_sensor.status {
+                    /* TO DEL - FIXED LP via INFLUX VAR
                     let single_sensor_lp = prepare_sensor_format(&config,
                                                                  &single_influx,
                                                                  &single_sensor,
@@ -481,6 +557,7 @@ value: {v}",
                     if config.flag.debug_influx_lp {
                         println!("\n#LINE_PROTOCOL:\n{}", single_sensor_lp);
                     }
+                    */
 
                     // RECORD // pouzit record v LP
                     let single_record = Record {
@@ -494,19 +571,45 @@ value: {v}",
                         host: config.host.to_string(),
                     };
 
+                    // LP via Record
+                    let generic_lp = prepare_generic_lp_format(&config,
+                                                               &single_influx,
+                                                               &single_record);
+                                                               //&generic_record);
+                    
+                    println!("\n#GENERIC_LP:\n{}", generic_lp);
+
+
+                    // OS_CMD <- GENERIC FLUX_QUERY
+                    let generic_influx_query = prepare_generic_flux_query_format(
+                        &config,
+                        &single_influx,
+                        //&single_sensor,
+                        &single_record,
+                        //json_pointer_value.to_string(),
+                        &dt.utc_influx_format);
+
+                    if config.flag.debug_flux_query {
+                        println!("\n#GENERIC QUERY:\n{}",
+                                 generic_influx_query,
+                        );
+                    }
+                    
                     // RECORD -> Vec<Record>
                     if !result_list.contains(&single_record) { 
                         result_list.push(single_record)
                     }
-                
+                    
                     // OS_CMD <- CURL
                     os_call_curl(&config,
                                  &influx_uri_write,
                                  &influx_auth,
-                                 &single_sensor_lp);
+                                 //&single_sensor_lp);
+                                 &generic_lp);
 
 
                     // OS_CMD <- FLUX_QUERY
+                    /* TO_ DEL generic_Q
                     let influx_query = prepare_flux_query_format(
                         &config,
                         &single_influx,
@@ -519,14 +622,16 @@ value: {v}",
                                  influx_query,
                         );
                     }
-                    
+                    */
+
                     if config.flag.run_flux_verify_record {
                         os_call_curl_flux(&config,
                                           &influx_uri_query,
                                           &influx_auth,
                                           &influx_accept,
                                           &influx_content,
-                                          &influx_query);
+                                          //&influx_query); 
+                                          &generic_influx_query);
                     }
                 } /* single_sensor.status */
             } /* all_sensors.values */
