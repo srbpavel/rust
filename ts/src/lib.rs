@@ -97,7 +97,6 @@ pub struct Influx {
     pub org: String,
     pub precision: String,
 
-    //pub measurement: String, ### TO_DEL
     pub machine_id: String,
     pub carrier: String,
     pub flag_valid_default: bool,
@@ -133,7 +132,6 @@ pub struct TemplateCsv {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateFlux {
-    // pub query_verify_record: String, // TO_DEL GENERIC
     pub query_verify_record_range_start: String,
     pub query_verify_record_suffix: String,
 }
@@ -156,8 +154,6 @@ pub struct TemplateCurl {
     pub influx_auth: String,
     pub influx_accept: String,
     pub influx_content: String,
-
-    //pub influx_lp: String, // TO_DEL now via GENERIC_LP
 }
 
 
