@@ -16,7 +16,7 @@ pub use crate::util::ts::{Dt};
 
 //use ts::TomlConfig;
 //use ts::TemplateTemperature;
-use ts::Influx;
+//use ts::Influx;
 use ts::*;
 
 
@@ -65,7 +65,6 @@ pub fn cmd_generic(config: &TomlConfig,
              cmd_args,
     );
     */
-    
     let cmd_pipe_program = "jq";
     let cmd_pipe_args = vec!["--slurp",
                              "--raw-input",
@@ -239,8 +238,31 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
 pub fn prepare_generic_flux_query_format(config: &TomlConfig,
                                          single_influx: &Influx,
                                          generic_record: &Record,
+                                         temperature: &TemplateSensors,
                                          utc_influx_format: &String) -> String {
 
+    let flux_template = match config.flag.add_flux_query_verify_record_suffix {
+        true => format!("{}{}",
+                String::from(&temperature.generic_query_verify_record),
+                String::from(&config.template.flux.query_verify_record_suffix),
+        ),
+        false => String::from(&temperature.generic_query_verify_record)
+    };    
+    
+    let mut flux = HashMap::new();
+    flux.insert("tag_carrier".to_string(), String::from(&temperature.tag_carrier));
+    flux.insert("tag_valid".to_string(), String::from(&temperature.tag_valid));
+    flux.insert("tag_id".to_string(), String::from(&temperature.tag_id));
+    
+    flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
+    flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
+    flux.insert("measurement".to_string(), String::from(&temperature.measurement));
+
+    // COMPARE only id + time
+    flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
+    flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+
+    /*
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
                 String::from(&config.template.temperature.generic_query_verify_record),
@@ -261,6 +283,7 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
     // COMPARE only id + time
     flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
     flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+    */
   
     return strfmt(&flux_template, &flux).unwrap()
 }
@@ -295,33 +318,76 @@ pub fn os_call_curl_flux(config: &TomlConfig,
 }
 
 
-pub fn os_call_sensors(config: &TomlConfig) -> String {
+pub fn os_call_sensors(config: &TomlConfig,
+                       temperature: &TemplateSensors) -> String {
     
-    //let sensor_output = Command::new(&config.template.sensors.program)
-    let sensor_output = Command::new(&config.template.temperature.program)
-    //let sensor_output = Command::new(&program)
-
-        //.arg(&config.template.sensors.param_1)
-        //.args(&config.template.sensors.args)
+    let sensor_output = Command::new(&temperature.program)
         .args(&config.template.temperature.args)
-        //.args(&args)
-
-
         .output().expect("failed to execute command");
     
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
 
+    /* 
     if config.flag.debug_sensor_output {
-        println!("\n#SENSOR:
+        println!("\n#TEMPERATURE SENSOR:
 stdout: {}
 stderr: {}",
                  sensor_stdout_string,
                  sensor_stderr_string,
         );
     }
+    */
 
     return sensor_stdout_string.to_string()
+}
+
+
+pub fn os_call_sensors_pipe(config: &TomlConfig,
+                            memory: &TemplateSensors) -> String {
+
+    /*
+    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
+             &memory.program,
+             &memory.args,
+    );
+    */
+    
+    let cmd_output = Command::new(&memory.program)
+        .args(&memory.args)
+        .stdout(Stdio::piped()).spawn().unwrap();
+
+    /*
+    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
+             &memory.pipe_program,
+             &memory.pipe_args,
+    );
+    */
+    
+    let cmd_pipe_output = Command::new(&memory.pipe_program)
+        .args(&memory.pipe_args)
+        .stdin(cmd_output.stdout.unwrap())
+        .output().expect("failed to execute command");
+
+
+    let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
+    let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
+
+    if config.flag.debug_sensor_output {
+        println!("\n#MEMORY_SENSOR:
+stdout: {}
+stderr: {}",
+                 cmd_pipe_output_stdout,
+                 cmd_pipe_output_stderr,
+        );
+    }
+
+    /*
+    println!("\n#CMD_pipe:stdout: {:#?}", cmd_pipe_output_stdout);
+    println!("\n#CMD_pipe:stdERR: {:#?}", cmd_pipe_output_stderr);
+    */
+    
+    return cmd_pipe_output_stdout.to_string()
 }
 
 
@@ -350,9 +416,30 @@ pub fn os_call_curl(config: &TomlConfig,
 
 
 pub fn prepare_generic_lp_format(config: &TomlConfig,
-                                 //influx_inst: &Influx, // TO DEL
-                                 generic_record: &Record)  -> String {
+                                 generic_record: &Record,
+                                 temperature: &TemplateSensors)  -> String {
 
+    let generic_lp_template = String::from(&temperature.generic_lp);
+    let mut generic_lp = HashMap::new();
+    generic_lp.insert("tag_machine".to_string(), String::from(&temperature.tag_machine));
+    generic_lp.insert("tag_carrier".to_string(), String::from(&temperature.tag_carrier));
+    generic_lp.insert("tag_valid".to_string(), String::from(&temperature.tag_valid));
+    generic_lp.insert("tag_id".to_string(), String::from(&temperature.tag_id));
+    generic_lp.insert("field".to_string(), String::from(&temperature.field));
+
+    generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
+    generic_lp.insert("host".to_string(), String::from(&generic_record.host));
+    generic_lp.insert("machine_id".to_string(), String::from(&generic_record.machine));
+
+    generic_lp.insert("carrier".to_string(), String::from(&generic_record.carrier));
+    generic_lp.insert("valid".to_string(), String::from(&generic_record.valid));
+
+    generic_lp.insert("id".to_string(), String::from(&generic_record.id));
+    generic_lp.insert("value".to_string(), String::from(&generic_record.value.to_string()));
+
+    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
+
+    /*
     let generic_lp_template = String::from(&config.template.temperature.generic_lp);
     let mut generic_lp = HashMap::new();
     generic_lp.insert("tag_machine".to_string(), String::from(&config.template.temperature.tag_machine));
@@ -360,16 +447,20 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
     generic_lp.insert("tag_valid".to_string(), String::from(&config.template.temperature.tag_valid));
     generic_lp.insert("tag_id".to_string(), String::from(&config.template.temperature.tag_id));
     generic_lp.insert("field".to_string(), String::from(&config.template.temperature.field));
-    
+
     generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
     generic_lp.insert("host".to_string(), String::from(&generic_record.host));
     generic_lp.insert("machine_id".to_string(), String::from(&generic_record.machine));
-    generic_lp.insert("sensor_carrier".to_string(), String::from(&generic_record.carrier));
-    generic_lp.insert("sensor_valid".to_string(), String::from(&generic_record.valid));
-    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
-    generic_lp.insert("sensor_id".to_string(), String::from(&generic_record.id));
-    generic_lp.insert("temperature_decimal".to_string(), String::from(&generic_record.value.to_string()));
 
+    generic_lp.insert("carrier".to_string(), String::from(&generic_record.carrier));
+    generic_lp.insert("valid".to_string(), String::from(&generic_record.valid));
+
+    generic_lp.insert("id".to_string(), String::from(&generic_record.id));
+    generic_lp.insert("value".to_string(), String::from(&generic_record.value.to_string()));
+
+    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
+    */
+    
     return strfmt(&generic_lp_template, &generic_lp).unwrap()
 }
 
@@ -427,15 +518,60 @@ pub fn prepare_influx_format(config: &TomlConfig,
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
 
-    // OS_CMD <- LM-SENSORS
-    let sensors_stdout = os_call_sensors(&config);
-
     // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
+
+    //let mut json_list: Vec<Record> = Vec::new();
+
+    let mut group_temperature = Vec::new();
+    let mut group_memory = Vec::new();
     
-    // JSON 
+    for v in &config.all_sensors.values {
+        if v.group == "temperature" && v.status {
+            //println!("TEMP: {}", v.group);
+            group_temperature.push(v);
+        }
+        else if v.group == "memory" && v.status {
+            //println!("MEM: {}", v.group);
+            group_memory.push(v);
+        }
+    }
+    
+    
+    // TEMPERATURE: LM-SENSORS <- OS_CMD 
+    let sensors_stdout = os_call_sensors(&config,
+                                         &config.template.temperature);
+
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
 
+    for t in &group_temperature { // ttt
+        //let sensor_temperature_pointer_value: i64 = sensors_memory_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        let sensor_temperature_pointer_value = &sensors_json.pointer(&t.pointer).unwrap();
+        
+        println!("\n#TEMPERATURE POINTER:\n{}: {}",
+                 t.pointer,
+                 sensor_temperature_pointer_value);
+
+    }
+
+    //_
+
+    // MEMORY
+    let sensors_memory_stdout = os_call_sensors_pipe(&config,
+                                                     &config.template.memory);
+
+    let sensors_memory_json: serde_json::Value = serde_json::from_str(&sensors_memory_stdout).unwrap();
+
+    for m in &group_memory {
+        let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
+
+        println!("\n#MEMORY POINTER:\n{}[i64]: {} kB",
+             m.pointer,
+             sensor_memory_pointer_value);
+
+    }
+    //_
+    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
@@ -459,22 +595,24 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
-            // CMD_GENERIC -> START
+            // MEMORY: CMD_GENERIC -> START
             /*
             let mem_generic_record = cmd_generic(&config,
                                                  &single_influx,
                                                  dt);
-
-            println!("\n#MEM @ GENERIC_RECORD:\n{:#?}", mem_generic_record);
+            
+            //println!("\n#MEM @ GENERIC_RECORD:\n{:#?}", mem_generic_record);
 
             let mem_generic_lp = prepare_generic_lp_format(&config,
-                                                           &single_influx,
-                                                           &mem_generic_record);
-
-            println!("\n#MEM @ GENERIC_LP:\n{:#?}", mem_generic_lp);
+                                                           &mem_generic_record,                         
+                                                           &config.template.memory);
+            
+            println!("\n#MEM @ GENERIC_LP:\n{}", mem_generic_lp);
             */
-            // CMD_GENERIC -> END
 
+            // MEMORY: CMD_GENERIC -> END
+
+            /*
             let mut group_temperature = Vec::new();
             let mut group_memory = Vec::new();
 
@@ -488,14 +626,23 @@ pub fn parse_sensors_data(config: &TomlConfig,
                     group_memory.push(v);
                 }
             }
+            */
             
+            /*
             println!("\n#TEMP: {:?}", group_temperature);
             println!("\n#MEM: {:?}", group_memory);
+            */
+
+            // SENSOR INSTANCES -> MEMORY
+            /*
+            for single_sensor in group_memory {
+                FUTURE_USE
+            }
+            */
             
-            
-            // SENSOR INSTANCES
+            // SENSOR INSTANCES -> TEMPERATURE
             //for single_sensor in &config.all_sensors.values {
-            for single_sensor in group_temperature {
+            for single_sensor in &group_temperature {
                 
                 // JSON single POINTER
                 let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
@@ -530,9 +677,8 @@ value: {v}",
 
                     // LP via Record
                     let generic_lp = prepare_generic_lp_format(&config,
-                                                               //&single_influx, TO DEL 
-                                                               &single_record);
-
+                                                               &single_record,
+                                                               &config.template.temperature);
 
                     if config.flag.debug_influx_lp {
                         println!("\n#GENERIC_LP:\n{}", generic_lp);
@@ -550,6 +696,7 @@ value: {v}",
                             &config,
                             &single_influx,
                             &single_record,
+                            &config.template.temperature,
                             &dt.utc_influx_format);
                         
                         if config.flag.debug_flux_query {
