@@ -156,7 +156,10 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
     let mut flux = HashMap::new();
     flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-    flux.insert("measurement".to_string(), String::from(&single_influx.measurement));
+
+    //flux.insert("measurement".to_string(), String::from(&single_influx.measurement));  ### TO_DEL
+    flux.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
+
     flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
     flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
     flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
@@ -247,7 +250,11 @@ pub fn prepare_sensor_format(config: &TomlConfig,
 
     let lp_template = String::from(&config.template.curl.influx_lp);
     let mut lp = HashMap::new();
-    lp.insert("measurement".to_string(), String::from(&influx_inst.measurement));
+
+    //lp.insert("measurement".to_string(), String::from(&influx_inst.measurement));  ### TO_DEL
+    lp.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
+
+
     lp.insert("host".to_string(), String::from(&config.host));
     lp.insert("machine_id".to_string(), String::from(&influx_inst.machine_id));
     lp.insert("sensor_carrier".to_string(), String::from(&influx_inst.carrier));
@@ -385,7 +392,10 @@ value: {v}",
                         id: single_sensor.name.to_string(),
                         valid: single_influx.flag_valid_default.to_string(),
                         machine: single_influx.machine_id.to_string(),
-                        measurement: single_influx.measurement.to_string(),
+
+                        //measurement: single_influx.measurement.to_string(),  ### TO_DEL
+                        measurement: config.all_sensors.measurement.to_string(),
+
                         host: config.host.to_string(),
                     };
 

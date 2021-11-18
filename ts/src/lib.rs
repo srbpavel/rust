@@ -97,7 +97,7 @@ pub struct Influx {
     pub org: String,
     pub precision: String,
 
-    pub measurement: String,
+    //pub measurement: String, ### TO_DEL
     pub machine_id: String,
     pub carrier: String,
     pub flag_valid_default: bool,
@@ -171,6 +171,7 @@ pub struct AllSensors {
     //values: [i32; 3], // fixed array with three int's
     //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Sensor>,
+    pub measurement: String,
 }
 
 
