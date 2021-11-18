@@ -115,6 +115,13 @@ pub struct Template {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateCsv {
+
+    pub tag_machine: String,
+    pub tag_id: String,
+    pub tag_carrier: String,
+    pub tag_valid: String,
+    pub field: String,
+
     pub annotated_datatype: String,
     pub annotated_header: String,
     pub csv_annotated: String,

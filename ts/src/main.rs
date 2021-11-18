@@ -13,11 +13,13 @@ pub use util::ts as timestamp;
 mod measurement;
 
 // CMD
+/*
 use std::process::{Command};
 use std::process::*; 
-
+*/
 
 fn main() {
+    /*
     // -> START --> CMD ARGS 
     let cmd_program = "/bin/cat";
     let cmd_args = vec!["/proc/meminfo"];
@@ -54,7 +56,7 @@ fn main() {
     let json_pointer_value: i64 = mem_info_json.pointer("/MemFree").unwrap().as_str().unwrap().parse().unwrap();
     println!("\n#POINTER:\nMemFree[i64]: {} kB",
              json_pointer_value);
-    // <- END
+    */ // <- END
 
     
     // COMMAND ARGS

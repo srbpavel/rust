@@ -1,5 +1,7 @@
 use std::process;
 use std::process::{Command};
+// CMD GENERIC
+use std::process::*; 
 
 extern crate strfmt;
 use strfmt::strfmt;
@@ -16,11 +18,12 @@ use ts::TomlConfig;
 use ts::Influx;
 use ts::Sensor;
 
+
 // BACKUP CVS 
 #[derive(Debug)]
 pub struct Record {
     pub ts: i64,
-    pub temperature_decimal: String,
+    pub value: String,
     pub carrier: String,
     pub id: String,
     pub valid: String,
@@ -36,6 +39,73 @@ impl PartialEq for Record
     fn eq(&self, other: &Self) -> bool {
         self.id.eq(&other.id)
     }
+}
+
+
+#[allow(unused_variables)]
+pub fn cmd_generic(config: &TomlConfig,
+                   single_influx: &Influx,
+                   dt: &Dt) -> Record {
+
+    let generic_measurement = "memory";
+    let generic_id = "memory_free_0";
+    let generic_pointer_path = "/MemFree";
+
+    let cmd_program = "/bin/cat";
+    let cmd_args = vec!["/proc/meminfo"];
+    let cmd = Command::new(&cmd_program)
+        .args(&cmd_args)
+        .stdout(Stdio::piped()).spawn().unwrap();
+
+    /*
+    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
+             cmd_program,
+             cmd_args,
+    );
+    */
+    
+    let cmd_pipe_program = "jq";
+    let cmd_pipe_args = vec!["--slurp",
+                             "--raw-input",
+                             "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"];
+
+    /*
+    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
+             cmd_pipe_program,
+             cmd_pipe_args,
+    );
+    */
+
+    let cmd_pipe = Command::new(cmd_pipe_program)
+        .args(cmd_pipe_args)
+        .stdin(cmd.stdout.unwrap())
+        .output().expect("failed to execute command");
+    
+    //println!("\n#CMD_pipe:stdout: {:#?}", String::from_utf8_lossy(&cmd_pipe.stdout));
+    //println!("\n#CMD_pipe:stdERR: {:#?}", String::from_utf8_lossy(&cmd_pipe.stderr));
+
+    let mem_info_json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&cmd_pipe.stdout)).unwrap();
+    //println!("\n#JSON:\n{:?}", mem_info_json);
+
+    let json_pointer_value: i64 = mem_info_json.pointer(generic_pointer_path).unwrap().as_str().unwrap().parse().unwrap();
+    /*
+    println!("\n#POINTER:\n{}[i64]: {} kB",
+             generic_pointer_path,
+             json_pointer_value);
+    */
+
+    let generic_record = Record {
+        ts: dt.ts,
+        value: json_pointer_value.to_string(), // _value
+        carrier: single_influx.carrier.to_string(),
+        id: generic_id.to_string(),
+        valid: single_influx.flag_valid_default.to_string(),
+        machine: single_influx.machine_id.to_string(),
+        measurement: generic_measurement.to_string(),
+        host: config.host.to_string(),
+    };
+
+    generic_record
 }
 
 
@@ -62,6 +132,9 @@ pub fn backup_data(config: &TomlConfig,
     if config.flag.debug_backup {
         println!("\n#CSV_ANNOTATED:");
     }
+
+    // format CSV HEADER
+    let csv_header = prepare_csv_header_format(&config);
     
     if !today_file_name.exists() {
         let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
@@ -79,12 +152,12 @@ pub fn backup_data(config: &TomlConfig,
             Ok(file) => file,
         };
 
-        writeln!(file, "{}", &config.template.csv.annotated_datatype).unwrap_or_else(|err| {
+        writeln!(file, "{}", &config.template.csv.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
             eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             process::exit(1);
         });
 
-        writeln!(file, "{}", &config.template.csv.annotated_header).unwrap_or_else(|err| {
+        writeln!(file, "{}", csv_header).unwrap_or_else(|err| {
             eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             process::exit(1);
         });
@@ -92,7 +165,15 @@ pub fn backup_data(config: &TomlConfig,
         if config.flag.debug_backup {
             println!("{}\n{}",
                      &config.template.csv.annotated_datatype,
-                     &config.template.csv.annotated_header,
+                     csv_header,
+            );
+        }
+    }
+    else {
+        if config.flag.debug_backup {
+            println!("{}\n{}",
+                     &config.template.csv.annotated_datatype,
+                     csv_header,
             );
         }
     }
@@ -121,6 +202,20 @@ pub fn backup_data(config: &TomlConfig,
 }
 
 
+pub fn prepare_csv_header_format(config: &TomlConfig) -> String {
+
+    let csv_header_template = String::from(&config.template.csv.annotated_header);
+    let mut csv_header = HashMap::new();
+    csv_header.insert("tag_machine".to_string(), &config.template.csv.tag_machine);
+    csv_header.insert("tag_carrier".to_string(), &config.template.csv.tag_carrier);
+    csv_header.insert("tag_valid".to_string(), &config.template.csv.tag_valid);
+    csv_header.insert("tag_id".to_string(), &config.template.csv.tag_id);
+    csv_header.insert("field".to_string(), &config.template.csv.field);
+
+    return strfmt(&csv_header_template, &csv_header).unwrap()
+}
+
+
 pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &Record) -> String {
 
@@ -129,11 +224,11 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
     csv_record.insert("measurement".to_string(), String::from(&record.measurement));
     csv_record.insert("host".to_string(), String::from(&record.host));
     csv_record.insert("machine".to_string(), String::from(&record.machine));
-    csv_record.insert("sensor_carrier".to_string(), String::from(&record.carrier));
-    csv_record.insert("sensor_valid".to_string(), String::from(&record.valid.to_string()));
+    csv_record.insert("carrier".to_string(), String::from(&record.carrier));
+    csv_record.insert("valid".to_string(), String::from(&record.valid.to_string()));
     csv_record.insert("ts".to_string(), String::from(&record.ts.to_string()));
-    csv_record.insert("sensor_id".to_string(), record.id.to_string());
-    csv_record.insert("temperature_decimal".to_string(), String::from(&record.temperature_decimal.to_string()));
+    csv_record.insert("id".to_string(), record.id.to_string());
+    csv_record.insert("value".to_string(), String::from(&record.value.to_string()));
 
     return strfmt(&csv_record_template, &csv_record).unwrap()
 }
@@ -156,12 +251,12 @@ pub fn prepare_flux_query_format(config: &TomlConfig,
     let mut flux = HashMap::new();
     flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-
-    //flux.insert("measurement".to_string(), String::from(&single_influx.measurement));  ### TO_DEL
     flux.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
 
+    // GENERIC to CHANGE
     flux.insert("sensor_id".to_string(), String::from(&single_sensor.name.to_string()));
     flux.insert("temperature_decimal".to_string(), String::from(&temperature_decimal.to_string())); // NO NEED TO FILTER _field as we have only one for now
+
     flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
   
     return strfmt(&flux_template, &flux).unwrap()
@@ -250,11 +345,7 @@ pub fn prepare_sensor_format(config: &TomlConfig,
 
     let lp_template = String::from(&config.template.curl.influx_lp);
     let mut lp = HashMap::new();
-
-    //lp.insert("measurement".to_string(), String::from(&influx_inst.measurement));  ### TO_DEL
     lp.insert("measurement".to_string(), String::from(&config.all_sensors.measurement));
-
-
     lp.insert("host".to_string(), String::from(&config.host));
     lp.insert("machine_id".to_string(), String::from(&influx_inst.machine_id));
     lp.insert("sensor_carrier".to_string(), String::from(&influx_inst.carrier));
@@ -352,6 +443,13 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
+            // CMD_GENERIC -> START
+            let generic_record = cmd_generic(&config,
+                                             &single_influx,
+                                             dt);
+            println!("\n#GENERIC_RECORD:\n{:#?}", generic_record);
+            // CMD_GENERIC -> END
+            
             // SENSOR INSTANCES
             for single_sensor in &config.all_sensors.values {
 
@@ -384,18 +482,15 @@ value: {v}",
                         println!("\n#LINE_PROTOCOL:\n{}", single_sensor_lp);
                     }
 
-                    // RECORD
+                    // RECORD // pouzit record v LP
                     let single_record = Record {
                         ts: dt.ts,
-                        temperature_decimal: json_pointer_value.to_string(),
+                        value: json_pointer_value.to_string(),
                         carrier: single_influx.carrier.to_string(),
                         id: single_sensor.name.to_string(),
                         valid: single_influx.flag_valid_default.to_string(),
                         machine: single_influx.machine_id.to_string(),
-
-                        //measurement: single_influx.measurement.to_string(),  ### TO_DEL
                         measurement: config.all_sensors.measurement.to_string(),
-
                         host: config.host.to_string(),
                     };
 
