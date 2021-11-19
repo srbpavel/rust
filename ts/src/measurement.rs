@@ -1,7 +1,6 @@
 use std::process;
 use std::process::{Command};
 
-// CMD GENERIC
 use std::process::*; 
 
 extern crate strfmt;
@@ -32,8 +31,30 @@ pub struct Record {
 }
 
 
+#[derive(Debug)]
+pub struct PreRecord {
+    pub ts: i64,
+    pub value: String,
+    //pub carrier: String,
+    pub id: String,
+    //pub valid: String,
+    //pub machine: String,
+    pub measurement: String,
+    pub host: String,
+}
+
+
 // STRUCT compare via contains
 impl PartialEq for Record
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.id.eq(&other.id)
+    }
+}
+
+
+// STRUCT compare via contains
+impl PartialEq for PreRecord
 {
     fn eq(&self, other: &Self) -> bool {
         self.id.eq(&other.id)
@@ -296,6 +317,30 @@ pub fn os_call_curl_flux(config: &TomlConfig,
 }
 
 
+pub fn os_call_metric(config: &TomlConfig,
+                      metric: &TemplateSensors) -> String {
+    
+    let sensor_output = Command::new(&metric.program)
+        .args(&metric.args)
+        .output().expect("failed to execute command");
+    
+    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
+    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
+
+    if config.flag.debug_sensor_output {
+        println!("\n#TEMPERATURE SENSOR:
+stdout: {}
+stderr: {}",
+                 sensor_stdout_string,
+                 sensor_stderr_string,
+        );
+    }
+
+    return sensor_stdout_string.to_string()
+}
+
+
+// TO DEL - metric
 pub fn os_call_sensors(config: &TomlConfig,
                        temperature: &TemplateSensors) -> String {
     
@@ -319,6 +364,53 @@ stderr: {}",
 }
 
 
+#[allow(dead_code)]
+#[allow(unused_variables)]
+pub fn os_call_metric_pipe(config: &TomlConfig,
+                           memory: &TemplateSensors) -> String {
+
+    /*
+    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
+             &memory.program,
+             &memory.args,
+    );
+    */
+    
+    let cmd_output = Command::new(&memory.program)
+        .args(&memory.args)
+        .stdout(Stdio::piped()).spawn().unwrap();
+
+    /*
+    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
+             &memory.pipe_program,
+             &memory.pipe_args,
+    );
+    */
+    
+    let cmd_pipe_output = Command::new(&memory.pipe_program)
+        .args(&memory.pipe_args)
+        .stdin(cmd_output.stdout.unwrap())
+        .output().expect("failed to execute command");
+
+
+    let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
+    let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
+
+    if config.flag.debug_sensor_output {
+        println!("\n#MEMORY_SENSOR:
+stdout: {}
+stderr: {}",
+                 cmd_pipe_output_stdout,
+                 cmd_pipe_output_stderr,
+        );
+    }
+
+    return cmd_pipe_output_stdout.to_string()
+}
+
+
+#[allow(dead_code)]
+#[allow(unused_variables)]
 pub fn os_call_sensors_pipe(config: &TomlConfig,
                             memory: &TemplateSensors) -> String {
 
@@ -470,87 +562,91 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
 
+    // METRIC_RESULT_LIST
+    let mut metric_result_list: Vec<PreRecord> = Vec::new();
+
+    // /*
     // OS_CMD <- LM-SENSORS
-    let sensors_stdout = os_call_sensors(&config,
-                                         &config.template.temperature);
+    let sensors_stdout = os_call_metric(&config,
+                                        &config.template.temperature);
 
     // JSON 
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
+    // */
     
-    /* // START T + M
-    let mut group_temperature = Vec::new();
-    let mut group_memory = Vec::new();
-    
-    for v in &config.all_sensors.values {
-        if v.group == "temperature" && v.status {
-            group_temperature.push(v);
-        }
-        else if v.group == "memory" && v.status {
-            group_memory.push(v);
-        }
-    }
-    
-    
-    // TEMPERATURE: LM-SENSORS <- OS_CMD 
-    let sensors_stdout = os_call_sensors(&config,
-                                         &config.template.temperature);
-
-    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-
-    for t in &group_temperature { // ttt
-        //let sensor_temperature_pointer_value: i64 = sensors_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
-        //let sensor_temperature_pointer_value = i64::from(sensors_json.pointer(&t.pointer).unwrap());
-        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
-
-        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap().is_u64();
-        let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
-        
-        //json_list.push(sensor_temperature_pointer_value);
-        /*
-        println!("\n#TEMPERATURE POINTER:\n{:#?}: {:#?}",
-                 t.pointer,
-                 sensor_temperature_pointer_value);
-        */
-    }
-
-    //_
-
-    // MEMORY
-    let sensors_memory_stdout = os_call_sensors_pipe(&config,
-                                                     &config.template.memory);
-
-    let sensors_memory_json: serde_json::Value = serde_json::from_str(&sensors_memory_stdout).unwrap();
-
-    for m in &group_memory {
-        //let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
-        let sensor_memory_pointer_value = sensors_memory_json.pointer(&m.pointer).unwrap();
-
-        //json_list.push(sensor_memory_pointer_value);
-
-        /*
-        println!("\n#MEMORY POINTER:\n{:#?}: {:#?}",
-             m.pointer,
-             sensor_memory_pointer_value);
-        */
-
-    }
-    //_
-
-    // JSON_LIST FULL CREAM
-    //println!("JSON_LIST: {:#?}", json_list);
-
-    */ // END T + M
-
-    /* METRICS
-    println!("METRICS:\n{:#?}", &config.metrics.keys());
+    // METRICS
+    println!("\n#METRICS:\n{:?}", &config.metrics.keys());
 
     for key in config.metrics.keys() {
-        println!("MEASUREMENT:{} / {}",
-                 config.metrics[key].measurement,
-                 config.metrics[key].field,
-        );
+        if config.metrics[key].flag_status {
+            println!("\n#MEASUREMENT:{} / {}",
+                     config.metrics[key].measurement,
+                     config.metrics[key].field,
+            );
+
+            let metric_stdout = os_call_sensors(&config,
+                                                &config.metrics[key]);
+            
+            let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap();
+
+            //println!("#METRIC_JSON: {v:?}", v=metric_json);
+
+            for single_sensor in &config.metrics[key].values {
+                
+                // JSON single POINTER
+                let single_sensor_pointer_value = &metric_json.pointer(&single_sensor.pointer).unwrap();
+                
+                // DEBUG true/false SENSORS
+                if config.flag.debug_pointer_output {
+                    println!("
+#POINTER_CFG:
+status: {s}
+name: {n}
+pointer: {p}
+value: {v}",
+                             s=single_sensor.status,
+                             n=single_sensor.name,
+                             p=single_sensor.pointer,
+                             v=single_sensor_pointer_value,
+                    );
+                }
+                
+                if single_sensor.status {
+                    // RECORD -> PREPARE and empty "" updated via INFLUX instance
+                    let single_record = PreRecord {
+                        ts: dt.ts,
+                        value: single_sensor_pointer_value.to_string(),
+                        //carrier: "".to_string(), //single_influx.carrier.to_string(),
+                        id: single_sensor.name.to_string(),
+                        //valid: "".to_string(), //single_influx.flag_valid_default.to_string(),
+                        //machine: "".to_string(), //single_influx.machine_id.to_string(),
+                        measurement: config.metrics[key].measurement.to_string(),
+                        host: config.host.to_string(),
+                    };
+
+                    //println!("#METRIC_RECORD: {:?}", single_record);
+
+                    // METRIC RECORD_LIST -> Vec<Record>
+                    if !metric_result_list.contains(&single_record) { 
+                        metric_result_list.push(single_record)
+                    }
+
+                    
+                }
+                    
+            } /* for single_sensor */
+        }
+    }
+
+
+    /*
+    //METRIC_RESULT_LIST
+    for single_metric_result in &metric_result_list {
+        println!("\n#SINGLE_METRIC_RESULT: {:#?}",
+                 single_metric_result);
     }
     */
+
     
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
@@ -575,6 +671,30 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
+
+            //METRIC_RESULT_LIST
+            for single_metric_result in &metric_result_list {
+            //for single_metric_result in IntoIterator::into_iter(metric_result_list) { //xxx
+                let new_single_metric_result = Record {
+                    ts: single_metric_result.ts, //xxx
+                    value: single_metric_result.value.to_string(),
+                    carrier: single_influx.carrier.to_string(),
+                    id: single_metric_result.id.to_string(),
+                    valid: single_influx.flag_valid_default.to_string(),
+                    machine: single_influx.machine_id.to_string(),
+                    measurement: single_metric_result.measurement.to_string(),
+                    host: single_metric_result.host.to_string(),
+                    //..single_metric_result
+                };
+
+                // /*
+                println!("\n#SINGLE_METRIC_RESULT: {:?}",
+                         new_single_metric_result);
+                // */
+
+            }
+
+            /* START OBSOLETE
             // SENSOR INSTANCES -> TEMPERATURE
             for single_sensor in &config.all_sensors.values {
             //for single_sensor in &group_temperature {
@@ -649,12 +769,19 @@ value: {v}",
                     }
 
                     // RECORD_LIST -> Vec<Record>
+                    // /*
                     if !result_list.contains(&single_record) { 
                         result_list.push(single_record)
                     }
+                    // */
 
                 } /* single_sensor.status */
+            
+            
             } /* all_sensors.values */
+
+            */ // END OBSOLETE
+
         } /* single_influx.status*/
     } /* all_influx.values */
 
@@ -664,3 +791,68 @@ value: {v}",
                 &dt.today_file_name)
 
 }
+
+
+    /* // START T + M
+    let mut group_temperature = Vec::new();
+    let mut group_memory = Vec::new();
+    
+    for v in &config.all_sensors.values {
+        if v.group == "temperature" && v.status {
+            group_temperature.push(v);
+        }
+        else if v.group == "memory" && v.status {
+            group_memory.push(v);
+        }
+    }
+    
+    
+    // TEMPERATURE: LM-SENSORS <- OS_CMD 
+    let sensors_stdout = os_call_sensors(&config,
+                                         &config.template.temperature);
+
+    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
+
+    for t in &group_temperature { // ttt
+        //let sensor_temperature_pointer_value: i64 = sensors_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        //let sensor_temperature_pointer_value = i64::from(sensors_json.pointer(&t.pointer).unwrap());
+        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
+
+        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap().is_u64();
+        let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
+        
+        //json_list.push(sensor_temperature_pointer_value);
+        /*
+        println!("\n#TEMPERATURE POINTER:\n{:#?}: {:#?}",
+                 t.pointer,
+                 sensor_temperature_pointer_value);
+        */
+    }
+
+    //_
+
+    // MEMORY
+    let sensors_memory_stdout = os_call_sensors_pipe(&config,
+                                                     &config.template.memory);
+
+    let sensors_memory_json: serde_json::Value = serde_json::from_str(&sensors_memory_stdout).unwrap();
+
+    for m in &group_memory {
+        //let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        let sensor_memory_pointer_value = sensors_memory_json.pointer(&m.pointer).unwrap();
+
+        //json_list.push(sensor_memory_pointer_value);
+
+        /*
+        println!("\n#MEMORY POINTER:\n{:#?}: {:#?}",
+             m.pointer,
+             sensor_memory_pointer_value);
+        */
+
+    }
+    //_
+
+    // JSON_LIST FULL CREAM
+    //println!("JSON_LIST: {:#?}", json_list);
+
+ */ // END T + M

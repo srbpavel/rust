@@ -34,7 +34,6 @@ pub struct TomlConfig {
     pub delay: Delay,
 
     pub template: Template,
-    //pub template: HashMap<String, TemplateSensors>,
     
     pub backup: Backup,
     
@@ -118,16 +117,9 @@ pub struct Influx {
 }
 
 
-/*
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Toys {
-    pub cars: HashMap<String, Template>, 
-}
-*/
-
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {
+    pub flag_status: bool,
     pub measurement: String,
 
     pub program: String,
@@ -135,6 +127,8 @@ pub struct TemplateSensors {
 
     pub pipe_program: String,
     pub pipe_args: Vec<String>,
+
+    pub values: Vec<Sensor>,
     
     pub tag_machine: String,
     pub tag_id: String,
@@ -157,8 +151,6 @@ pub struct Template {
     pub curl: TemplateCurl,
 
     pub flux: TemplateFlux,
-
-    //pub template: HashMap<String, TemplateSensors>,
 
     pub temperature: TemplateSensors,
     pub memory: TemplateSensors,
@@ -194,7 +186,7 @@ pub struct TemplateCurl {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
-    pub group: String,
+    //pub group: String,
     pub status: bool,
     pub name: String,
     pub pointer: String,
