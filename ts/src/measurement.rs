@@ -564,7 +564,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                     })
                 },
 
-                // PIPE is there
+                // PIPE is here
                 true => {
                     let metric_stdout = os_call_metric_pipe(&config,
                                                        &config.metrics[key]);
@@ -573,31 +573,9 @@ pub fn parse_sensors_data(config: &TomlConfig,
                         eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
                         process::exit(1);
                     })
-
-                    /*    
-                    let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
-                        process::exit(1);
-                    });
-
-                    metric_json
-                    */
                 }
             };
             
-            //println!("\n#METRIC_STDOUT: {:#?}", metric_stdout);
-            //println!("#METRIC_JSON: {v:?}", v=metric_json);
-            
-            //let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap(); //eee
-            /*
-            let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
-                process::exit(1);
-            });
-            */
-
-
-
             for single_sensor in &config.metrics[key].values {
                 
                 // JSON single POINTER
@@ -621,25 +599,27 @@ value: {v}",
 
                 let pointer_parsed: f64 = match config.metrics[key].flag_pipe {
                     false => {
-                        println!("value: {v} / {v:#?}", v=single_sensor_pointer_value);
+                        /* println!("value: {v} / {v:#?}", v=single_sensor_pointer_value); */
                         
-                        let number: f64 = single_sensor_pointer_value.to_string().parse().unwrap();
-
+                        let number: f64 = single_sensor_pointer_value.to_string().parse().unwrap_or_else(|err| {
+                            eprintln!("\nEXIT: Problem parsing JSON VALUE to f64\nREASON >>> {}", err);
+                            process::exit(1);
+                        });
+                        
                         number
                     },
                     
                     true => {
-                        println!("value_PIPE: {}", v=single_sensor_pointer_value);
+                        /* println!("value_PIPE: {}", v=single_sensor_pointer_value); */
 
-                        //let json_pointer_value: i64 = mem_info_json.pointer(generic_pointer_path).unwrap().as_str().unwrap().parse().unwrap();
-                        
-                        //let replace = str::replace(String::from(&single_sensor_pointer_value.parse()), "\"", "");
-                        let replace: f64 = str::replace(single_sensor_pointer_value.as_str().unwrap(), "\"", "").parse().unwrap();
+                        let replace: f64 = str::replace(single_sensor_pointer_value.as_str().unwrap(), "\"", "").parse().unwrap_or_else(|err| {
+                            eprintln!("\nEXIT: Problem parsing JSON VALUE <PIPE> to f64 via replace: \" \nREASON >>> {}", err);
+                            process::exit(1);
+                        });
 
-                        println!("REPLACE: {r} / {r:#?}", r=replace);
+                        /* println!("REPLACE: {r} / {r:#?}", r=replace); */
 
                         replace
-                        //single_sensor_pointer_value
                     },
                 };
                 
@@ -647,10 +627,7 @@ value: {v}",
                     let single_record = PreRecord {
                         key:key.to_string(),
                         ts: dt.ts,
-
-                        //value: single_sensor_pointer_value.to_string(),
                         value: pointer_parsed.to_string(),
-                        
                         id: single_sensor.name.to_string(),
                         measurement: config.metrics[key].measurement.to_string(),
                         host: config.host.to_string(),
@@ -776,68 +753,3 @@ value: {v}",
         }
     }
 }
-
-
-    /* // START T + M
-    let mut group_temperature = Vec::new();
-    let mut group_memory = Vec::new();
-    
-    for v in &config.all_sensors.values {
-        if v.group == "temperature" && v.status {
-            group_temperature.push(v);
-        }
-        else if v.group == "memory" && v.status {
-            group_memory.push(v);
-        }
-    }
-    
-    
-    // TEMPERATURE: LM-SENSORS <- OS_CMD 
-    let sensors_stdout = os_call_sensors(&config,
-                                         &config.template.temperature);
-
-    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-
-    for t in &group_temperature { // ttt
-        //let sensor_temperature_pointer_value: i64 = sensors_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
-        //let sensor_temperature_pointer_value = i64::from(sensors_json.pointer(&t.pointer).unwrap());
-        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
-
-        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap().is_u64();
-        let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
-        
-        //json_list.push(sensor_temperature_pointer_value);
-        /*
-        println!("\n#TEMPERATURE POINTER:\n{:#?}: {:#?}",
-                 t.pointer,
-                 sensor_temperature_pointer_value);
-        */
-    }
-
-    //_
-
-    // MEMORY
-    let sensors_memory_stdout = os_call_sensors_pipe(&config,
-                                                     &config.template.memory);
-
-    let sensors_memory_json: serde_json::Value = serde_json::from_str(&sensors_memory_stdout).unwrap();
-
-    for m in &group_memory {
-        //let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
-        let sensor_memory_pointer_value = sensors_memory_json.pointer(&m.pointer).unwrap();
-
-        //json_list.push(sensor_memory_pointer_value);
-
-        /*
-        println!("\n#MEMORY POINTER:\n{:#?}: {:#?}",
-             m.pointer,
-             sensor_memory_pointer_value);
-        */
-
-    }
-    //_
-
-    // JSON_LIST FULL CREAM
-    //println!("JSON_LIST: {:#?}", json_list);
-
- */ // END T + M
