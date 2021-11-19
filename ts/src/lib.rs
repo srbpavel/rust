@@ -26,7 +26,6 @@ pub struct TomlConfig {
     pub host: String,
 
     //HASH
-    pub toys: HashMap<String, Toy>,
     pub metrics: HashMap<String, TemplateSensors>,
     
     // STRUCT
@@ -39,16 +38,9 @@ pub struct TomlConfig {
     
     // VEC
     pub all_influx: AllInflux,
-    //pub all_sensors: AllSensors,
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Toy {
-    pub measurement: String,
-}
-
-        
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
     pub debug_new_config: bool,
@@ -57,7 +49,7 @@ pub struct Flag {
     pub debug_ts_to_dt: bool,
 
     pub debug_sensor_output: bool,
-    pub debug_sensor_instances: bool,
+    pub debug_metric_instances: bool,
 
     pub debug_pointer_output: bool,
 
@@ -96,6 +88,8 @@ pub struct Delay {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllInflux {
+    //values: [i32; 3], // fixed array with three int's
+    //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Influx>,
 }
 
@@ -151,11 +145,7 @@ pub struct TemplateSensors {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Template {
     pub curl: TemplateCurl,
-
     pub flux: TemplateFlux,
-
-    //pub temperature: TemplateSensors,
-    //pub memory: TemplateSensors,
 }
 
 
@@ -188,21 +178,10 @@ pub struct TemplateCurl {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
-    //pub group: String,
     pub status: bool,
     pub name: String,
     pub pointer: String,
 }
-
-
-/*
-#[derive(Serialize, Deserialize, Debug)]
-pub struct AllSensors {
-    //values: [i32; 3], // fixed array with three int's
-    //values: Vec<i32>, // unlimited size vector
-    pub values: Vec<Sensor>,
-}
-*/
 
 
 #[cfg(test)]

@@ -36,10 +36,7 @@ pub struct PreRecord {
     pub key: String,
     pub ts: i64,
     pub value: String,
-    //pub carrier: String,
     pub id: String,
-    //pub valid: String,
-    //pub machine: String,
     pub measurement: String,
     pub host: String,
 }
@@ -155,12 +152,11 @@ pub fn backup_data(config: &TomlConfig,
 
     // FILE CREATE or APPEND
     if config.flag.debug_backup {
-        println!("\n#CSV_ANNOTATED:");
+        println!("\n#CSV_ANNOTATED: {}\n#", &today_file_name.display());
     }
 
     // format CSV HEADER
-    let csv_header = prepare_csv_header_format(//&config,
-                                               &metric);
+    let csv_header = prepare_csv_header_format(&metric);
     
     if !today_file_name.exists() {
         let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
@@ -212,8 +208,7 @@ pub fn backup_data(config: &TomlConfig,
     
     // RESULT_LIST
     for single_record in result_list {
-        let csv_record = prepare_csv_record_format(//&config,
-                                                   &single_record,
+        let csv_record = prepare_csv_record_format(&single_record,
                                                    &metric,
         );
 
@@ -229,9 +224,7 @@ pub fn backup_data(config: &TomlConfig,
 }
 
 
-//this 3 to MEM also
-pub fn prepare_csv_header_format(//config: &TomlConfig,
-metric: &TemplateSensors) -> String {
+pub fn prepare_csv_header_format(metric: &TemplateSensors) -> String {
 
     let csv_header_template = String::from(&metric.annotated_header);
     let mut csv_header = HashMap::new();
@@ -245,8 +238,7 @@ metric: &TemplateSensors) -> String {
 }
 
 
-pub fn prepare_csv_record_format(//config: &TomlConfig,
-                                 record: &Record,
+pub fn prepare_csv_record_format(record: &Record,
                                  metric: &TemplateSensors) -> String {
 
     let csv_record_template = String::from(&metric.csv_annotated);
@@ -267,10 +259,7 @@ pub fn prepare_csv_record_format(//config: &TomlConfig,
 pub fn prepare_generic_flux_query_format(config: &TomlConfig,
                                          single_influx: &Influx,
                                          generic_record: &Record,
-
-                                         //temperature: &TemplateSensors,
                                          metric: &TemplateSensors,
-                                         
                                          utc_influx_format: &String) -> String {
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
@@ -290,7 +279,7 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
     flux.insert("measurement".to_string(), String::from(&metric.measurement));
 
-    // for now COMPARE only id + time // if needed also _value
+    // COMPARE only id + time // if needed can add _VALUE
     flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
     flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
 
@@ -350,32 +339,6 @@ stderr: {}",
 }
 
 
-// TO DEL - metric
-/*
-pub fn os_call_sensors(config: &TomlConfig,
-                       temperature: &TemplateSensors) -> String {
-    
-    let sensor_output = Command::new(&temperature.program)
-        .args(&config.template.temperature.args)
-        .output().expect("failed to execute command");
-    
-    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
-    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
-
-    if config.flag.debug_sensor_output {
-        println!("\n#TEMPERATURE SENSOR:
-stdout: {}
-stderr: {}",
-                 sensor_stdout_string,
-                 sensor_stderr_string,
-        );
-    }
-
-    return sensor_stdout_string.to_string()
-}
-*/
-
-
 #[allow(dead_code)]
 #[allow(unused_variables)]
 pub fn os_call_metric_pipe(config: &TomlConfig,
@@ -421,7 +384,7 @@ stderr: {}",
 }
 
 
-
+/*
 #[allow(dead_code)]
 #[allow(unused_variables)]
 pub fn os_call_sensors_pipe(config: &TomlConfig,
@@ -465,7 +428,7 @@ stderr: {}",
 
     return cmd_pipe_output_stdout.to_string()
 }
-
+*/
 
 pub fn os_call_curl(config: &TomlConfig,
                    influx_uri: &String,
@@ -491,9 +454,7 @@ pub fn os_call_curl(config: &TomlConfig,
 }
 
 
-#[allow(unused_variables)] // nepouzivam zatim CONFIG
-pub fn prepare_generic_lp_format(//config: &TomlConfig,
-                                 generic_record: &Record,
+pub fn prepare_generic_lp_format(generic_record: &Record,
                                  metric: &TemplateSensors
 )  -> String {
 
@@ -570,7 +531,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
-//#[allow(unused_variables)]
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
 
@@ -580,15 +540,6 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // METRIC_RESULT_LIST
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
-    /*
-    // OS_CMD <- LM-SENSORS
-    let sensors_stdout = os_call_metric(&config,
-                                        &config.template.temperature);
-
-    // JSON 
-    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-    */
-    
     // METRICS
     println!("\n#METRICS:\n{:?}", &config.metrics.keys());
 
@@ -599,7 +550,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      config.metrics[key].field,
             );
 
-            let metric_stdout = os_call_metric(&config, //xxx
+            let metric_stdout = os_call_metric(&config,
                                                &config.metrics[key]);
             
             let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap();
@@ -627,7 +578,6 @@ value: {v}",
                 }
                 
                 if single_sensor.status {
-                    // RECORD -> PREPARE and empty "" updated via INFLUX instance
                     let single_record = PreRecord {
                         key:key.to_string(),
                         ts: dt.ts,
@@ -637,8 +587,6 @@ value: {v}",
                         host: config.host.to_string(),
                     };
 
-                    //println!("#METRIC_RECORD: {:?}", single_record);
-
                     // METRIC RECORD_LIST -> Vec<Record>
                     if !metric_result_list.contains(&single_record) { 
                         metric_result_list.push(single_record)
@@ -647,20 +595,19 @@ value: {v}",
                     
                 }
                     
-            } /* for single_sensor */
+            } /* for single_sensor in each metric*/
         }
-    }
+    } /* for key in metrics */
 
 
-    /*
-    //METRIC_RESULT_LIST
+    /* flag or DEL ??? 
+    // METRIC_RESULT_LIST
     for single_metric_result in &metric_result_list {
         println!("\n#SINGLE_METRIC_RESULT: {:#?}",
                  single_metric_result);
     }
     */
 
-    
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         if single_influx.status {
@@ -700,14 +647,12 @@ value: {v}",
                 };
 
                 if config.flag.debug_metric_record {
-                    println!("\n#SINGLE_METRIC_RESULT: {:?}",
+                    println!("\n#SINGLE_METRIC_RESULT:\n{:?}",
                              new_single_metric_result);
                 }
 
                 // LP via Record
-                let generic_lp = prepare_generic_lp_format(//&config,
-                                                           &new_single_metric_result,
-                                                           //&config.template.temperature);
+                let generic_lp = prepare_generic_lp_format(&new_single_metric_result,
                                                            &config.metrics[&single_metric_result.key.to_string()]);
 
                 if config.flag.debug_influx_lp {
@@ -726,8 +671,6 @@ value: {v}",
                         &config,
                         &single_influx,
                         &new_single_metric_result,
-
-                        //&config.template.temperature,
                         &config.metrics[&single_metric_result.key.to_string()],
                     
                         &dt.utc_influx_format);
@@ -747,108 +690,14 @@ value: {v}",
                 }
                 
                 // RECORD_LIST -> Vec<Record>
-                // /*
                 if !result_list.contains(&new_single_metric_result) { 
                     result_list.push(new_single_metric_result)
                 }
-                // */
-                
-            }
-
-            /* START OBSOLETE
-            // SENSOR INSTANCES -> TEMPERATURE
-            for single_sensor in &config.all_sensors.values {
-            //for single_sensor in &group_temperature {
-                
-                // JSON single POINTER
-                let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
-                
-                // DEBUG true/false SENSORS
-                if config.flag.debug_pointer_output {
-                    println!("
-#POINTER_CFG:
-status: {s}
-name: {n}
-pointer: {p}
-value: {v}",
-                             s=single_sensor.status,
-                             n=single_sensor.name,
-                             p=single_sensor.pointer,
-                             v=json_pointer_value,
-                    );
-                }
-
-                if single_sensor.status {
-                    // RECORD
-                    let single_record = Record {
-                        ts: dt.ts,
-                        value: json_pointer_value.to_string(),
-                        carrier: single_influx.carrier.to_string(),
-                        id: single_sensor.name.to_string(),
-                        valid: single_influx.flag_valid_default.to_string(),
-                        machine: single_influx.machine_id.to_string(),
-                        measurement: config.template.temperature.measurement.to_string(),
-                        host: config.host.to_string(),
-                    };
-
-                    // LP via Record
-                    let generic_lp = prepare_generic_lp_format(&config,
-                                                               &single_record,
-                                                               &config.template.temperature);
-
-                    if config.flag.debug_influx_lp {
-                        println!("\n#LP:\n{}", generic_lp);
-                    }
-
-                    // OS_CMD <- CURL
-                    os_call_curl(&config,
-                                 &influx_uri_write,
-                                 &influx_auth,
-                                 &generic_lp);
-
-                    // OS_CMD <- GENERIC FLUX_QUERY
-                    if config.flag.run_flux_verify_record {
-                        let generic_influx_query = prepare_generic_flux_query_format(
-                            &config,
-                            &single_influx,
-                            &single_record,
-                            &config.template.temperature,
-                            &dt.utc_influx_format);
-                        
-                        if config.flag.debug_flux_query {
-                            println!("\n#QUERY:\n{}",
-                                     generic_influx_query,
-                            );
-                        }
-
-                        os_call_curl_flux(&config,
-                                          &influx_uri_query,
-                                          &influx_auth,
-                                          &influx_accept,
-                                          &influx_content,
-                                          &generic_influx_query);
-                    }
-
-                    // RECORD_LIST -> Vec<Record>
-                    // /*
-                    if !result_list.contains(&single_record) { 
-                        result_list.push(single_record)
-                    }
-                    // */
-
-                } /* single_sensor.status */
-            
-            
-            } /* all_sensors.values */
-
-            */ // END OBSOLETE
-
+            } /* for single_metric */
         } /* single_influx.status*/
     } /* all_influx.values */
-
+    
     // BACKUP
-
-    // /*
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
             backup_data(&config,
@@ -857,7 +706,6 @@ value: {v}",
                         &config.metrics[key]);
         }
     }
-    // */
 }
 
 

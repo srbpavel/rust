@@ -1,7 +1,41 @@
-name = 'laptop_core_temperature'
+name = 'laptop'
 # influx: host TAG
 host = 'spongebob'
 work_dir = '/home/conan/soft/rust/ts'
+
+
+[flag]
+debug_new_config = false
+
+debug_ts = false
+# future_use
+debug_ts_to_dt = false
+
+debug_metric_instances = false
+debug_sensor_output = false # RAW_JSON
+debug_pointer_output = false # JSON value
+debug_metric_record = false # Struct
+
+debug_influx_lp = false
+debug_influx_uri = true # false
+debug_influx_auth = false
+debug_influx_output = false # CURL stdout/stderr
+debug_influx_instances = false
+
+# query influx to verify write was successfull
+run_flux_verify_record = true # false
+# add |> count() to [template.flux].query_verify_record
+add_flux_query_verify_record_suffix = false
+
+debug_flux_query = false
+debug_flux_result = false
+
+# search for QUERY in this CONFIG_FILE
+run_egrep = false
+debug_egrep = true # false
+
+debug_backup = true # false # show CSV ANNOTATED data
+
 
 [metrics]
 [metrics.temperature]
@@ -45,8 +79,8 @@ pipe_args = [
 	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"]
 
 values = [
-       {group="memory", status=true, name="memory_free", pointer="/MemFree"},
-       {group="memory", status=true, name="memory_available", pointer="/MemAvailable"},
+       {status=true, name="memory_free", pointer="/MemFree"},
+       {status=true, name="memory_available", pointer="/MemAvailable"},
        ]
 
 tag_machine = "Machine"
@@ -60,42 +94,6 @@ annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{fie
 csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
 generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
 generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
-# _metrics
-
-
-[flag]
-debug_new_config = false
-
-debug_ts = false
-# future_use
-debug_ts_to_dt = false
-
-debug_sensor_output = false # RAW_JSON
-debug_sensor_instances = false
-debug_pointer_output = false # JSON value
-
-debug_metric_record = false
-
-debug_influx_lp = false
-
-debug_influx_uri = true # false
-debug_influx_auth = false
-debug_influx_output = false # CURL stdout/stderr
-debug_influx_instances = false
-
-# query influx to verify write was successfull
-run_flux_verify_record = true # false
-# add |> count() to [template.flux].query_verify_record
-add_flux_query_verify_record_suffix = false
-
-debug_flux_query = false
-debug_flux_result = false
-
-# search for QUERY in this CONFIG_FILE
-run_egrep = false
-debug_egrep = true # false
-
-debug_backup = true #false
 
 
 # future_use
@@ -135,80 +133,112 @@ values = [
        ]
 
 
-# vector of sensor: Struct instances
-[all_sensors]
-#group: temperature/memory
-#status: on/off
-#name: influx SensorId TAG
-#pointer: json path / influx TemperatureDecimal FIELD
-# DO NOT BREAK LINES IN Struct AS IT WILL !panic
-values = [
-       {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
-       {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
-       {status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
-       {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
-]
-
-
 [template]
-[template.temperature]
-flag_status = true # false
-measurement = "temperature"
+[template.curl]
+# $ dpkg -l|egrep curl
+# ii  curl                                  7.74.0-1.3+b1                          amd64        command line tool for transferring data with URL syntax
+program = "/usr/bin/curl"
+param_insecure = "--insecure"
+param_request = "--request"
+param_post = "POST"
+param_header = "--header"
+param_data = "--data-raw"
+
+influx_uri_api = "{secure}://{server}:{port}/api/v2/"
+influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
+influx_uri_query = "query?org={org}"
+
+influx_auth = "Authorization: Token {token}"
+influx_accept = "Accept: application/csv"
+influx_content = "Content-type: application/vnd.flux"
+
+
+[template.flux]
+query_verify_record_range_start = "-1h"
+query_verify_record_suffix = " |> count()"
+#
+# INFLUX API query CALL via CURL
+#
+#$ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -7d) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier","SensorValid", "_field"]) |> limit(n:1)'
+#
+# RESULT
+#
+#,result,table,_time,_value,Machine,SensorId
+#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
+#
+# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group()'
+#
+# RESULT |> group()
+#
+#,result,table,_time,_value,Machine,SensorId
+#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
+#
+# RESULT |> count()
+#
+# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group() |> count()'
+#
+#,result,table,_value
+#,_result,0,1
+
+
+#[template.temperature]
+#flag_status = true # false
+#measurement = "temperature"
 
 # $dpkg -l|egrep lm-sensors
 # ii  lm-sensors                            1:3.6.0-7                              amd64        utilities to read temperature/voltage/fan sensors
-program = "/usr/bin/sensors"
-args = ["-j"]
+#program = "/usr/bin/sensors"
+#args = ["-j"]
 
-pipe_program = ""
-pipe_args = []
+#pipe_program = ""
+#pipe_args = []
 
-values = []
+#values = []
 
 # TAG name
-tag_machine = "Machine"
-tag_id = "SensorId"
-tag_carrier = "SensorCarrier" 
-tag_valid = "SensorValid"
-field = "TemperatureDecimal"
+#tag_machine = "Machine"
+#tag_id = "SensorId"
+#tag_carrier = "SensorCarrier" 
+#tag_valid = "SensorValid"
+#field = "TemperatureDecimal"
 
 # for now only FIX count of TAG's and SINGLE _FIELD
-annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
-annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
-csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
-generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
-generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+#annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
+#annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
+#csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
+#generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
 
 
-[template.memory]
-flag_status = false
-measurement = "memory"
+#[template.memory]
+#flag_status = false
+#measurement = "memory"
 
-program = "/bin/cat"
-args = ["/proc/meminfo"]
+#program = "/bin/cat"
+#args = ["/proc/meminfo"]
 
 # $ dpkg -l |egrep jq
 # ii  jq                                    1.6-2.1                                amd64        lightweight and flexible command-line JSON processor
-pipe_program = "jq"
-pipe_args = [
-	  "--slurp",
-	  "--raw-input",
-	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"]
+#pipe_program = "jq"
+#pipe_args = [
+#	  "--slurp",
+#	  "--raw-input",
+#	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\#"))}) | from_entries"]
 
-values = []
+#values = []
 
 # TAG name
-tag_machine = "Machine"
-tag_id = "MemoryId"
-tag_carrier = "MemoryCarrier" 
-tag_valid = "MemoryValid"
-field = "MemoryDecimal"
+#tag_machine = "Machine"
+#tag_id = "MemoryId"
+#tag_carrier = "MemoryCarrier" 
+#tag_valid = "MemoryValid"
+#field = "MemoryDecimal"
 
-annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
-annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
-csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
-generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
-generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+#annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
+#annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
+#csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
+#generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
 
 
 # IMPORT_from_backup -> EXPORT -> compare/verify
@@ -251,6 +281,22 @@ generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start
 # from(bucket: "import_test_rust") |> range(start: -24h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> drop(columns:["_start", "_stop", "host", "_measurement"]) |> sort(columns: ["_time"], desc:true) |> limit(n:20)
 #
 
+
+# vector of sensor: Struct instances
+#[all_sensors]
+#group: temperature/memory
+#status: on/off
+#name: influx SensorId TAG
+#pointer: json path / influx TemperatureDecimal FIELD
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+
+#values = [
+#       {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
+#       {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
+#       {status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
+#       {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
+#]
+
 #[template.sensors]
 #[template.temperature] ADD TO OLD [template.csv]
 # $dpkg -l|egrep lm-sensors
@@ -259,51 +305,8 @@ generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start
 #param_1 = "-j"
 #args = ["-j"]
 
-[template.curl]
-# $ dpkg -l|egrep curl
-# ii  curl                                  7.74.0-1.3+b1                          amd64        command line tool for transferring data with URL syntax
-program = "/usr/bin/curl"
-param_insecure = "--insecure"
-param_request = "--request"
-param_post = "POST"
-param_header = "--header"
-param_data = "--data-raw"
 
-influx_uri_api = "{secure}://{server}:{port}/api/v2/"
-influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
-influx_uri_query = "query?org={org}"
 
-influx_auth = "Authorization: Token {token}"
-influx_accept = "Accept: application/csv"
-influx_content = "Content-type: application/vnd.flux"
-
-[template.flux]
-query_verify_record_range_start = "-1h"
-query_verify_record_suffix = " |> count()"
-
-#
-# INFLUX API query CALL via CURL
-#
-#$ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -7d) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier","SensorValid", "_field"]) |> limit(n:1)'
-#
-# RESULT
-#
-#,result,table,_time,_value,Machine,SensorId
-#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
-#
-# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group()'
-#
-# RESULT |> group()
-#
-#,result,table,_time,_value,Machine,SensorId
-#,_result,0,2021-11-16T11:43:43.871Z,54,spongebob,0
-#
-# RESULT |> count()
-#
-# $ /usr/bin/curl --insecure --request POST https://ruth:8086/api/v2/query?org=foookin_paavel --header 'Authorization: Token riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==' --header 'Accept: application/csv' --header 'Content-type: application/vnd.flux' --data 'from(bucket: "test_rust") |> range(start: -6h) |> filter(fn: (r) => r["_measurement"] == "temperature") |> filter(fn: (r) => r["SensorId"] == "0") |> filter(fn: (r) => r["_value"] == 54.0) |> filter(fn: (r) => r["_time"] == 2021-11-16T11:43:43.871Z) |> sort(columns: ["_time"], desc:true) |> drop(columns:["_start", "_stop", "host", "_measurement","SensorCarrier", "SensorValid", "_field"]) |> limit(n:1) |> group() |> count()'
-#
-#,result,table,_value
-#,_result,0,1
 
 # 
 #
@@ -321,10 +324,10 @@ query_verify_record_suffix = " |> count()"
 #  "MemAvailable": "1829704",
 #  "Buffers": "229724",
 
-[toys]
-[toys.car]
-measurement = "m_car"
-[toys.excavator]
-measurement = "m_excavator"
-[toys.dozer]
-measurement = "m_dozer"
+#[toys]
+#[toys.car]
+#measurement = "m_car"
+#[toys.excavator]
+#measurement = "m_excavator"
+#[toys.dozer]
+#measurement = "m_dozer"

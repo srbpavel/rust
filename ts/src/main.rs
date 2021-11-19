@@ -12,12 +12,10 @@ pub use util::ts as timestamp;
 // SENSORS
 mod measurement;
 
-// ENUM
-//use ts::{TomlConfig, Influx, TemplateSensors};
+// DEBUG -> measurement
+//
+//use metynka::{TomlConfig, Influx, TemplateSensors};
 //use crate::metynka::TemplateSensors;
-//use ts::TemplateSensors;
-
-//use ts::{TemplateSensors};
 
 
 fn main() {
@@ -28,13 +26,13 @@ fn main() {
     });
 
     // TOML_CONFIG
-    let new_config = metynka::parse_toml_config(&cmd_args).unwrap_or_else(|err| {
+    let config = metynka::parse_toml_config(&cmd_args).unwrap_or_else(|err| {
         eprintln!("\nEXIT: reading file\nREASON >>> {}", err);
         process::exit(1);
     });
 
     // EGREP
-    if new_config.flag.run_egrep && new_config.flag.debug_egrep {
+    if config.flag.run_egrep && config.flag.debug_egrep {
         if let Err(e) = metynka::read_config(cmd_args) {
             eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
             process::exit(1);
@@ -42,11 +40,11 @@ fn main() {
     }
     
     // DT Struct
-    let dt = timestamp::ts_now(new_config.flag.debug_ts);
+    let dt = timestamp::ts_now(config.flag.debug_ts);
 
     // DEBUG: ALL_INFLUX
-    if new_config.flag.debug_influx_instances {
-        for single_influx in &new_config.all_influx.values {
+    if config.flag.debug_influx_instances {
+        for single_influx in &config.all_influx.values {
             let status = match single_influx.status {
                 true => "true",
                 false => "false",
@@ -58,24 +56,19 @@ fn main() {
         }
     }
 
-    // DEBUG: ALL_SENSOR
-    /* OBSOLETE - TO DEL or CHANGE
-    if new_config.flag.debug_sensor_instances {
-        for single_sensor in &new_config.all_sensors.values {
-            let status = match single_sensor.status {
-                true => "true",
-                false => "false",
-            };
-
-            println!("SENSOR [{}]: {}",
-                     status,
-                     single_sensor.name);
+    // DEBUG: ALL_METRICS
+    if config.flag.debug_metric_instances {
+        for key in config.metrics.keys() {
+            println!("\n#METRIC:\n<{n}> / {s}\n\n{m:#?}",
+                     n=&config.metrics[key].measurement,
+                     s=&config.metrics[key].flag_status,
+                     m=&config.metrics[key],
+            );
         }
     }
-    */
-    
+
     // SENSOR
-    measurement::parse_sensors_data(&new_config,
+    measurement::parse_sensors_data(&config,
                                     &dt,
     );
 
