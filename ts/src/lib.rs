@@ -121,6 +121,7 @@ pub struct TemplateSensors {
     pub program: String,
     pub args: Vec<String>,
 
+    pub flag_pipe: bool,
     pub pipe_program: String,
     pub pipe_args: Vec<String>,
 

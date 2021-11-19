@@ -170,6 +170,7 @@ pub fn backup_data(config: &TomlConfig,
                     .open(&today_file_name)
                     .unwrap() // NO NEED TO TEST ? AS CREATED
             },
+            
             Ok(file) => file,
         };
 
@@ -207,18 +208,20 @@ pub fn backup_data(config: &TomlConfig,
     
     // RESULT_LIST
     for single_record in result_list {
-        let csv_record = prepare_csv_record_format(&single_record,
-                                                   &metric,
-        );
+        if &metric.measurement == &single_record.measurement { //xxx
+            let csv_record = prepare_csv_record_format(&single_record,
+                                                       &metric,
+            );
 
-        if config.flag.debug_backup {
-            println!("{}", &csv_record);
+            if config.flag.debug_backup {
+                println!("{}", &csv_record);
+            }
+            
+            writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+                eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+                process::exit(1);
+            });
         }
-        
-        writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
-            eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-            process::exit(1);
-        });
     }
 }
 
@@ -544,17 +547,45 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
-            println!("\n#MEASUREMENT:{} / {}",
+            println!("\n#MEASUREMENT: <{}> / {}",
                      config.metrics[key].measurement,
                      config.metrics[key].field,
             );
 
-            let metric_stdout = os_call_metric(&config,
-                                               &config.metrics[key]);
-            
-            let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap();
+            let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
+                false => {
+                    let metric_stdout = os_call_metric(&config,
+                                                       &config.metrics[key]);
 
+                    serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                        process::exit(1);
+                    })
+                },
+                
+                true => {
+                    let metric_stdout = os_call_metric_pipe(&config,
+                                                       &config.metrics[key]);
+
+                    serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                        process::exit(1);
+                    })
+                }
+            };
+            
+            //println!("\n#METRIC_STDOUT: {:#?}", metric_stdout);
             //println!("#METRIC_JSON: {v:?}", v=metric_json);
+            
+            //let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap(); //eee
+            /*
+            let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                process::exit(1);
+            });
+            */
+
+
 
             for single_sensor in &config.metrics[key].values {
                 
