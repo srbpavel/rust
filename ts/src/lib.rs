@@ -7,6 +7,8 @@ use serde::{Serialize, Deserialize};
 
 use std::process;
 
+use std::collections::HashMap;
+
 
 pub struct CmdArgs {
     // when modified DO NOT forget to change ARG_COUNT verification -> learn to count struct descendants
@@ -23,10 +25,17 @@ pub struct TomlConfig {
     pub name: String,
     pub host: String,
 
+    //HASH
+    pub toys: HashMap<String, Toy>,
+    pub metrics: HashMap<String, TemplateSensors>,
+    
     // STRUCT
     pub flag: Flag,
     pub delay: Delay,
+
     pub template: Template,
+    //pub template: HashMap<String, TemplateSensors>,
+    
     pub backup: Backup,
     
     // VEC
@@ -35,6 +44,12 @@ pub struct TomlConfig {
 }
 
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Toy {
+    pub measurement: String,
+}
+
+        
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
     pub debug_new_config: bool,
@@ -103,6 +118,14 @@ pub struct Influx {
 }
 
 
+/*
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Toys {
+    pub cars: HashMap<String, Template>, 
+}
+*/
+
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {
     pub measurement: String,
@@ -135,7 +158,8 @@ pub struct Template {
 
     pub flux: TemplateFlux,
 
-    //pub temperature: TemplateTemperature,
+    //pub template: HashMap<String, TemplateSensors>,
+
     pub temperature: TemplateSensors,
     pub memory: TemplateSensors,
 }

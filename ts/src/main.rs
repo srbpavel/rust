@@ -12,6 +12,13 @@ pub use util::ts as timestamp;
 // SENSORS
 mod measurement;
 
+// ENUM
+//use ts::{TomlConfig, Influx, TemplateSensors};
+//use crate::metynka::TemplateSensors;
+//use ts::TemplateSensors;
+
+//use ts::{TemplateSensors};
+
 
 fn main() {
     // COMMAND ARGS
@@ -26,6 +33,19 @@ fn main() {
         process::exit(1);
     });
 
+    // HASH
+    /*
+    println!("TOYS:\n{:#?}", &new_config.toys.keys());
+
+    for key in new_config.toys.keys() {
+        println!("KEY:{:#?}",
+                 new_config.toys[key].measurement);
+    }
+    
+    */
+    //_
+
+    
     // EGREP
     if new_config.flag.run_egrep && new_config.flag.debug_egrep {
         if let Err(e) = metynka::read_config(cmd_args) {
@@ -69,4 +89,36 @@ fn main() {
     measurement::parse_sensors_data(&new_config,
                                     &dt,
     );
+
+
+    //ENUM
+    /*
+    #[derive(Debug)]
+    enum DataType {
+        Temperature(TemplateSensors),
+        Memory(TemplateSensors),
+    }
+    //_
+
+    //let data_type: DataType = DataType::TemplateSensors;
+
+    let temperature: DataType = DataType::Temperature(new_config.template.temperature);
+    let memory: DataType = DataType::Memory(new_config.template.memory);
+
+    /*
+    println!("ENUM:\n{:#?}\n{:#?}",
+             temperature,
+             memory,
+    );
+    */
+    */
+
+    /*
+    for s in [&new_config.template.temperature, &new_config.template.memory] {
+        println!("\nARRAY:\n{:#?}",
+                 &s.measurement,
+        );
+    }
+    */
+    
 }

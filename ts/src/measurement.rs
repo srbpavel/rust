@@ -470,10 +470,14 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
 
-    //let mut all_sensors_result_list: Vec<Record> = Vec::new();
-    
-    //let mut json_list = Vec::new();
+    // OS_CMD <- LM-SENSORS
+    let sensors_stdout = os_call_sensors(&config,
+                                         &config.template.temperature);
 
+    // JSON 
+    let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
+    
+    /* // START T + M
     let mut group_temperature = Vec::new();
     let mut group_memory = Vec::new();
     
@@ -534,6 +538,19 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     // JSON_LIST FULL CREAM
     //println!("JSON_LIST: {:#?}", json_list);
+
+    */ // END T + M
+
+    /* METRICS
+    println!("METRICS:\n{:#?}", &config.metrics.keys());
+
+    for key in config.metrics.keys() {
+        println!("MEASUREMENT:{} / {}",
+                 config.metrics[key].measurement,
+                 config.metrics[key].field,
+        );
+    }
+    */
     
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
@@ -559,12 +576,12 @@ pub fn parse_sensors_data(config: &TomlConfig,
             }
 
             // SENSOR INSTANCES -> TEMPERATURE
-            //for single_sensor in &config.all_sensors.values {
-            for single_sensor in &group_temperature {
+            for single_sensor in &config.all_sensors.values {
+            //for single_sensor in &group_temperature {
                 
                 // JSON single POINTER
                 let json_pointer_value = &sensors_json.pointer(&single_sensor.pointer).unwrap();
-
+                
                 // DEBUG true/false SENSORS
                 if config.flag.debug_pointer_output {
                     println!("
