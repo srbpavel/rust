@@ -1,5 +1,6 @@
 use std::process;
 use std::process::{Command};
+
 // CMD GENERIC
 use std::process::*; 
 
@@ -14,10 +15,7 @@ use std::io::Write;
 
 pub use crate::util::ts::{Dt};
 
-//use ts::TomlConfig;
-//use ts::TemplateTemperature;
-//use ts::Influx;
-use ts::*;
+use ts::{TomlConfig, Influx, TemplateSensors};
 
 
 // BACKUP CVS 
@@ -43,6 +41,7 @@ impl PartialEq for Record
 }
 
 
+/*
 #[allow(dead_code)] // when FN commented
 #[allow(unused_variables)]
 pub fn cmd_generic(config: &TomlConfig,
@@ -108,6 +107,7 @@ pub fn cmd_generic(config: &TomlConfig,
 
     generic_record
 }
+ */
 
 
 pub fn backup_data(config: &TomlConfig,
@@ -203,6 +203,7 @@ pub fn backup_data(config: &TomlConfig,
 }
 
 
+//this 3 to MEM also
 pub fn prepare_csv_header_format(config: &TomlConfig) -> String {
 
     let csv_header_template = String::from(&config.template.temperature.annotated_header);
@@ -258,33 +259,10 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
     flux.insert("measurement".to_string(), String::from(&temperature.measurement));
 
-    // COMPARE only id + time
+    // for now COMPARE only id + time // if needed also _value
     flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
     flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
 
-    /*
-    let flux_template = match config.flag.add_flux_query_verify_record_suffix {
-        true => format!("{}{}",
-                String::from(&config.template.temperature.generic_query_verify_record),
-                String::from(&config.template.flux.query_verify_record_suffix),
-        ),
-        false => String::from(&config.template.temperature.generic_query_verify_record)
-    };    
-    
-    let mut flux = HashMap::new();
-    flux.insert("tag_carrier".to_string(), String::from(&config.template.temperature.tag_carrier));
-    flux.insert("tag_valid".to_string(), String::from(&config.template.temperature.tag_valid));
-    flux.insert("tag_id".to_string(), String::from(&config.template.temperature.tag_id));
-    
-    flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
-    flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-    flux.insert("measurement".to_string(), String::from(&config.template.temperature.measurement));
-
-    // COMPARE only id + time
-    flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
-    flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
-    */
-  
     return strfmt(&flux_template, &flux).unwrap()
 }
 
@@ -328,7 +306,6 @@ pub fn os_call_sensors(config: &TomlConfig,
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
 
-    /* 
     if config.flag.debug_sensor_output {
         println!("\n#TEMPERATURE SENSOR:
 stdout: {}
@@ -337,7 +314,6 @@ stderr: {}",
                  sensor_stderr_string,
         );
     }
-    */
 
     return sensor_stdout_string.to_string()
 }
@@ -382,11 +358,6 @@ stderr: {}",
         );
     }
 
-    /*
-    println!("\n#CMD_pipe:stdout: {:#?}", cmd_pipe_output_stdout);
-    println!("\n#CMD_pipe:stdERR: {:#?}", cmd_pipe_output_stderr);
-    */
-    
     return cmd_pipe_output_stdout.to_string()
 }
 
@@ -414,7 +385,7 @@ pub fn os_call_curl(config: &TomlConfig,
     }
 }
 
-
+#[allow(unused_variables)] // nepouzivam zatim CONFIG
 pub fn prepare_generic_lp_format(config: &TomlConfig,
                                  generic_record: &Record,
                                  temperature: &TemplateSensors)  -> String {
@@ -439,28 +410,6 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
 
     generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
 
-    /*
-    let generic_lp_template = String::from(&config.template.temperature.generic_lp);
-    let mut generic_lp = HashMap::new();
-    generic_lp.insert("tag_machine".to_string(), String::from(&config.template.temperature.tag_machine));
-    generic_lp.insert("tag_carrier".to_string(), String::from(&config.template.temperature.tag_carrier));
-    generic_lp.insert("tag_valid".to_string(), String::from(&config.template.temperature.tag_valid));
-    generic_lp.insert("tag_id".to_string(), String::from(&config.template.temperature.tag_id));
-    generic_lp.insert("field".to_string(), String::from(&config.template.temperature.field));
-
-    generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
-    generic_lp.insert("host".to_string(), String::from(&generic_record.host));
-    generic_lp.insert("machine_id".to_string(), String::from(&generic_record.machine));
-
-    generic_lp.insert("carrier".to_string(), String::from(&generic_record.carrier));
-    generic_lp.insert("valid".to_string(), String::from(&generic_record.valid));
-
-    generic_lp.insert("id".to_string(), String::from(&generic_record.id));
-    generic_lp.insert("value".to_string(), String::from(&generic_record.value.to_string()));
-
-    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
-    */
-    
     return strfmt(&generic_lp_template, &generic_lp).unwrap()
 }
 
@@ -521,18 +470,18 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
 
-    //let mut json_list: Vec<Record> = Vec::new();
+    //let mut all_sensors_result_list: Vec<Record> = Vec::new();
+    
+    //let mut json_list = Vec::new();
 
     let mut group_temperature = Vec::new();
     let mut group_memory = Vec::new();
     
     for v in &config.all_sensors.values {
         if v.group == "temperature" && v.status {
-            //println!("TEMP: {}", v.group);
             group_temperature.push(v);
         }
         else if v.group == "memory" && v.status {
-            //println!("MEM: {}", v.group);
             group_memory.push(v);
         }
     }
@@ -545,13 +494,19 @@ pub fn parse_sensors_data(config: &TomlConfig,
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
 
     for t in &group_temperature { // ttt
-        //let sensor_temperature_pointer_value: i64 = sensors_memory_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
-        let sensor_temperature_pointer_value = &sensors_json.pointer(&t.pointer).unwrap();
+        //let sensor_temperature_pointer_value: i64 = sensors_json.pointer(&t.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        //let sensor_temperature_pointer_value = i64::from(sensors_json.pointer(&t.pointer).unwrap());
+        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
+
+        //let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap().is_u64();
+        let sensor_temperature_pointer_value = sensors_json.pointer(&t.pointer).unwrap();
         
-        println!("\n#TEMPERATURE POINTER:\n{}: {}",
+        //json_list.push(sensor_temperature_pointer_value);
+        /*
+        println!("\n#TEMPERATURE POINTER:\n{:#?}: {:#?}",
                  t.pointer,
                  sensor_temperature_pointer_value);
-
+        */
     }
 
     //_
@@ -563,14 +518,22 @@ pub fn parse_sensors_data(config: &TomlConfig,
     let sensors_memory_json: serde_json::Value = serde_json::from_str(&sensors_memory_stdout).unwrap();
 
     for m in &group_memory {
-        let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        //let sensor_memory_pointer_value: i64 = sensors_memory_json.pointer(&m.pointer).unwrap().as_str().unwrap().parse().unwrap();
+        let sensor_memory_pointer_value = sensors_memory_json.pointer(&m.pointer).unwrap();
 
-        println!("\n#MEMORY POINTER:\n{}[i64]: {} kB",
+        //json_list.push(sensor_memory_pointer_value);
+
+        /*
+        println!("\n#MEMORY POINTER:\n{:#?}: {:#?}",
              m.pointer,
              sensor_memory_pointer_value);
+        */
 
     }
     //_
+
+    // JSON_LIST FULL CREAM
+    //println!("JSON_LIST: {:#?}", json_list);
     
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
@@ -595,51 +558,6 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
-            // MEMORY: CMD_GENERIC -> START
-            /*
-            let mem_generic_record = cmd_generic(&config,
-                                                 &single_influx,
-                                                 dt);
-            
-            //println!("\n#MEM @ GENERIC_RECORD:\n{:#?}", mem_generic_record);
-
-            let mem_generic_lp = prepare_generic_lp_format(&config,
-                                                           &mem_generic_record,                         
-                                                           &config.template.memory);
-            
-            println!("\n#MEM @ GENERIC_LP:\n{}", mem_generic_lp);
-            */
-
-            // MEMORY: CMD_GENERIC -> END
-
-            /*
-            let mut group_temperature = Vec::new();
-            let mut group_memory = Vec::new();
-
-            for v in &config.all_sensors.values {
-                if v.group == "temperature" && v.status {
-                    //println!("TEMP: {}", v.group);
-                    group_temperature.push(v);
-                }
-                else if v.group == "memory" && v.status {
-                    //println!("MEM: {}", v.group);
-                    group_memory.push(v);
-                }
-            }
-            */
-            
-            /*
-            println!("\n#TEMP: {:?}", group_temperature);
-            println!("\n#MEM: {:?}", group_memory);
-            */
-
-            // SENSOR INSTANCES -> MEMORY
-            /*
-            for single_sensor in group_memory {
-                FUTURE_USE
-            }
-            */
-            
             // SENSOR INSTANCES -> TEMPERATURE
             //for single_sensor in &config.all_sensors.values {
             for single_sensor in &group_temperature {
@@ -681,7 +599,7 @@ value: {v}",
                                                                &config.template.temperature);
 
                     if config.flag.debug_influx_lp {
-                        println!("\n#GENERIC_LP:\n{}", generic_lp);
+                        println!("\n#LP:\n{}", generic_lp);
                     }
 
                     // OS_CMD <- CURL
