@@ -10,7 +10,6 @@ measurement = "temperature"
 
 program = "/usr/bin/sensors"
 args = ["-j"]
-
 pipe_program = ""
 pipe_args = []
 
@@ -39,14 +38,16 @@ measurement = "memory"
 
 program = "/bin/cat"
 args = ["/proc/meminfo"]
-
 pipe_program = "jq"
 pipe_args = [
 	  "--slurp",
 	  "--raw-input",
 	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"]
 
-values = []
+values = [
+       {group="memory", status=true, name="memory_free", pointer="/MemFree"},
+       {group="memory", status=true, name="memory_available", pointer="/MemAvailable"},
+       ]
 
 tag_machine = "Machine"
 tag_id = "MemoryId"
@@ -73,19 +74,22 @@ debug_sensor_output = false # RAW_JSON
 debug_sensor_instances = false
 debug_pointer_output = false # JSON value
 
+debug_metric_record = false
+
+debug_influx_lp = false
+
 debug_influx_uri = true # false
 debug_influx_auth = false
-debug_influx_lp = false
-debug_influx_output = false
+debug_influx_output = false # CURL stdout/stderr
 debug_influx_instances = false
 
 # query influx to verify write was successfull
-run_flux_verify_record = false
+run_flux_verify_record = true # false
 # add |> count() to [template.flux].query_verify_record
 add_flux_query_verify_record_suffix = false
 
-debug_flux_query = true # false
-debug_flux_result = true # false
+debug_flux_query = false
+debug_flux_result = false
 
 # search for QUERY in this CONFIG_FILE
 run_egrep = false
@@ -139,12 +143,10 @@ values = [
 #pointer: json path / influx TemperatureDecimal FIELD
 # DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
-       {group="temperature", status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
-       {group="temperature", status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
-       {group="temperature", status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
-       {group="temperature", status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
-       #{group="memory", status=true, name="memory_free", pointer="/MemFree"},
-       #{group="memory", status=true, name="memory_available", pointer="/MemAvailable"},
+       {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
+       {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
+       {status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
+       {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
 ]
 
 
