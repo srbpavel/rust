@@ -553,6 +553,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
             );
 
             let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
+                // no PIPE
                 false => {
                     let metric_stdout = os_call_metric(&config,
                                                        &config.metrics[key]);
@@ -562,7 +563,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
                         process::exit(1);
                     })
                 },
-                
+
+                // PIPE is there
                 true => {
                     let metric_stdout = os_call_metric_pipe(&config,
                                                        &config.metrics[key]);
@@ -571,6 +573,15 @@ pub fn parse_sensors_data(config: &TomlConfig,
                         eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
                         process::exit(1);
                     })
+
+                    /*    
+                    let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                        process::exit(1);
+                    });
+
+                    metric_json
+                    */
                 }
             };
             
@@ -606,12 +617,40 @@ value: {v}",
                              v=single_sensor_pointer_value,
                     );
                 }
+
+
+                let pointer_parsed: f64 = match config.metrics[key].flag_pipe {
+                    false => {
+                        println!("value: {v} / {v:#?}", v=single_sensor_pointer_value);
+                        
+                        let number: f64 = single_sensor_pointer_value.to_string().parse().unwrap();
+
+                        number
+                    },
+                    
+                    true => {
+                        println!("value_PIPE: {}", v=single_sensor_pointer_value);
+
+                        //let json_pointer_value: i64 = mem_info_json.pointer(generic_pointer_path).unwrap().as_str().unwrap().parse().unwrap();
+                        
+                        //let replace = str::replace(String::from(&single_sensor_pointer_value.parse()), "\"", "");
+                        let replace: f64 = str::replace(single_sensor_pointer_value.as_str().unwrap(), "\"", "").parse().unwrap();
+
+                        println!("REPLACE: {r} / {r:#?}", r=replace);
+
+                        replace
+                        //single_sensor_pointer_value
+                    },
+                };
                 
                 if single_sensor.status {
                     let single_record = PreRecord {
                         key:key.to_string(),
                         ts: dt.ts,
-                        value: single_sensor_pointer_value.to_string(),
+
+                        //value: single_sensor_pointer_value.to_string(),
+                        value: pointer_parsed.to_string(),
+                        
                         id: single_sensor.name.to_string(),
                         measurement: config.metrics[key].measurement.to_string(),
                         host: config.host.to_string(),
