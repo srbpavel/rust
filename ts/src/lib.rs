@@ -61,9 +61,11 @@ pub struct Flag {
 
     pub debug_pointer_output: bool,
 
+    pub debug_metric_record: bool,
+
+    pub debug_influx_lp: bool,
     pub debug_influx_uri: bool,
     pub debug_influx_auth: bool,
-    pub debug_influx_lp: bool,
     pub debug_influx_output: bool,
     pub debug_influx_instances: bool,
 

@@ -33,6 +33,7 @@ pub struct Record {
 
 #[derive(Debug)]
 pub struct PreRecord {
+    pub key: String,
     pub ts: i64,
     pub value: String,
     //pub carrier: String,
@@ -260,25 +261,28 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
 pub fn prepare_generic_flux_query_format(config: &TomlConfig,
                                          single_influx: &Influx,
                                          generic_record: &Record,
-                                         temperature: &TemplateSensors,
+
+                                         //temperature: &TemplateSensors,
+                                         metric: &TemplateSensors,
+                                         
                                          utc_influx_format: &String) -> String {
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
-                String::from(&temperature.generic_query_verify_record),
+                String::from(&metric.generic_query_verify_record),
                 String::from(&config.template.flux.query_verify_record_suffix),
         ),
-        false => String::from(&temperature.generic_query_verify_record)
+        false => String::from(&metric.generic_query_verify_record)
     };    
     
     let mut flux = HashMap::new();
-    flux.insert("tag_carrier".to_string(), String::from(&temperature.tag_carrier));
-    flux.insert("tag_valid".to_string(), String::from(&temperature.tag_valid));
-    flux.insert("tag_id".to_string(), String::from(&temperature.tag_id));
+    flux.insert("tag_carrier".to_string(), String::from(&metric.tag_carrier));
+    flux.insert("tag_valid".to_string(), String::from(&metric.tag_valid));
+    flux.insert("tag_id".to_string(), String::from(&metric.tag_id));
     
     flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
     flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-    flux.insert("measurement".to_string(), String::from(&temperature.measurement));
+    flux.insert("measurement".to_string(), String::from(&metric.measurement));
 
     // for now COMPARE only id + time // if needed also _value
     flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
@@ -328,7 +332,7 @@ pub fn os_call_metric(config: &TomlConfig,
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
 
     if config.flag.debug_sensor_output {
-        println!("\n#TEMPERATURE SENSOR:
+        println!("\n#METRIC SENSOR:
 stdout: {}
 stderr: {}",
                  sensor_stdout_string,
@@ -409,6 +413,7 @@ stderr: {}",
 }
 
 
+
 #[allow(dead_code)]
 #[allow(unused_variables)]
 pub fn os_call_sensors_pipe(config: &TomlConfig,
@@ -477,18 +482,20 @@ pub fn os_call_curl(config: &TomlConfig,
     }
 }
 
-#[allow(unused_variables)] // nepouzivam zatim CONFIG
-pub fn prepare_generic_lp_format(config: &TomlConfig,
-                                 generic_record: &Record,
-                                 temperature: &TemplateSensors)  -> String {
 
-    let generic_lp_template = String::from(&temperature.generic_lp);
+#[allow(unused_variables)] // nepouzivam zatim CONFIG
+pub fn prepare_generic_lp_format(//config: &TomlConfig,
+                                 generic_record: &Record,
+                                 metric: &TemplateSensors
+)  -> String {
+
+    let generic_lp_template = String::from(&metric.generic_lp);
     let mut generic_lp = HashMap::new();
-    generic_lp.insert("tag_machine".to_string(), String::from(&temperature.tag_machine));
-    generic_lp.insert("tag_carrier".to_string(), String::from(&temperature.tag_carrier));
-    generic_lp.insert("tag_valid".to_string(), String::from(&temperature.tag_valid));
-    generic_lp.insert("tag_id".to_string(), String::from(&temperature.tag_id));
-    generic_lp.insert("field".to_string(), String::from(&temperature.field));
+    generic_lp.insert("tag_machine".to_string(), String::from(&metric.tag_machine));
+    generic_lp.insert("tag_carrier".to_string(), String::from(&metric.tag_carrier));
+    generic_lp.insert("tag_valid".to_string(), String::from(&metric.tag_valid));
+    generic_lp.insert("tag_id".to_string(), String::from(&metric.tag_id));
+    generic_lp.insert("field".to_string(), String::from(&metric.field));
 
     generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
     generic_lp.insert("host".to_string(), String::from(&generic_record.host));
@@ -614,12 +621,10 @@ value: {v}",
                 if single_sensor.status {
                     // RECORD -> PREPARE and empty "" updated via INFLUX instance
                     let single_record = PreRecord {
+                        key:key.to_string(),
                         ts: dt.ts,
                         value: single_sensor_pointer_value.to_string(),
-                        //carrier: "".to_string(), //single_influx.carrier.to_string(),
                         id: single_sensor.name.to_string(),
-                        //valid: "".to_string(), //single_influx.flag_valid_default.to_string(),
-                        //machine: "".to_string(), //single_influx.machine_id.to_string(),
                         measurement: config.metrics[key].measurement.to_string(),
                         host: config.host.to_string(),
                     };
@@ -673,10 +678,9 @@ value: {v}",
 
 
             //METRIC_RESULT_LIST
-            for single_metric_result in &metric_result_list {
-            //for single_metric_result in IntoIterator::into_iter(metric_result_list) { //xxx
+            for single_metric_result in &metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
                 let new_single_metric_result = Record {
-                    ts: single_metric_result.ts, //xxx
+                    ts: single_metric_result.ts,
                     value: single_metric_result.value.to_string(),
                     carrier: single_influx.carrier.to_string(),
                     id: single_metric_result.id.to_string(),
@@ -684,14 +688,63 @@ value: {v}",
                     machine: single_influx.machine_id.to_string(),
                     measurement: single_metric_result.measurement.to_string(),
                     host: single_metric_result.host.to_string(),
-                    //..single_metric_result
+                    //..single_metric_result // Record -> Record
                 };
 
-                // /*
-                println!("\n#SINGLE_METRIC_RESULT: {:?}",
-                         new_single_metric_result);
-                // */
+                if config.flag.debug_metric_record {
+                    println!("\n#SINGLE_METRIC_RESULT: {:?}",
+                             new_single_metric_result);
+                }
 
+                // LP via Record
+                let generic_lp = prepare_generic_lp_format(//&config,
+                                                           &new_single_metric_result,
+                                                           //&config.template.temperature);
+                                                           &config.metrics[&single_metric_result.key.to_string()]);
+
+                if config.flag.debug_influx_lp {
+                    println!("\n#LP:\n{}", generic_lp);
+                }
+
+                // OS_CMD <- CURL
+                os_call_curl(&config,
+                             &influx_uri_write,
+                             &influx_auth,
+                             &generic_lp);
+
+                // OS_CMD <- GENERIC FLUX_QUERY
+                if config.flag.run_flux_verify_record {
+                    let generic_influx_query = prepare_generic_flux_query_format(
+                        &config,
+                        &single_influx,
+                        &new_single_metric_result,
+
+                        //&config.template.temperature,
+                        &config.metrics[&single_metric_result.key.to_string()],
+                    
+                        &dt.utc_influx_format);
+                        
+                    if config.flag.debug_flux_query {
+                        println!("\n#QUERY:\n{}",
+                                 generic_influx_query,
+                        );
+                    }
+
+                    os_call_curl_flux(&config,
+                                      &influx_uri_query,
+                                      &influx_auth,
+                                      &influx_accept,
+                                      &influx_content,
+                                      &generic_influx_query);
+                }
+                
+                // RECORD_LIST -> Vec<Record>
+                // /*
+                if !result_list.contains(&new_single_metric_result) { 
+                    result_list.push(new_single_metric_result)
+                }
+                // */
+                
             }
 
             /* START OBSOLETE
