@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 
 pub struct CmdArgs {
-    // when modified DO NOT forget to change ARG_COUNT verification -> learn to count struct descendants
+    // when modified DO NOT forget to change ARG_COUNT verification -> learn to count struct descendants / not via hash_map
     pub query: String,
     pub filename: String,
     pub case_sensitive: bool,
@@ -25,16 +25,16 @@ pub struct TomlConfig {
     pub name: String,
     pub host: String,
 
-    //HASH
+    //iter over HASH
     pub metrics: HashMap<String, TemplateSensors>,
     
     // STRUCT
     pub flag: Flag,
-    pub delay: Delay,
+    pub backup: Backup,
 
     pub template: Template,
     
-    pub backup: Backup,
+    pub delay: Delay,
     
     // VEC
     pub all_influx: AllInflux,
@@ -46,20 +46,18 @@ pub struct Flag {
     pub debug_new_config: bool,
     
     pub debug_ts: bool,
-    pub debug_ts_to_dt: bool,
+    pub debug_ts_to_dt: bool, // obsolete to DEL ?
 
     pub debug_sensor_output: bool,
     pub debug_metric_instances: bool,
-
     pub debug_pointer_output: bool,
-
     pub debug_metric_record: bool,
 
+    pub debug_influx_instances: bool,
     pub debug_influx_lp: bool,
     pub debug_influx_uri: bool,
     pub debug_influx_auth: bool,
     pub debug_influx_output: bool,
-    pub debug_influx_instances: bool,
 
     pub run_flux_verify_record: bool,
     pub add_flux_query_verify_record_suffix: bool,   
@@ -76,6 +74,7 @@ pub struct Flag {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Backup {
     pub dir: String,
+    pub file_extension: String,
 }
 
 

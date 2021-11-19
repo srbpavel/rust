@@ -39,7 +39,7 @@ fn main() {
         }
     }
     
-    // DT Struct
+    // DateTime Struct
     let dt = timestamp::ts_now(config.flag.debug_ts);
 
     // DEBUG: ALL_INFLUX

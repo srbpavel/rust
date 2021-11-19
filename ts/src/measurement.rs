@@ -20,25 +20,33 @@ use ts::{TomlConfig, Influx, TemplateSensors};
 // BACKUP CVS 
 #[derive(Debug)]
 pub struct Record {
-    pub ts: i64,
-    pub value: String,
-    pub carrier: String,
-    pub id: String,
-    pub valid: String,
-    pub machine: String,
     pub measurement: String,
+
+    pub value: String,
+    pub id: String,
+
+    pub machine: String,
+    pub carrier: String,
+    pub valid: String,
+
     pub host: String,
+
+    pub ts: i64,
 }
 
 
 #[derive(Debug)]
 pub struct PreRecord {
     pub key: String,
-    pub ts: i64,
+
+    pub measurement: String,
+
     pub value: String,
     pub id: String,
-    pub measurement: String,
+
     pub host: String,
+
+    pub ts: i64,    
 }
 
 
@@ -59,75 +67,6 @@ impl PartialEq for PreRecord
 }
 
 
-/*
-#[allow(dead_code)] // when FN commented
-#[allow(unused_variables)]
-pub fn cmd_generic(config: &TomlConfig,
-                   single_influx: &Influx,
-                   dt: &Dt) -> Record {
-
-    let generic_measurement = "memory";
-    let generic_id = "memory_free_0";
-    let generic_pointer_path = "/MemFree";
-
-    let cmd_program = "/bin/cat";
-    let cmd_args = vec!["/proc/meminfo"];
-    let cmd = Command::new(&cmd_program)
-        .args(&cmd_args)
-        .stdout(Stdio::piped()).spawn().unwrap();
-
-    /*
-    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
-             cmd_program,
-             cmd_args,
-    );
-    */
-    let cmd_pipe_program = "jq";
-    let cmd_pipe_args = vec!["--slurp",
-                             "--raw-input",
-                             "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"];
-
-    /*
-    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
-             cmd_pipe_program,
-             cmd_pipe_args,
-    );
-    */
-
-    let cmd_pipe = Command::new(cmd_pipe_program)
-        .args(cmd_pipe_args)
-        .stdin(cmd.stdout.unwrap())
-        .output().expect("failed to execute command");
-    
-    //println!("\n#CMD_pipe:stdout: {:#?}", String::from_utf8_lossy(&cmd_pipe.stdout));
-    //println!("\n#CMD_pipe:stdERR: {:#?}", String::from_utf8_lossy(&cmd_pipe.stderr));
-
-    let mem_info_json: serde_json::Value = serde_json::from_str(&String::from_utf8_lossy(&cmd_pipe.stdout)).unwrap();
-    //println!("\n#JSON:\n{:?}", mem_info_json);
-
-    let json_pointer_value: i64 = mem_info_json.pointer(generic_pointer_path).unwrap().as_str().unwrap().parse().unwrap();
-    /*
-    println!("\n#POINTER:\n{}[i64]: {} kB",
-             generic_pointer_path,
-             json_pointer_value);
-    */
-
-    let generic_record = Record {
-        ts: dt.ts,
-        value: json_pointer_value.to_string(), // _value
-        carrier: single_influx.carrier.to_string(),
-        id: generic_id.to_string(),
-        valid: single_influx.flag_valid_default.to_string(),
-        machine: single_influx.machine_id.to_string(),
-        measurement: generic_measurement.to_string(),
-        host: config.host.to_string(),
-    };
-
-    generic_record
-}
- */
-
-
 pub fn backup_data(config: &TomlConfig,
                    result_list: &Vec<Record>,
                    today_file_name: &String,
@@ -143,10 +82,11 @@ pub fn backup_data(config: &TomlConfig,
         });
     }
 
-    let today_file_name = full_path.join(format!("{t}_{n}_{m}.csv",
+    let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
                                                  t=&today_file_name,
                                                  n=&config.name,
                                                  m=&metric.measurement,
+                                                 e=&config.backup.file_extension,
     ));
 
     // FILE CREATE or APPEND
@@ -208,7 +148,7 @@ pub fn backup_data(config: &TomlConfig,
     
     // RESULT_LIST
     for single_record in result_list {
-        if &metric.measurement == &single_record.measurement { //xxx
+        if &metric.measurement == &single_record.measurement {
             let csv_record = prepare_csv_record_format(&single_record,
                                                        &metric,
             );
@@ -341,34 +281,19 @@ stderr: {}",
 }
 
 
-#[allow(dead_code)]
-#[allow(unused_variables)]
+//#[allow(dead_code)]
+//#[allow(unused_variables)]
 pub fn os_call_metric_pipe(config: &TomlConfig,
                            memory: &TemplateSensors) -> String {
 
-    /*
-    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
-             &memory.program,
-             &memory.args,
-    );
-    */
-    
     let cmd_output = Command::new(&memory.program)
         .args(&memory.args)
         .stdout(Stdio::piped()).spawn().unwrap();
 
-    /*
-    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
-             &memory.pipe_program,
-             &memory.pipe_args,
-    );
-    */
-    
     let cmd_pipe_output = Command::new(&memory.pipe_program)
         .args(&memory.pipe_args)
         .stdin(cmd_output.stdout.unwrap())
         .output().expect("failed to execute command");
-
 
     let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
     let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
@@ -385,52 +310,6 @@ stderr: {}",
     return cmd_pipe_output_stdout.to_string()
 }
 
-
-/*
-#[allow(dead_code)]
-#[allow(unused_variables)]
-pub fn os_call_sensors_pipe(config: &TomlConfig,
-                            memory: &TemplateSensors) -> String {
-
-    /*
-    println!("\n#CMD_PROGRAM:\n{:#?}\n#CMD_ARGS:\n{:#?}",
-             &memory.program,
-             &memory.args,
-    );
-    */
-    
-    let cmd_output = Command::new(&memory.program)
-        .args(&memory.args)
-        .stdout(Stdio::piped()).spawn().unwrap();
-
-    /*
-    println!("\n#CMD_pipe_PROGRAM:\n{:#?}\n#CMD_pipe_ARGS:\n{:#?}",
-             &memory.pipe_program,
-             &memory.pipe_args,
-    );
-    */
-    
-    let cmd_pipe_output = Command::new(&memory.pipe_program)
-        .args(&memory.pipe_args)
-        .stdin(cmd_output.stdout.unwrap())
-        .output().expect("failed to execute command");
-
-
-    let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
-    let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
-
-    if config.flag.debug_sensor_output {
-        println!("\n#MEMORY_SENSOR:
-stdout: {}
-stderr: {}",
-                 cmd_pipe_output_stdout,
-                 cmd_pipe_output_stderr,
-        );
-    }
-
-    return cmd_pipe_output_stdout.to_string()
-}
-*/
 
 pub fn os_call_curl(config: &TomlConfig,
                    influx_uri: &String,
@@ -457,8 +336,7 @@ pub fn os_call_curl(config: &TomlConfig,
 
 
 pub fn prepare_generic_lp_format(generic_record: &Record,
-                                 metric: &TemplateSensors
-)  -> String {
+                                 metric: &TemplateSensors)  -> String {
 
     let generic_lp_template = String::from(&metric.generic_lp);
     let mut generic_lp = HashMap::new();
@@ -552,6 +430,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      config.metrics[key].field,
             );
 
+            
+            // SWAP exit -> Some() / None
             let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
                 // no PIPE
                 false => {
@@ -596,16 +476,35 @@ value: {v}",
                     );
                 }
 
-
-                let pointer_parsed: f64 = match config.metrics[key].flag_pipe {
+            /* MUSTR
+            let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
+                Err(why) => {
+                    eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
+                              &today_file_name.display(),
+                              why);
+                
+                    fs::OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open(&today_file_name)
+                        .unwrap() // NO NEED TO TEST ? AS CREATED
+                },
+                
+                Ok(file) => file,
+            };
+            */
+                
+                // /*
+                let pointer_parsed:f64 = match config.metrics[key].flag_pipe {
                     false => {
                         /* println!("value: {v} / {v:#?}", v=single_sensor_pointer_value); */
                         
                         let number: f64 = single_sensor_pointer_value.to_string().parse().unwrap_or_else(|err| {
                             eprintln!("\nEXIT: Problem parsing JSON VALUE to f64\nREASON >>> {}", err);
+                            //0.0
                             process::exit(1);
                         });
-                        
+
                         number
                     },
                     
@@ -614,15 +513,17 @@ value: {v}",
 
                         let replace: f64 = str::replace(single_sensor_pointer_value.as_str().unwrap(), "\"", "").parse().unwrap_or_else(|err| {
                             eprintln!("\nEXIT: Problem parsing JSON VALUE <PIPE> to f64 via replace: \" \nREASON >>> {}", err);
+                            //0.0
                             process::exit(1);
                         });
 
                         /* println!("REPLACE: {r} / {r:#?}", r=replace); */
-
                         replace
                     },
                 };
+                // */
                 
+                //if pointer_parsed_status && single_sensor.status {
                 if single_sensor.status {
                     let single_record = PreRecord {
                         key:key.to_string(),
