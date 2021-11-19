@@ -59,6 +59,7 @@ fn main() {
     }
 
     // DEBUG: ALL_SENSOR
+    /* OBSOLETE - TO DEL or CHANGE
     if new_config.flag.debug_sensor_instances {
         for single_sensor in &new_config.all_sensors.values {
             let status = match single_sensor.status {
@@ -71,6 +72,7 @@ fn main() {
                      single_sensor.name);
         }
     }
+    */
     
     // SENSOR
     measurement::parse_sensors_data(&new_config,

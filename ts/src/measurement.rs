@@ -133,9 +133,10 @@ pub fn cmd_generic(config: &TomlConfig,
 
 
 pub fn backup_data(config: &TomlConfig,
-                   result_list: Vec<Record>,
-                   today_file_name: &String) {
-
+                   result_list: &Vec<Record>,
+                   today_file_name: &String,
+                   metric: &TemplateSensors) {
+    
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
 
     // DIR CREATE if not EXISTS
@@ -146,9 +147,10 @@ pub fn backup_data(config: &TomlConfig,
         });
     }
 
-    let today_file_name = full_path.join(format!("{}_{}.csv",
-                                                 &today_file_name,
-                                                 &config.name,
+    let today_file_name = full_path.join(format!("{t}_{n}_{m}.csv",
+                                                 t=&today_file_name,
+                                                 n=&config.name,
+                                                 m=&metric.measurement,
     ));
 
     // FILE CREATE or APPEND
@@ -157,7 +159,8 @@ pub fn backup_data(config: &TomlConfig,
     }
 
     // format CSV HEADER
-    let csv_header = prepare_csv_header_format(&config);
+    let csv_header = prepare_csv_header_format(//&config,
+                                               &metric);
     
     if !today_file_name.exists() {
         let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
@@ -175,7 +178,7 @@ pub fn backup_data(config: &TomlConfig,
             Ok(file) => file,
         };
 
-        writeln!(file, "{}", &config.template.temperature.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
+        writeln!(file, "{}", &metric.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
             eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             process::exit(1);
         });
@@ -187,7 +190,7 @@ pub fn backup_data(config: &TomlConfig,
 
         if config.flag.debug_backup {
             println!("{}\n{}",
-                     &config.template.temperature.annotated_datatype,
+                     &metric.annotated_datatype,
                      csv_header,
             );
         }
@@ -195,7 +198,7 @@ pub fn backup_data(config: &TomlConfig,
     else {
         if config.flag.debug_backup {
             println!("{}\n{}",
-                     &config.template.temperature.annotated_datatype,
+                     &metric.annotated_datatype,
                      csv_header,
             );
         }
@@ -209,8 +212,9 @@ pub fn backup_data(config: &TomlConfig,
     
     // RESULT_LIST
     for single_record in result_list {
-        let csv_record = prepare_csv_record_format(&config,
+        let csv_record = prepare_csv_record_format(//&config,
                                                    &single_record,
+                                                   &metric,
         );
 
         if config.flag.debug_backup {
@@ -226,24 +230,26 @@ pub fn backup_data(config: &TomlConfig,
 
 
 //this 3 to MEM also
-pub fn prepare_csv_header_format(config: &TomlConfig) -> String {
+pub fn prepare_csv_header_format(//config: &TomlConfig,
+metric: &TemplateSensors) -> String {
 
-    let csv_header_template = String::from(&config.template.temperature.annotated_header);
+    let csv_header_template = String::from(&metric.annotated_header);
     let mut csv_header = HashMap::new();
-    csv_header.insert("tag_machine".to_string(), &config.template.temperature.tag_machine);
-    csv_header.insert("tag_carrier".to_string(), &config.template.temperature.tag_carrier);
-    csv_header.insert("tag_valid".to_string(), &config.template.temperature.tag_valid);
-    csv_header.insert("tag_id".to_string(), &config.template.temperature.tag_id);
-    csv_header.insert("field".to_string(), &config.template.temperature.field);
+    csv_header.insert("tag_machine".to_string(), &metric.tag_machine);
+    csv_header.insert("tag_carrier".to_string(), &metric.tag_carrier);
+    csv_header.insert("tag_valid".to_string(), &metric.tag_valid);
+    csv_header.insert("tag_id".to_string(), &metric.tag_id);
+    csv_header.insert("field".to_string(), &metric.field);
 
     return strfmt(&csv_header_template, &csv_header).unwrap()
 }
 
 
-pub fn prepare_csv_record_format(config: &TomlConfig,
-                                 record: &Record) -> String {
+pub fn prepare_csv_record_format(//config: &TomlConfig,
+                                 record: &Record,
+                                 metric: &TemplateSensors) -> String {
 
-    let csv_record_template = String::from(&config.template.temperature.csv_annotated);
+    let csv_record_template = String::from(&metric.csv_annotated);
     let mut csv_record = HashMap::new();
     csv_record.insert("measurement".to_string(), String::from(&record.measurement));
     csv_record.insert("host".to_string(), String::from(&record.host));
@@ -345,6 +351,7 @@ stderr: {}",
 
 
 // TO DEL - metric
+/*
 pub fn os_call_sensors(config: &TomlConfig,
                        temperature: &TemplateSensors) -> String {
     
@@ -366,6 +373,7 @@ stderr: {}",
 
     return sensor_stdout_string.to_string()
 }
+*/
 
 
 #[allow(dead_code)]
@@ -572,14 +580,14 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // METRIC_RESULT_LIST
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
-    // /*
+    /*
     // OS_CMD <- LM-SENSORS
     let sensors_stdout = os_call_metric(&config,
                                         &config.template.temperature);
 
     // JSON 
     let sensors_json: serde_json::Value = serde_json::from_str(&sensors_stdout).unwrap();
-    // */
+    */
     
     // METRICS
     println!("\n#METRICS:\n{:?}", &config.metrics.keys());
@@ -591,8 +599,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      config.metrics[key].field,
             );
 
-            let metric_stdout = os_call_sensors(&config,
-                                                &config.metrics[key]);
+            let metric_stdout = os_call_metric(&config, //xxx
+                                               &config.metrics[key]);
             
             let metric_json: serde_json::Value = serde_json::from_str(&metric_stdout).unwrap();
 
@@ -839,10 +847,17 @@ value: {v}",
     } /* all_influx.values */
 
     // BACKUP
-    backup_data(&config,
-                result_list,
-                &dt.today_file_name)
 
+    // /*
+    for key in config.metrics.keys() {
+        if config.metrics[key].flag_status {
+            backup_data(&config,
+                        &result_list,
+                        &dt.today_file_name,
+                        &config.metrics[key]);
+        }
+    }
+    // */
 }
 
 

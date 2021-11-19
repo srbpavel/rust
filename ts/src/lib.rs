@@ -39,7 +39,7 @@ pub struct TomlConfig {
     
     // VEC
     pub all_influx: AllInflux,
-    pub all_sensors: AllSensors,
+    //pub all_sensors: AllSensors,
 }
 
 
@@ -154,8 +154,8 @@ pub struct Template {
 
     pub flux: TemplateFlux,
 
-    pub temperature: TemplateSensors,
-    pub memory: TemplateSensors,
+    //pub temperature: TemplateSensors,
+    //pub memory: TemplateSensors,
 }
 
 
@@ -195,12 +195,14 @@ pub struct Sensor {
 }
 
 
+/*
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllSensors {
     //values: [i32; 3], // fixed array with three int's
     //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Sensor>,
 }
+*/
 
 
 #[cfg(test)]
