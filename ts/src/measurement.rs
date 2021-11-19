@@ -1,7 +1,7 @@
 use std::process;
 use std::process::{Command};
 
-use std::process::*; 
+use std::process::{Stdio}; 
 
 extern crate strfmt;
 use strfmt::strfmt;
@@ -51,7 +51,6 @@ impl PartialEq for Record
 }
 
 
-// STRUCT compare via contains
 impl PartialEq for PreRecord
 {
     fn eq(&self, other: &Self) -> bool {
