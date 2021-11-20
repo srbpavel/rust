@@ -517,15 +517,19 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
                 // /* TRY to CATCH err and not EXIT // nevim co dat na error hlasku ? 
                 //let single_sensor_pointer_value = match metric_json.pointer(&single_sensor.pointer).unwrap() {
-                let single_sensor_pointer_value = match metric_json.pointer(&single_sensor.pointer) { //xxx
+                let (single_sensor_pointer_value, status) = match metric_json.pointer(&single_sensor.pointer) { //xxx
                     Some(value) => {
-                        println!("SOME")
+                        println!("POINTER_PATH: SOME: <{v}> / {v:?}",
+                                 v=value);
 
-                        Some(value)
+                        (Some(value), true)
                     },
-                    
-                    //_ => None
-                    None => None
+
+                    None => {
+                        println!("POINTER_PATH: NONE");
+
+                        (None, false)
+                    }
                 };
 
                 /*
@@ -540,21 +544,26 @@ pub fn parse_sensors_data(config: &TomlConfig,
                     
                 };
                 */
-                    
 
+                /*
+                // MOVED DOWN
+                //let (single_sensor_pointer_value, status) = match single_sensor_pointer_value { // + unwrap() //xxx
                 let single_sensor_pointer_value = match single_sensor_pointer_value { // + unwrap() //xxx
                     Some(x) => {
-                        println!("SOME: {s} / {s:?}", s=x);
+                        println!("   UNWRAP_SOME: {s} / {s:?}",
+                                 s=x);
+
                         x
                     }
                     
                     None => {
-                        println!("NONE !!!");
+                        println!("   UNWRAP_NONE: ");
+
                         process::exit(1);
                     }
                 };
                 
-                // */
+                */
 
                 
                 /* !panic if WRONG POINTER path
@@ -576,34 +585,56 @@ pub fn parse_sensors_data(config: &TomlConfig,
 status: {s}
 name: {n}
 pointer: {p}
-value: {v}",
+value: {v:?}
+path_status: {ps}",
                              s=single_sensor.status,
                              n=single_sensor.name,
                              p=single_sensor.pointer,
                              //v=&single_sensor_pointer_value, //FOR SOME
                              v=&single_sensor_pointer_value,
+                             ps=&status,
                     );
                 }
 
-                let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string()); //ttt
+                if status {
                 
-                if pointer_status && single_sensor.status {
-                    let single_record = PreRecord {
-                        key:key.to_string(),
-                        ts: dt.ts,
-
-                        value: pointer_parsed_float.to_string(),
+                    // FROM UP
+                    let single_sensor_pointer_value = match single_sensor_pointer_value { // + unwrap() //xxx
+                        Some(x) => {
+                            println!("   UNWRAP_SOME: {s} / {s:?}",
+                                     s=x);
+                            
+                            x
+                        }
                         
-                        id: single_sensor.name.to_string(),
-                        measurement: config.metrics[key].measurement.to_string(),
-                        host: config.host.to_string(),
+                        None => {
+                            println!("   UNWRAP_NONE: ");
+                            
+                            process::exit(1);
+                        }
                     };
+                    // 
+                
+                    let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string()); //ttt
+                
+                    if pointer_status && single_sensor.status {
+                        let single_record = PreRecord {
+                            key:key.to_string(),
+                            ts: dt.ts,
+
+                            value: pointer_parsed_float.to_string(),
+                        
+                            id: single_sensor.name.to_string(),
+                            measurement: config.metrics[key].measurement.to_string(),
+                            host: config.host.to_string(),
+                        };
                     
-                    // METRIC RECORD_LIST -> Vec<Record>
-                    if !metric_result_list.contains(&single_record) { 
-                        metric_result_list.push(single_record)
+                        // METRIC RECORD_LIST -> Vec<Record>
+                        if !metric_result_list.contains(&single_record) { 
+                            metric_result_list.push(single_record)
+                        }
                     }
-                }
+                } /* path status */
             } /* for single_sensor in each metric*/
         }
     } /* for key in metrics */
