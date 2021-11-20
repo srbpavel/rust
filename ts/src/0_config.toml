@@ -17,7 +17,7 @@ debug_metric_instances = false
 # RAW_JSON
 debug_sensor_output = false
 # JSON value
-debug_pointer_output = false
+debug_pointer_output = false 
 # record Struct
 debug_metric_record = false
 
