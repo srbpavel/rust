@@ -513,26 +513,28 @@ pub fn parse_sensors_data(config: &TomlConfig,
             };
             
             for single_sensor in &config.metrics[key].values {
-                // JSON single POINTER
+                //if single_sensor.status {
 
-                // /* TRY to CATCH err and not EXIT // nevim co dat na error hlasku ? 
-                //let single_sensor_pointer_value = match metric_json.pointer(&single_sensor.pointer).unwrap() {
-                let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) { //xxx
+                // JSON single POINTER
+                let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
                     Some(value) => {
-                        /*
-                        println!("POINTER_PATH: SOME: <{v}> / {v:?}",
-                                 v=value);
-                        */
+                        if config.flag.debug_pointer_output {
+                            println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
+                                     v=value);
+                        }
 
                         (Some(value), true)
                     },
 
                     None => {
+                        println!("\n#POINTER_PATH");
                         eprintln!("\nWARNING: Problem parsing JSON PATH: <{}>", &single_sensor.pointer);
                         (None, false)
                     }
                 };
 
+                // TO KEEP IN MIND
+                
                 /* !panic if WRONG POINTER path
                 let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
                 */
@@ -547,13 +549,12 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
                 // DEBUG true/false SENSORS
                 if config.flag.debug_pointer_output {
-                    println!("
-#POINTER_CFG:
+                    println!("path_status: {ps}
 status: {s}
 name: {n}
 pointer: {p}
-value: {v:?}
-path_status: {ps}",
+value: {v:?}",
+
                              s=single_sensor.status,
                              n=single_sensor.name,
                              p=single_sensor.pointer,
@@ -563,31 +564,8 @@ path_status: {ps}",
                 }
 
                 // JSON PATH failed
-                if pointer_path_status {
-                     /*
-                    let single_sensor_pointer_value = match single_sensor_pointer_value { // + unwrap() //xxx
-                        Some(x) => {
-                            /*
-                            println!("   UNWRAP_SOME: {s} / {s:?}",
-                                     s=x);
-                            */
-                            
-                            x
-                        }
-                        
-                        None => {
-                            eprintln!("   UNWRAP_NONE: ");
-
-                            // tohle nesmim zakomentovat ?
-                            process::exit(1);
-                        }
-                    };
-                    */
-                
-                    // + unwrap misto horniho SHADOW: Some(x) -> x
-                    //let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.unwrap().to_string());
-                    //let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string());
-
+                //if pointer_path_status && single_sensor.status {
+                if pointer_path_status && single_sensor.status {
                     let (pointer_parsed_float, pointer_status): (f64, bool) = match single_sensor_pointer_value { // + unwrap() //xxx
                         Some(value) => {
                             /*
@@ -600,12 +578,12 @@ path_status: {ps}",
 
                         None => {
                             eprintln!("   UNWRAP_NONE: ");
-                            // tohle nesmim zakomentovat ?
-                            process::exit(1);
+                            process::exit(1); // tohle nesmim zakomentovat, ale nemelo by nastat ?
                         }
                     };
                     
-                    if pointer_status && single_sensor.status {
+                    //if pointer_status && single_sensor.status {
+                    if pointer_status {
                         let single_record = PreRecord {
                             key:key.to_string(),
                             ts: dt.ts,
