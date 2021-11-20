@@ -19,6 +19,19 @@ mod measurement;
 
 
 fn main() {
+    // QUICK SAMPLE TEST
+    /*
+    enum Example {
+        Data(i32),
+    }
+    
+    let x = Example::Data(123); // wrap the data
+    let Example::Data(y) = x;   // unwrap the data via a pattern
+    
+    dbg!(y); // prints 'y = 123'
+    */
+    //_
+
     // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
          eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);

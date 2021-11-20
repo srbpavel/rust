@@ -16,7 +16,7 @@ pub use crate::util::ts::{Dt};
 
 use ts::{TomlConfig, Influx, TemplateSensors};
 
-use std::any::{Any}; //use std::any::{Any, TypeId};
+use std::any::{Any};
 use core::fmt::Debug; //use std::fmt::Debug;
 
 
@@ -70,6 +70,9 @@ impl PartialEq for PreRecord
 }
 
 
+// https://doc.rust-lang.org/std/any/index.html
+// https://doc.rust-lang.org/std/any/trait.Any.html
+// DOUCIT + POCHOPIT zpusob volani
 fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
     let value_any = value as &dyn Any;
 
@@ -84,6 +87,7 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 
             match as_string.parse::<f64>() {
                 Err(_why) => {
+                    // JSON VALUE wrapped with "
                     let float_via_replace = str::replace(as_string, "\"", "").parse::<f64>().unwrap();
 
                     /*
@@ -114,13 +118,6 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 
     (value, status)
 }
-
-
-/*
-fn do_work<T: Any + Debug>(value: &T) -> f64 {
-    verify_pointer_type(value)
-}
-*/
 
 
 pub fn backup_data(config: &TomlConfig,
@@ -541,7 +538,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
                 */
                 
-                /* EXIT if WRONG POINTER path
+                /* EXIT if WRONG POINTER path but we want to get rid of all exit
                 let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
                     eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
                               single_sensor.pointer);
@@ -569,10 +566,10 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                              s=value);
                                 }
                                 verify_pointer_type(&value.to_string())
-                            }
+                            },
                             None => {
                                 eprintln!("unwrap: !!! none !!!");
-                                process::exit(1); // tohle nesmim zakomentovat, ale nemelo by nastat ?
+                                process::exit(1); // tohle neumim nahradit, ale nemelo by nastat ?
                             }
                         };
                     
