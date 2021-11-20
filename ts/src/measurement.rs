@@ -513,25 +513,27 @@ pub fn parse_sensors_data(config: &TomlConfig,
             };
             
             for single_sensor in &config.metrics[key].values {
-                //if single_sensor.status {
+                if single_sensor.status {
+                    // JSON single POINTER
+                    let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
+                        Some(value) => {
+                            if config.flag.debug_pointer_output {
+                                println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
+                                         v=value);
+                            }
+                            
+                            (Some(value), true)
+                        },
 
-                // JSON single POINTER
-                let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
-                    Some(value) => {
-                        if config.flag.debug_pointer_output {
-                            println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
-                                     v=value);
+                        None => {
+                            println!("\n#POINTER_PATH: !!! NONE !!!");
+                            eprintln!("\nWARNING: Problem parsing METRIC: {m} -> JSON PATH: {jp}",
+                                      jp=&single_sensor.pointer,
+                                      m=config.metrics[key].measurement,
+                            );
+                            (None, false)
                         }
-
-                        (Some(value), true)
-                    },
-
-                    None => {
-                        println!("\n#POINTER_PATH");
-                        eprintln!("\nWARNING: Problem parsing JSON PATH: <{}>", &single_sensor.pointer);
-                        (None, false)
-                    }
-                };
+                    };
 
                 // TO KEEP IN MIND
                 
@@ -547,72 +549,59 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 });
                 */
 
-                // DEBUG true/false SENSORS
-                if config.flag.debug_pointer_output {
-                    println!("path_status: {ps}
-status: {s}
-name: {n}
-pointer: {p}
-value: {v:?}",
+                    // DEBUG true/false SENSORS
+                    if config.flag.debug_pointer_output {
+                        println!("path_status: {ps}\nstatus: {s}\nname: {n}\npointer: {p}\nvalue: {v:?}",
+                                 s=single_sensor.status,
+                                 n=single_sensor.name,
+                                 p=single_sensor.pointer,
+                                 v=&single_sensor_pointer_value,
+                                 ps=&pointer_path_status,
+                        );
+                    }
 
-                             s=single_sensor.status,
-                             n=single_sensor.name,
-                             p=single_sensor.pointer,
-                             v=&single_sensor_pointer_value,
-                             ps=&pointer_path_status,
-                    );
-                }
-
-                // JSON PATH failed
-                //if pointer_path_status && single_sensor.status {
-                if pointer_path_status && single_sensor.status {
-                    let (pointer_parsed_float, pointer_status): (f64, bool) = match single_sensor_pointer_value { // + unwrap() //xxx
-                        Some(value) => {
-                            /*
-                            println!("   UNWRAP_SOME: {s} / {s:?}",
-                                     s=x);
-                            */
-                            
-                            verify_pointer_type(&value.to_string())
-                        }
-
-                        None => {
-                            eprintln!("   UNWRAP_NONE: ");
-                            process::exit(1); // tohle nesmim zakomentovat, ale nemelo by nastat ?
-                        }
-                    };
-                    
-                    //if pointer_status && single_sensor.status {
-                    if pointer_status {
-                        let single_record = PreRecord {
-                            key:key.to_string(),
-                            ts: dt.ts,
-
-                            value: pointer_parsed_float.to_string(),
-                        
-                            id: single_sensor.name.to_string(),
-                            measurement: config.metrics[key].measurement.to_string(),
-                            host: config.host.to_string(),
+                    // JSON PATH failed
+                    if pointer_path_status {
+                        let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
+                            Some(value) => {
+                                if config.flag.debug_pointer_output {
+                                    println!("unwrap_some: {s} / {s:?}",
+                                             s=value);
+                                }
+                                verify_pointer_type(&value.to_string())
+                            }
+                            None => {
+                                eprintln!("unwrap: !!! none !!!");
+                                process::exit(1); // tohle nesmim zakomentovat, ale nemelo by nastat ?
+                            }
                         };
                     
-                        // METRIC RECORD_LIST -> Vec<Record>
-                        if !metric_result_list.contains(&single_record) { 
-                            metric_result_list.push(single_record)
+                        if pointer_type_status {
+                            let single_record = PreRecord {
+                                key:key.to_string(),
+                                ts: dt.ts,
+                                value: pointer_parsed_float.to_string(),
+                                id: single_sensor.name.to_string(),
+                                measurement: config.metrics[key].measurement.to_string(),
+                                host: config.host.to_string(),
+                            };
+                    
+                            // METRIC RECORD_LIST -> Vec<Record>
+                            if !metric_result_list.contains(&single_record) { 
+                                metric_result_list.push(single_record)
+                            }
                         }
-                    }
-                } /* path status */
+                    } /* path status */
+                } /* if single_sensorstatus */
             } /* for single_sensor in each metric*/
         }
     } /* for key in metrics */
 
-
-    /* flag or DEL ??? 
-    // METRIC_RESULT_LIST
-    for single_metric_result in &metric_result_list {
-        println!("\n#SINGLE_METRIC_RESULT: {:#?}",
-                 single_metric_result);
+    if config.flag.debug_metric_record {
+        for single_metric_result in &metric_result_list {
+            println!("\n {:?}", single_metric_result);
+        }
     }
-    */
 
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
@@ -652,11 +641,11 @@ value: {v:?}",
                     //..single_metric_result // Record -> Record
                 };
 
+                // PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
-                    println!("\n#SINGLE_METRIC_RESULT:\n{:?}",
-                             new_single_metric_result);
+                    println!("\n{:?}", new_single_metric_result);
                 }
-
+                
                 // LP via Record
                 let generic_lp = prepare_generic_lp_format(&new_single_metric_result,
                                                            &config.metrics[&single_metric_result.key.to_string()]);
