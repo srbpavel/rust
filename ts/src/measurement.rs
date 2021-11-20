@@ -517,55 +517,22 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
                 // /* TRY to CATCH err and not EXIT // nevim co dat na error hlasku ? 
                 //let single_sensor_pointer_value = match metric_json.pointer(&single_sensor.pointer).unwrap() {
-                let (single_sensor_pointer_value, status) = match metric_json.pointer(&single_sensor.pointer) { //xxx
+                let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) { //xxx
                     Some(value) => {
+                        /*
                         println!("POINTER_PATH: SOME: <{v}> / {v:?}",
                                  v=value);
+                        */
 
                         (Some(value), true)
                     },
 
                     None => {
-                        println!("POINTER_PATH: NONE");
-
+                        eprintln!("\nWARNING: Problem parsing JSON PATH: <{}>", &single_sensor.pointer);
                         (None, false)
                     }
                 };
 
-                /*
-                let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(|| {
-                    eprintln!("\nEXIT: Problem parsing POINTER JSON");
-                });
-                    value => {
-                        Some(value)
-                    },
-                    
-                    Err => None
-                    
-                };
-                */
-
-                /*
-                // MOVED DOWN
-                //let (single_sensor_pointer_value, status) = match single_sensor_pointer_value { // + unwrap() //xxx
-                let single_sensor_pointer_value = match single_sensor_pointer_value { // + unwrap() //xxx
-                    Some(x) => {
-                        println!("   UNWRAP_SOME: {s} / {s:?}",
-                                 s=x);
-
-                        x
-                    }
-                    
-                    None => {
-                        println!("   UNWRAP_NONE: ");
-
-                        process::exit(1);
-                    }
-                };
-                
-                */
-
-                
                 /* !panic if WRONG POINTER path
                 let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
                 */
@@ -590,33 +557,54 @@ path_status: {ps}",
                              s=single_sensor.status,
                              n=single_sensor.name,
                              p=single_sensor.pointer,
-                             //v=&single_sensor_pointer_value, //FOR SOME
                              v=&single_sensor_pointer_value,
-                             ps=&status,
+                             ps=&pointer_path_status,
                     );
                 }
 
-                if status {
-                
-                    // FROM UP
+                // JSON PATH failed
+                if pointer_path_status {
+                     /*
                     let single_sensor_pointer_value = match single_sensor_pointer_value { // + unwrap() //xxx
                         Some(x) => {
+                            /*
                             println!("   UNWRAP_SOME: {s} / {s:?}",
                                      s=x);
+                            */
                             
                             x
                         }
                         
                         None => {
-                            println!("   UNWRAP_NONE: ");
-                            
+                            eprintln!("   UNWRAP_NONE: ");
+
+                            // tohle nesmim zakomentovat ?
                             process::exit(1);
                         }
                     };
-                    // 
+                    */
                 
-                    let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string()); //ttt
-                
+                    // + unwrap misto horniho SHADOW: Some(x) -> x
+                    //let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.unwrap().to_string());
+                    //let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string());
+
+                    let (pointer_parsed_float, pointer_status): (f64, bool) = match single_sensor_pointer_value { // + unwrap() //xxx
+                        Some(value) => {
+                            /*
+                            println!("   UNWRAP_SOME: {s} / {s:?}",
+                                     s=x);
+                            */
+                            
+                            verify_pointer_type(&value.to_string())
+                        }
+
+                        None => {
+                            eprintln!("   UNWRAP_NONE: ");
+                            // tohle nesmim zakomentovat ?
+                            process::exit(1);
+                        }
+                    };
+                    
                     if pointer_status && single_sensor.status {
                         let single_record = PreRecord {
                             key:key.to_string(),
