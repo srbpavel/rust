@@ -1,5 +1,6 @@
+# used in backup_filename
 name = 'laptop'
-# influx: host TAG
+# influx:: host TAG
 host = 'spongebob'
 work_dir = '/home/conan/soft/rust/ts'
 
@@ -11,16 +12,22 @@ debug_ts = false
 # future_use
 debug_ts_to_dt = false
 
+# view metric Struct parsed config data
 debug_metric_instances = false
-debug_sensor_output = false # RAW_JSON
-debug_pointer_output = false # JSON value
-debug_metric_record = false # Struct
+# RAW_JSON
+debug_sensor_output = false
+# JSON value
+debug_pointer_output = false
+# record Struct
+debug_metric_record = false
 
+# view influx Struct parsed config data
+debug_influx_instances = false
 debug_influx_lp = false
 debug_influx_uri = true # false
 debug_influx_auth = false
-debug_influx_output = false # CURL stdout/stderr
-debug_influx_instances = false
+# CURL stdout/stderr
+debug_influx_output = false
 
 # query influx to verify write was successfull
 run_flux_verify_record = true # false
@@ -34,19 +41,29 @@ debug_flux_result = false
 run_egrep = false
 debug_egrep = true # false
 
-debug_backup = true # false # show CSV ANNOTATED data
+# display CSV ANNOTATED data to backup
+debug_backup = true # false
 
 
+#hash map
 [metrics]
 [metrics.temperature]
 flag_status = true # false
+# influx:: measurement
 measurement = "temperature"
 
 program = "/usr/bin/sensors"
 args = ["-j"]
+
+flag_pipe = false
 pipe_program = ""
 pipe_args = []
 
+#status: on/off
+#name: influx:: SensorId TAG -> if changed will impact flux query
+#pointer: json path
+#
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
        {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
@@ -54,10 +71,12 @@ values = [
        {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
        ]
 
+# influx:: TAG names
 tag_machine = "Machine"
 tag_id = "SensorId"
 tag_carrier = "SensorCarrier" 
 tag_valid = "SensorValid"
+# influx:: _field
 field = "TemperatureDecimal"
 
 annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
@@ -66,27 +85,38 @@ csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{
 generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
 generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
 
+
 [metrics.memory]
-flag_status = false
-measurement = "memory"
+flag_status = true # false
+# influx:: measurement
+measurement = "memory_float"
 
 program = "/bin/cat"
 args = ["/proc/meminfo"]
+
+flag_pipe = true # false
 pipe_program = "jq"
 pipe_args = [
 	  "--slurp",
 	  "--raw-input",
 	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"]
 
+#status: on/off
+#name: influx:: SensorId TAG -> if changed will impact flux query
+#pointer: json path
+#
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {status=true, name="memory_free", pointer="/MemFree"},
-       {status=true, name="memory_available", pointer="/MemAvailable"},
+       {status=true, name="memory_available", pointer="/MemAvailable"}, #e
        ]
 
+# influx:: TAG names
 tag_machine = "Machine"
 tag_id = "MemoryId"
 tag_carrier = "MemoryCarrier" 
 tag_valid = "MemoryValid"
+# influx:: _field
 field = "MemoryDecimal"
 
 annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
@@ -101,10 +131,11 @@ generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start
 second = 60
 minute = 1
 
-# we backup always, no flag to turn off
+
+# backup always, no flag to turn off
 [backup]
 dir = "csv"
-file_extension = ".csv"
+file_extension = "csv"
 
 
 # vector of influx: Struct instances
@@ -134,9 +165,8 @@ values = [
 
 
 [template]
+# influx params
 [template.curl]
-# $ dpkg -l|egrep curl
-# ii  curl                                  7.74.0-1.3+b1                          amd64        command line tool for transferring data with URL syntax
 program = "/usr/bin/curl"
 param_insecure = "--insecure"
 param_request = "--request"
@@ -153,7 +183,9 @@ influx_accept = "Accept: application/csv"
 influx_content = "Content-type: application/vnd.flux"
 
 
+
 [template.flux]
+# verification duration range
 query_verify_record_range_start = "-1h"
 query_verify_record_suffix = " |> count()"
 #

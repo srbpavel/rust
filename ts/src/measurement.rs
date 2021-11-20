@@ -16,6 +16,9 @@ pub use crate::util::ts::{Dt};
 
 use ts::{TomlConfig, Influx, TemplateSensors};
 
+use std::any::{Any}; //use std::any::{Any, TypeId};
+use core::fmt::Debug; //use std::fmt::Debug;
+
 
 // BACKUP CVS 
 #[derive(Debug)]
@@ -65,6 +68,59 @@ impl PartialEq for PreRecord
         self.id.eq(&other.id)
     }
 }
+
+
+fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
+    let value_any = value as &dyn Any;
+
+    let (value, status): (f64, bool) = match value_any.downcast_ref::<String>() {
+        Some(as_string) => {             
+            /*
+            println!("STRING len: {len} / str: <{str}> / debug: {str:?}",
+                     len=as_string.len(),
+                     str=as_string,
+            );
+            */
+
+            match as_string.parse::<f64>() {
+                Err(_why) => {
+                    let float_via_replace = str::replace(as_string, "\"", "").parse::<f64>().unwrap();
+
+                    /*
+                    println!("   ERROR_to_f64: {w} REPLACE: <{r}> / debug: {r:?}",
+                             w = why,
+                             r = float_via_replace,
+                    );
+                    */
+
+                    (float_via_replace, true)
+                },
+                Ok(number) => {
+                    /*
+                    println!("   FLOAT: {f} / debug: {f:?}", f=number);
+                     */
+                    
+                    (number, true)
+                },
+            }
+        }
+
+        None => {
+            println!("ANY: {:?}", value);
+
+            (0.0, false)
+        }
+    };
+
+    (value, status)
+}
+
+
+/*
+fn do_work<T: Any + Debug>(value: &T) -> f64 {
+    verify_pointer_type(value)
+}
+*/
 
 
 pub fn backup_data(config: &TomlConfig,
@@ -430,8 +486,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      config.metrics[key].field,
             );
 
-            
-            // SWAP exit -> Some() / None
+
+            // OS CALL program or pipe_program
             let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
                 // no PIPE
                 false => {
@@ -439,7 +495,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                                        &config.metrics[key]);
 
                     serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                        eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
                         process::exit(1);
                     })
                 },
@@ -450,7 +506,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                                        &config.metrics[key]);
 
                     serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                        eprintln!("\nEXIT: Problem parsing METRIC JSON\nREASON >>> {}", err);
+                        eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
                         process::exit(1);
                     })
                 }
@@ -459,9 +515,42 @@ pub fn parse_sensors_data(config: &TomlConfig,
             for single_sensor in &config.metrics[key].values {
                 
                 // JSON single POINTER
-                let single_sensor_pointer_value = &metric_json.pointer(&single_sensor.pointer).unwrap();
+                //let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //& NEJAK JSEM TO ROZREJPAL KUA
+
+                // /* KUA
+                let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{ //&
+                    eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
+                              single_sensor.pointer);
+                    process::exit(1);
+                });
+                // */
+
+                /*
+                //let (single_sensor_pointer_value, single_sensor_pointer_status) = match metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{}) {
+                let (single_sensor_pointer_value, single_sensor_pointer_status) = match metric_json.pointer(&single_sensor.pointer).unwrap() {
+                    //value => (value.to_string(), true),
+                    //value => ("0.0".to_string(), false),
+                    value => (value.to_string(), true),
+                    Err(..) => ("0.0".to_string(), false),
+                };
+
+                */
+
+                /*
+                println!("TEST POINTER[{p:}]: <{p}>",
+                         p=single_sensor_pointer_value,
+                );
+                */
+                
+                /*
+                println!("TEST POINTER[{s:}]: <{p}>",
+                         s=single_sensor_pointer_status,
+                         p=single_sensor_pointer_value,
+                );
+                */
                 
                 // DEBUG true/false SENSORS
+                //if single_sensor_pointer_status && config.flag.debug_pointer_output {
                 if config.flag.debug_pointer_output {
                     println!("
 #POINTER_CFG:
@@ -472,7 +561,7 @@ value: {v}",
                              s=single_sensor.status,
                              n=single_sensor.name,
                              p=single_sensor.pointer,
-                             v=single_sensor_pointer_value,
+                             v=&single_sensor_pointer_value,
                     );
                 }
 
@@ -493,15 +582,57 @@ value: {v}",
                 Ok(file) => file,
             };
             */
+
+                /*
+                println!("TYPE_TEST: {v:?} / {v}",
+                         v=single_sensor_pointer_value);
+                */
+
+                let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value.to_string()); //ttt
+                //let (pointer_parsed_float, pointer_status): (f64, bool) = verify_pointer_type(&single_sensor_pointer_value);
                 
-                // /*
+                /*
+                println!("POINTER PARSED FLOAT[{s:}]: <{v:#?}>",
+                         v=pointer_parsed_float,
+                         s=pointer_status);
+                */
+                
+                /* TYPE PARSE # OBSOLETE
+                //let pointer_parsed:f64 = match config.metrics[key].flag_pipe {
+                let pointer_parsed:f64 = match config.metrics[key].flag_pipe {
+                    false => {
+                        /* println!("value: {v} / {v:#?}", v=single_sensor_pointer_value); */
+                        
+                        let number:f64 = single_sensor_pointer_value.to_string().parse().unwrap_or_else(|err| {
+                            eprintln!("\nEXIT: Problem parsing JSON VALUE to f64\nREASON >>> {}", err);
+                            process::exit(1);
+                        });
+
+                        number
+                    },
+                    
+                    true => {
+                        /* println!("value_PIPE: {}", v=single_sensor_pointer_value); */
+
+                        let replace:f64 = str::replace(single_sensor_pointer_value.as_str().unwrap(), "\"", "").parse().unwrap_or_else(|err| {
+                            eprintln!("\nEXIT: Problem parsing JSON VALUE <PIPE> to f64 via replace: \" \nREASON >>> {}", err);
+                            //0.0
+                            process::exit(1);
+                        });
+
+                        /* println!("REPLACE: {r} / {r:#?}", r=replace); */
+                        replace
+                    },
+                };
+                */
+                
+                /*
                 let pointer_parsed:f64 = match config.metrics[key].flag_pipe {
                     false => {
                         /* println!("value: {v} / {v:#?}", v=single_sensor_pointer_value); */
                         
                         let number: f64 = single_sensor_pointer_value.to_string().parse().unwrap_or_else(|err| {
                             eprintln!("\nEXIT: Problem parsing JSON VALUE to f64\nREASON >>> {}", err);
-                            //0.0
                             process::exit(1);
                         });
 
@@ -521,27 +652,26 @@ value: {v}",
                         replace
                     },
                 };
-                // */
+                */
                 
-                //if pointer_parsed_status && single_sensor.status {
-                if single_sensor.status {
+                if pointer_status && single_sensor.status {
                     let single_record = PreRecord {
                         key:key.to_string(),
                         ts: dt.ts,
-                        value: pointer_parsed.to_string(),
+
+                        //value: pointer_parsed.to_string(),
+                        value: pointer_parsed_float.to_string(),
+                        
                         id: single_sensor.name.to_string(),
                         measurement: config.metrics[key].measurement.to_string(),
                         host: config.host.to_string(),
                     };
-
+                    
                     // METRIC RECORD_LIST -> Vec<Record>
                     if !metric_result_list.contains(&single_record) { 
                         metric_result_list.push(single_record)
                     }
-
-                    
                 }
-                    
             } /* for single_sensor in each metric*/
         }
     } /* for key in metrics */
