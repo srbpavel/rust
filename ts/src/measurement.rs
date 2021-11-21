@@ -126,75 +126,79 @@ pub fn backup_data(config: &TomlConfig,
                    metric: &TemplateSensors) {
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
-    // TEST error handling
+    // FOR TEST error handling
     //let full_path = Path::new("/root/").join(&config.backup.dir);
-
+    //_
+    
     let full_path_status = full_path.exists();
     
     // DIR CREATE if not EXISTS
-    //if !full_path.exists() {
     let full_path_create_status = if !full_path_status {
         fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-            println!("\n!!! WARNING: not able to create backup DIR: {d}\nREASON: >>> {e}",
+            println!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}", // use fmt to have it only once as variable
+                     m=&metric.measurement,
                      d=&config.work_dir,
                      e=err);
-            eprintln!("\nERROR: failed CREATE backup DIR: {d}\nREASON: >>> {e}",
-                     d=&config.work_dir,
+            eprintln!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}",
+                      m=&metric.measurement,
+                      d=&config.work_dir,
                       e=err);
-            //process::exit(1); // this will not exit but raise ALARM
         });
-
         false
-    } else { true };
-
-    /*
-    println!("EEE: {}", full_path_create_status);
-    cely obalit do if create_status
-    */
-    
-    let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
-                                                 t=&today_file_name,
-                                                 n=&config.name,
-                                                 m=&metric.measurement,
-                                                 e=&config.backup.file_extension,
-    ));
-
-    // FILE CREATE or APPEND
-    if config.flag.debug_backup {
-        println!("\n#CSV_ANNOTATED: {}\n#", &today_file_name.display());
     }
+    else {
+        true
+    };
 
-    // format CSV HEADER
-    let csv_header = prepare_csv_header_format(&metric);
+    // WE HAVE DIR and VERIFIED 
+    if full_path_create_status {
+        let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
+                                                     t=&today_file_name,
+                                                     n=&config.name,
+                                                     m=&metric.measurement,
+                                                     e=&config.backup.file_extension,
+        ));
+
+        // FILE CREATE or APPEND
+        if config.flag.debug_backup {
+            println!("\n#CSV_ANNOTATED: {}\n#", &today_file_name.display());
+        }
+
+        // format CSV HEADER
+        let csv_header = prepare_csv_header_format(&metric);
     
-    if full_path_status {
         if !today_file_name.exists() {
             let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
                 Err(why) => {
                     eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
                               &today_file_name.display(),
                               why);
-                
+
+                    // uz nevim proc to tu mam? PODLE ME KDYZ ZAKLADAM NOVEJ SOUBOR
                     fs::OpenOptions::new()
                         .write(true)
                         .append(true)
                         .open(&today_file_name)
                         .unwrap() // NO NEED TO TEST ? AS CREATED
                 },
-            
+                
                 Ok(file) => file,
             };
 
+            // TEST if DIR+FILE OK but FULL_DISC
+            // CSV_DATATYPE
             writeln!(file, "{}", &metric.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
-                eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                process::exit(1);  // this will not exit but raise ALARM
+                eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+                //process::exit(1);  // this will not exit but raise ALARM
             });
 
+            // CSV_HEADER
             writeln!(file, "{}", csv_header).unwrap_or_else(|err| {
-                eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                process::exit(1);  // this will not exit but raise ALARM
+                eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+                //process::exit(1);  // this will not exit but raise ALARM
             });
 
+            // you have it twice, fix it to have it only once
             if config.flag.debug_backup {
                 println!("{}\n{}",
                          &metric.annotated_datatype,
@@ -210,30 +214,34 @@ pub fn backup_data(config: &TomlConfig,
                 );
             }
         }
-    }
 
-    let mut file = fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(&today_file_name)
-        .unwrap();
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&today_file_name)
+            .unwrap(); //this should not fail as we have valid dir + filenema -> verified // but test with FULL_DISC
     
-    // RESULT_LIST
-    for single_record in result_list {
-        if &metric.measurement == &single_record.measurement {
-            let csv_record = prepare_csv_record_format(&single_record,
-                                                       &metric,
-            );
+        // RESULT_LIST
+        for single_record in result_list {
+            if &metric.measurement == &single_record.measurement {
+                let csv_record = prepare_csv_record_format(&single_record,
+                                                           &metric,
+                );
+                
+                if config.flag.debug_backup {
+                    println!("{}", &csv_record);
+                }
 
-            if config.flag.debug_backup {
-                println!("{}", &csv_record);
+                // APPEND SINGLE RECORD to backup_file
+                writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+                    eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+                    //process::exit(1);  // this will not exit but raise ALARM
+                });
             }
-            
-            writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
-                eprintln!("\nEXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                process::exit(1);  // this will not exit but raise ALARM
-            });
         }
+    } /* if full_path_create_status */
+    else {
+        println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
     }
 }
 
