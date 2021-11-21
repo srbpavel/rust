@@ -18,6 +18,64 @@ pub struct CmdArgs {
 }
 
 
+impl CmdArgs {
+    pub fn new(mut args: env::Args) -> Result<CmdArgs, &'static str> {
+        // HARDCODED as config with debug_flag's not parsed yet
+        println!("\n#COMMAND: {:#?}",
+                 args);
+
+        const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 PROGRAM
+        
+        if args.len() < ARG_COUNT {
+            return Err("not enough arguments")
+        } else if args.len() > ARG_COUNT {
+            return Err("too many arguments")
+        }
+
+        let _program = match args.next() { // FUTURE_USE
+            Some(arg) => arg,
+            None => return Err("should never fail"),
+        };
+
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("no QUERY string [keyword] cmd_argument"),
+        };
+
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("no FILE NAME [path] cmd_argument"),
+        };
+
+        /* ENV
+        // terminal: $ export CASE_INSENSITIVE=1
+        // terminla: $ unset CASE_INSENSITIVE
+        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+         */
+
+        let case_sensitive = match args.next() {
+            /* LONG WAY
+            Some(arg) => if vec!["true", "false"].contains(&arg.to_lowercase().as_str()) {
+                //arg.to_lowercase().parse::<bool>().unwrap()
+                arg.to_lowercase().parse::<bool>().unwrap()
+            } else {
+                return Err("CASE SENSITIVE not true/false BOOL")
+            },
+            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
+            */
+
+            Some(arg) => arg.to_lowercase().parse::<bool>().unwrap_or_else(|err| {
+                eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
+                process::exit(1);
+            }),
+            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
+        };
+
+        return Ok(CmdArgs {query, filename, case_sensitive});
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TomlConfig {
     // ROOT
@@ -25,15 +83,13 @@ pub struct TomlConfig {
     pub name: String,
     pub host: String,
 
-    //iter over HASH
+    //iter via HASH key
     pub metrics: HashMap<String, TemplateSensors>,
     
     // STRUCT
     pub flag: Flag,
     pub backup: Backup,
-
     pub template: Template,
-    
     pub delay: Delay,
     
     // VEC
@@ -319,68 +375,22 @@ pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
 }
 
 
-impl CmdArgs {
-    pub fn new(mut args: env::Args) -> Result<CmdArgs, &'static str> {
-        println!("\n#COMMAND: {:#?}",
-                 args);
-
-        const ARG_COUNT: usize = 4; // sum of struct CmdArgs members + 1 PROGRAM
-        
-        if args.len() < ARG_COUNT {
-            return Err("not enough arguments")
-        } else if args.len() > ARG_COUNT {
-            return Err("too many arguments")
-        }
-
-        let _program = match args.next() { // FUTURE_USE
-            Some(arg) => arg,
-            None => return Err("should never fail"),
-        };
-
-        let query = match args.next() {
-            Some(arg) => arg,
-            None => return Err("no QUERY string [keyword] cmd_argument"),
-        };
-
-        let filename = match args.next() {
-            Some(arg) => arg,
-            None => return Err("no FILE NAME [path] cmd_argument"),
-        };
-
-        /* ENV
-        // terminal: $ export CASE_INSENSITIVE=1
-        // terminla: $ unset CASE_INSENSITIVE
-        let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
-         */
-
-        let case_sensitive = match args.next() {
-            /* LONG WAY
-            Some(arg) => if vec!["true", "false"].contains(&arg.to_lowercase().as_str()) {
-                //arg.to_lowercase().parse::<bool>().unwrap()
-                arg.to_lowercase().parse::<bool>().unwrap()
-            } else {
-                return Err("CASE SENSITIVE not true/false BOOL")
-            },
-            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
-            */
-
-            Some(arg) => arg.to_lowercase().parse::<bool>().unwrap_or_else(|err| {
-                eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
-                process::exit(1);
-            }),
-            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
-        };
-
-        return Ok(CmdArgs {query, filename, case_sensitive});
-    }
-}
-
-
 pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error>> {
     println!("\n#PARSE file_config -> TOML:\n{:}", &cmd_args.filename);
 
-    let toml_file = fs::read_to_string(&cmd_args.filename);
-    let toml_config: TomlConfig = toml::from_str(&toml_file.unwrap()).unwrap();
+    let toml_file = fs::read_to_string(&cmd_args.filename).unwrap_or_else(|err| {
+        eprintln!("\nEXIT: error reading config file: {}\nREASON >>> {e}",
+                  c=&cmd_args.filename,
+                  e=err);
+        process::exit(1);
+    });
+
+    let toml_config: TomlConfig = toml::from_str(&toml_file).unwrap_or_else(|err| {
+        eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
+                  c=&cmd_args.filename,
+                  e=err);
+        process::exit(1);
+    });
 
     /*
     let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();

@@ -5,7 +5,7 @@ use std::process;
 // LIB.RS
 use ts as metynka;
 
-// /UTIL/TS
+// UTIL/TS
 mod util;
 pub use util::ts as timestamp;
 
@@ -19,7 +19,7 @@ mod measurement;
 
 
 fn main() {
-    // QUICK SAMPLE TEST
+    // FOR SAMPLE TEST
     /*
     enum Example {
         Data(i32),
@@ -39,11 +39,8 @@ fn main() {
     });
 
     // TOML_CONFIG
-    let config = metynka::parse_toml_config(&cmd_args).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: reading file\nREASON >>> {}", err);
-        process::exit(1);
-    });
-
+    let config = metynka::parse_toml_config(&cmd_args).unwrap();
+    
     // EGREP
     if config.flag.run_egrep && config.flag.debug_egrep {
         if let Err(e) = metynka::read_config(cmd_args) {
