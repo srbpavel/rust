@@ -12,12 +12,11 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 
-pub use crate::util::ts::{Dt};
-
-use ts::{TomlConfig, Influx, TemplateSensors};
-
 use std::any::{Any};
 use core::fmt::Debug; //use std::fmt::Debug;
+
+pub use crate::util::ts::{Dt};
+use ts::{TomlConfig, Influx, TemplateSensors};
 
 
 // BACKUP CVS 
@@ -126,11 +125,14 @@ pub fn backup_data(config: &TomlConfig,
                    metric: &TemplateSensors) {
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
-    // FOR TEST error handling
-    //let full_path = Path::new("/root/").join(&config.backup.dir);
+    /* FOR TEST error handling */
+    //let full_path = Path::new("/home/conan/").join(&config.backup.dir);
+    //println!("FULL_PATH: {:#?}", full_path);
+    //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
     //_
     
     let full_path_status = full_path.exists();
+    //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
     
     // DIR CREATE if not EXISTS
     let full_path_create_status = if !full_path_status {
@@ -150,7 +152,7 @@ pub fn backup_data(config: &TomlConfig,
         true
     };
 
-    // WE HAVE DIR and VERIFIED 
+    // WE HAVE DIR and VERIFIED but PERMISION CAN CHANGE so + test write
     if full_path_create_status {
         let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
                                                      t=&today_file_name,
@@ -179,7 +181,7 @@ pub fn backup_data(config: &TomlConfig,
                         .write(true)
                         .append(true)
                         .open(&today_file_name)
-                        .unwrap() // NO NEED TO TEST ? AS CREATED
+                        .unwrap() // ALSO NEED TEST
                 },
                 
                 Ok(file) => file,
@@ -215,12 +217,36 @@ pub fn backup_data(config: &TomlConfig,
             }
         }
 
+        // /*
         let mut file = fs::OpenOptions::new()
             .write(true)
             .append(true)
             .open(&today_file_name)
-            .unwrap(); //this should not fail as we have valid dir + filenema -> verified // but test with FULL_DISC
-    
+            .unwrap(); // FAIL when DIR+FILE are there but no permision to write
+        
+        // */
+
+        /*
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&today_file_name)
+            .unwrap_or_else(|err| {
+                eprintln!("\nERROR_inside: APPEND DATA to file failed)");
+            });
+        */
+        
+        /*
+        let mut file = match fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&today_file_name)
+            .unwrap() {
+                Ok(_) => println!("Data written successfully"),
+                Err(err) => eprintln!("\nERROR_inside: APPEND DATA to file failed")
+            };
+        */
+        
         // RESULT_LIST
         for single_record in result_list {
             if &metric.measurement == &single_record.measurement {

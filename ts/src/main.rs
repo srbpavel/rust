@@ -13,8 +13,7 @@ pub use util::ts as timestamp;
 mod measurement;
 
 // DEBUG -> measurement
-//
-//use metynka::{TomlConfig, Influx, TemplateSensors};
+//use metynka::{TomlConfig, Influx};
 //use crate::metynka::TemplateSensors;
 
 
