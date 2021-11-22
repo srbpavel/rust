@@ -134,10 +134,26 @@ pub fn backup_data(config: &TomlConfig,
     //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
     //_
     
-    let full_path_status = full_path.exists();
+    /* let full_path_status = full_path.exists(); */
+    /* FOR TEST error handling */
     //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
     
     // DIR CREATE if not EXISTS
+
+    if !full_path.exists() {
+        fs::create_dir_all(&full_path).unwrap_or_else(|err| {
+            println!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}", // use fmt to have it only once as variable
+                     m=&metric.measurement,
+                     d=&config.work_dir,
+                     e=err);
+            eprintln!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}",
+                      m=&metric.measurement,
+                      d=&config.work_dir,
+                      e=err);
+        });
+    }
+
+    /*
     let full_path_create_status = if !full_path_status {
         fs::create_dir_all(&full_path).unwrap_or_else(|err| {
             println!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}", // use fmt to have it only once as variable
@@ -154,9 +170,11 @@ pub fn backup_data(config: &TomlConfig,
     else {
         true
     };
+    */
 
     // WE HAVE DIR and VERIFIED but PERMISION CAN CHANGE so + test write
-    if full_path_create_status {
+    /* if full_path_create_status { */
+    if full_path.exists() {
         let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
                                                      t=&today_file_name,
                                                      n=&config.name,

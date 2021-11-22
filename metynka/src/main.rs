@@ -2,14 +2,14 @@
 use std::env;
 use std::process;
 
-// LIB.RS
-/* use ts as metynka; */
+// /LIB.RS
+/* use metynka as bronco; */
 
-// UTIL/TS
+// /UTIL/TS
 mod util;
 pub use util::ts as timestamp;
 
-// SENSORS
+// /SENSORS
 mod measurement;
 
 // DEBUG -> measurement
