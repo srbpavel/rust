@@ -1,0 +1,6 @@
+#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number
+m,host,Machine,MemoryId,MemoryCarrier,MemoryValid,MemoryDecimal,time
+memory_float,spongebob,spongebob,memory_free,cargo,true,421956,1637574614648
+memory_float,spongebob,spongebob,memory_available,cargo,true,2262308,1637574614648
+memory_float,spongebob,spongebob,memory_free,cargo,true,304384,1637575501618
+memory_float,spongebob,spongebob,memory_available,cargo,true,2177748,1637575501618

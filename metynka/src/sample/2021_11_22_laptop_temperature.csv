@@ -1,0 +1,10 @@
+#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number
+m,host,Machine,SensorId,SensorCarrier,SensorValid,TemperatureDecimal,time
+temperature,spongebob,spongebob,0,cargo,true,53,1637574614648
+temperature,spongebob,spongebob,1,cargo,true,55,1637574614648
+temperature,spongebob,spongebob,2,cargo,true,46,1637574614648
+temperature,spongebob,spongebob,3,cargo,true,50,1637574614648
+temperature,spongebob,spongebob,0,cargo,true,52,1637575501618
+temperature,spongebob,spongebob,1,cargo,true,55,1637575501618
+temperature,spongebob,spongebob,2,cargo,true,45,1637575501618
+temperature,spongebob,spongebob,3,cargo,true,50,1637575501618
