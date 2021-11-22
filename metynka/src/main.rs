@@ -18,7 +18,7 @@ mod measurement;
 
 
 fn main() {
-    // FOR SAMPLE TEST's at START
+    // QUICK SAMPLE CODE TEST
     /*
     let line = "1\n2\n3\n4\nBUCKET";
     

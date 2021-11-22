@@ -104,6 +104,8 @@ pub struct Flag {
     pub debug_ts: bool,
     pub debug_ts_to_dt: bool, // obsolete to DEL ?
 
+    pub debug_template_formater: bool,
+    
     pub debug_sensor_output: bool,
     pub debug_metric_instances: bool,
     pub debug_pointer_output: bool,
