@@ -18,7 +18,24 @@ mod measurement;
 
 
 fn main() {
-    // FOR SAMPLE TEST
+    // FOR SAMPLE TEST's at START
+    /*
+    let line = "1\n2\n3\n4\nBUCKET";
+    
+    for num in line.lines() {
+        match num.parse::<u32>().map_or(666, |i| i * 2) {
+            n => println!("num: {} / <n: {:#?}>", num, n),
+        }
+        /*
+        match num.parse::<u8>().map(|i| i * 2) {
+            Ok(n) => println!("num: {} / <n: {:#?}>", num, n),
+            Err(why) => eprintln!("\n#ERROR: num: <{}> \n>>> REASON: {}", num, why),
+            //Err(..) => {},
+        }
+        */
+    }
+    */
+
     /*
     enum Example {
         Data(i32),

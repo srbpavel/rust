@@ -1,22 +1,22 @@
 use std::process;
-use std::process::{Command};
-
-use std::process::{Stdio}; 
+use std::process::{Command, Stdio};
 
 extern crate strfmt;
 use strfmt::strfmt;
+
 use std::collections::HashMap;
 
 use std::path::Path;
 use std::fs;
-use std::fs::File;
+use std::fs::{OpenOptions, File};
+
 use std::io::Write;
 
 use std::any::{Any};
+
 use core::fmt::Debug; //use std::fmt::Debug;
 
 pub use crate::util::ts::{Dt};
-/* use ts::{TomlConfig, Influx, TemplateSensors}; */
 use metynka::{TomlConfig, Influx, TemplateSensors};
 
 
@@ -88,6 +88,7 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
             match as_string.parse::<f64>() {
                 Err(_why) => {
                     // JSON VALUE wrapped with "
+                    // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
                     let float_via_replace = str::replace(as_string, "\"", "").parse::<f64>().unwrap();
 
                     /*
@@ -119,61 +120,55 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
     (value, status)
 }
 
+fn my_formater<'sf>(template: &String,
+                    fake_key: &Vec<&str>, 
+                    fake_value: &Vec<&str>) -> String{
+
+    let print_template = String::from(template);
+    let mut print_hash = HashMap::new();
+    
+    for p in 0..*&fake_key.len() as u8 {
+        print_hash.insert(
+            fake_key[p as usize].to_string(),
+            String::from(fake_value[p as usize])
+        );
+    }
+    
+    strfmt(&print_template, &print_hash).unwrap()
+}
+
 
 pub fn backup_data(config: &TomlConfig,
                    result_list: &Vec<Record>,
                    today_file_name: &String,
                    metric: &TemplateSensors) {
 
-    println!("\n#BACKUP: <{}>", metric.measurement);
-    
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
     /* FOR TEST error handling */
-    //let full_path = Path::new("/home/conan/").join(&config.backup.dir);
-    //println!("FULL_PATH: {:#?}", full_path);
-    //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
+    // let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
+    //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION write ROOT
+    //println!(" @@@ DEBUG @@@ FULL_PATH: {:#?}", full_path);
     //_
     
-    /* let full_path_status = full_path.exists(); */
-    /* FOR TEST error handling */
-    //println!("FULL_PATH_STATUS: {:#?}", full_path_status);
-    
     // DIR CREATE if not EXISTS
-
     if !full_path.exists() {
         fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-            println!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}", // use fmt to have it only once as variable
-                     m=&metric.measurement,
-                     d=&config.work_dir,
-                     e=err);
-            eprintln!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}",
-                      m=&metric.measurement,
-                      d=&config.work_dir,
-                      e=err);
+            let print_template = String::from("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}");
+
+            let print_formated =  my_formater(&print_template, 
+                                              &vec!["m", "d", "e"],
+                                              &vec![&metric.measurement,
+                                                    &config.work_dir,
+                                                    &err.to_string(),
+                                              ]
+            );
+
+            println!("{}", print_formated);
+            eprintln!("{}", print_formated);
         });
     }
 
-    /*
-    let full_path_create_status = if !full_path_status {
-        fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-            println!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}", // use fmt to have it only once as variable
-                     m=&metric.measurement,
-                     d=&config.work_dir,
-                     e=err);
-            eprintln!("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}",
-                      m=&metric.measurement,
-                      d=&config.work_dir,
-                      e=err);
-        });
-        true //false
-    }
-    else {
-        true
-    };
-    */
-
-    // WE HAVE DIR and VERIFIED but PERMISION CAN CHANGE so + test write
-    /* if full_path_create_status { */
+    // WE HAVE DIR and VERIFIED but PERMISION CAN CHANGE -> write is OK
     if full_path.exists() {
         let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
                                                      t=&today_file_name,
@@ -198,11 +193,12 @@ pub fn backup_data(config: &TomlConfig,
                               why);
 
                     // uz nevim proc to tu mam? PODLE ME KDYZ ZAKLADAM NOVEJ SOUBOR
-                    fs::OpenOptions::new()
+                    OpenOptions::new()
                         .write(true)
                         .append(true)
                         .open(&today_file_name)
-                        .unwrap() // ALSO NEED TEST
+                        .expect("FAILED TO OPEN FILE")
+                        //.unwrap() // ALSO NEED TEST
                 },
                 
                 Ok(file) => file,
@@ -238,52 +234,61 @@ pub fn backup_data(config: &TomlConfig,
             }
         }
 
-        // /*
-        let mut file = fs::OpenOptions::new()
+        let (mut file, file_status) = match OpenOptions::new()
             .write(true)
             .append(true)
             .open(&today_file_name)
-            .unwrap(); // FAIL when DIR+FILE are there but no permision to write
-        
-        // */
+        {
+            Ok(file) => (file, true),
+
+            Err(why) => {
+                eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
+                          &today_file_name.display(),
+                          why);
+
+                (OpenOptions::new()
+                 .read(true)
+                 .open(&today_file_name)
+                 .expect("FAILED TO OPEN FILE just for READ"),
+                 false)
+            },
+        };
 
         /*
-        let mut file = fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(&today_file_name)
-            .unwrap_or_else(|err| {
-                eprintln!("\nERROR_inside: APPEND DATA to file failed)");
-            });
+        println!("\n@@@FILE:\nAAA: {:#?}\nBBB: {:#?}]\nCCC: {:#?}",
+                 file.metadata(),
+                 /*
+                 match file.metadata() {
+                     Ok(data) => data,
+                     Err(_) => process::exit(1)
+                 },
+                 */
+                 file.metadata().unwrap().permissions(),
+                 file); // cannot acces File field ? as this is method
         */
-        
-        /*
-        let mut file = match fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(&today_file_name)
-            .unwrap() {
-                Ok(_) => println!("Data written successfully"),
-                Err(err) => eprintln!("\nERROR_inside: APPEND DATA to file failed")
-            };
-        */
-        
-        // RESULT_LIST
-        for single_record in result_list {
-            if &metric.measurement == &single_record.measurement {
-                let csv_record = prepare_csv_record_format(&single_record,
-                                                           &metric,
-                );
-                
-                if config.flag.debug_backup {
-                    println!("{}", &csv_record);
+       
+        if !file_status {
+            println!("\n@@@ WE CANNOT WRITE as READ_ONLY");
+            println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:?}", result_list);
+        }
+        else {
+            // RESULT_LIST
+            for single_record in result_list {
+                if &metric.measurement == &single_record.measurement {
+                    let csv_record = prepare_csv_record_format(&single_record,
+                                                               &metric,
+                    );
+                    
+                    if config.flag.debug_backup {
+                        println!("{}", &csv_record);
+                    }
+                    
+                    // APPEND SINGLE RECORD to backup_file
+                    writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+                        eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
+                        //process::exit(1);  // this will not exit but raise ALARM
+                    });
                 }
-
-                // APPEND SINGLE RECORD to backup_file
-                writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
-                    eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                    //process::exit(1);  // this will not exit but raise ALARM
-                });
             }
         }
     } /* if full_path_create_status */
@@ -310,6 +315,7 @@ pub fn prepare_csv_header_format(metric: &TemplateSensors) -> String {
 pub fn prepare_csv_record_format(record: &Record,
                                  metric: &TemplateSensors) -> String {
 
+    // /*
     let csv_record_template = String::from(&metric.csv_annotated);
     let mut csv_record = HashMap::new();
     csv_record.insert("measurement".to_string(), String::from(&record.measurement));
@@ -322,6 +328,7 @@ pub fn prepare_csv_record_format(record: &Record,
     csv_record.insert("value".to_string(), String::from(&record.value.to_string()));
 
     return strfmt(&csv_record_template, &csv_record).unwrap()
+    // */
 }
 
 
