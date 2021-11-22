@@ -3,7 +3,7 @@ use std::env;
 use std::process;
 
 // LIB.RS
-use ts as metynka;
+/* use ts as metynka; */
 
 // UTIL/TS
 mod util;

@@ -2,7 +2,7 @@
 name = 'laptop'
 # influx:: host TAG
 host = 'spongebob'
-work_dir = '/home/conan/soft/rust/ts'
+work_dir = '/home/conan/soft/rust/metynka'
 
 
 [flag]

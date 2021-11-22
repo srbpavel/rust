@@ -16,7 +16,8 @@ use std::any::{Any};
 use core::fmt::Debug; //use std::fmt::Debug;
 
 pub use crate::util::ts::{Dt};
-use ts::{TomlConfig, Influx, TemplateSensors};
+/* use ts::{TomlConfig, Influx, TemplateSensors}; */
+use metynka::{TomlConfig, Influx, TemplateSensors};
 
 
 // BACKUP CVS 
@@ -123,6 +124,8 @@ pub fn backup_data(config: &TomlConfig,
                    result_list: &Vec<Record>,
                    today_file_name: &String,
                    metric: &TemplateSensors) {
+
+    println!("\n#BACKUP: <{}>", metric.measurement);
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
     /* FOR TEST error handling */
@@ -146,7 +149,7 @@ pub fn backup_data(config: &TomlConfig,
                       d=&config.work_dir,
                       e=err);
         });
-        false
+        true //false
     }
     else {
         true
