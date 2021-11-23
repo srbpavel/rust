@@ -1,10 +1,6 @@
 use std::process;
 use std::process::{Command, Stdio};
 
-//extern crate strfmt;
-//use strfmt::strfmt;
-//use std::collections::HashMap;
-
 use std::path::Path;
 use std::fs;
 use std::fs::{OpenOptions, File};
@@ -17,7 +13,7 @@ use core::fmt::Debug; //use std::fmt::Debug;
 
 pub use crate::util::ts::{Dt};
 use metynka::{TomlConfig, Influx, TemplateSensors};
-pub use crate::util::template_formater::my_tuple_formater;
+pub use crate::util::template_formater::tuple_formater;
 
 
 // BACKUP CVS 
@@ -121,29 +117,6 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 }
 
 
-/* //fff
-fn my_tuple_formater<'sf>(template: &String,
-                          pair: &Vec<(&str, &str)>,
-                          debug: bool) -> String {
-
-    let template = String::from(template);
-    let mut hash_map = HashMap::new();
-
-    if debug { println!("\n#My_Tuple_Formater:") }
-
-    for t in pair {
-        if debug {
-            println!(" {} <- {}", t.0, t.1);
-        }
-        
-        hash_map.insert(t.0.to_string(), String::from(t.1));
-    }
-
-    strfmt(&template, &hash_map).unwrap()
-}
-*/
-
-
 pub fn backup_data(config: &TomlConfig,
                    result_list: &Vec<Record>,
                    today_file_name: &String,
@@ -159,39 +132,18 @@ pub fn backup_data(config: &TomlConfig,
     // DIR CREATE if not EXISTS
     if !full_path.exists() {
         fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-            let print_template = String::from("\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}");
-
-            let print_formated = my_tuple_formater(&print_template, 
-                                                   &vec![("m", &metric.measurement),
-                                                        ("d", &config.work_dir),
-                                                        ("e", &err.to_string())
+            let print_formated = tuple_formater(&"\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}".to_string(),
+                                                   &vec![
+                                                       ("m", &metric.measurement),
+                                                       ("d", &config.work_dir),
+                                                       ("e", &err.to_string())
                                                    ],
-                                                   config.flag.debug_template_formater
+                                                config.flag.debug_template_formater
             );
             
             println!("{}", print_formated);
             eprintln!("{}", print_formated);
             
-            /*
-            let print_formated =  my_formater(&print_template, 
-                                              &vec!["m", "d", "e"],
-                                              &vec![&metric.measurement,
-                                                    &config.work_dir,
-                                                    &err.to_string(),
-                                              ]
-            );
-            */
-
-            /*
-            let print_formated = my_struct_formater(
-                &print_template, 
-                &vec![
-                    Pair {key:"m".to_string(), value:metric.measurement.to_string()},
-                    Pair {key:"d".to_string(), value:config.work_dir.to_string()},
-                    Pair {key:"e".to_string(), value:err.to_string()},
-                ],
-            );
-            */
         });
     }
 
@@ -296,7 +248,7 @@ pub fn backup_data(config: &TomlConfig,
         */
        
         if !file_status {
-            println!("\n@@@ WE CANNOT WRITE as READ_ONLY");
+            println!("\n@@@ WE CANNOT WRITE as READ_ONLY"); // DEL when done
             println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:?}", result_list);
         }
         else {
@@ -330,15 +282,15 @@ pub fn backup_data(config: &TomlConfig,
 pub fn prepare_csv_header_format(config: &TomlConfig,
                                  metric: &TemplateSensors) -> String {
 
-    my_tuple_formater(&metric.annotated_header, 
-                      &vec![
-                          ("tag_machine", &metric.tag_machine),
-                          ("tag_carrier", &metric.tag_carrier),
-                          ("tag_valid", &metric.tag_valid),
-                          ("tag_id", &metric.tag_id),
-                          ("field", &metric.field),
-                      ],
-                      config.flag.debug_template_formater
+    tuple_formater(&metric.annotated_header, 
+                   &vec![
+                       ("tag_machine", &metric.tag_machine),
+                       ("tag_carrier", &metric.tag_carrier),
+                       ("tag_valid", &metric.tag_valid),
+                       ("tag_id", &metric.tag_id),
+                       ("field", &metric.field),
+                   ],
+                   config.flag.debug_template_formater
     )
     /*
     let csv_header_template = String::from(&metric.annotated_header);
@@ -358,18 +310,18 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &Record,
                                  metric: &TemplateSensors) -> String {
 
-    my_tuple_formater(&metric.csv_annotated, 
-                      &vec![
-                          ("measurement", &record.measurement),
-                          ("host", &record.host),
-                          ("machine", &record.machine),
-                          ("carrier", &record.carrier),
-                          ("valid", &record.valid.to_string()),
-                          ("ts", &record.ts.to_string()),
-                          ("id", &record.id.to_string()),
-                          ("value", &record.value.to_string()),
-                      ],
-                      config.flag.debug_template_formater
+    tuple_formater(&metric.csv_annotated, 
+                   &vec![
+                       ("measurement", &record.measurement),
+                       ("host", &record.host),
+                       ("machine", &record.machine),
+                       ("carrier", &record.carrier),
+                       ("valid", &record.valid.to_string()),
+                       ("ts", &record.ts.to_string()),
+                       ("id", &record.id.to_string()),
+                       ("value", &record.value.to_string()),
+                   ],
+                   config.flag.debug_template_formater
     )
 
     /*
@@ -403,21 +355,21 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
         false => String::from(&metric.generic_query_verify_record)
     };    
 
-    my_tuple_formater(&flux_template,
-                      &vec![
-                          ("tag_carrier", &metric.tag_carrier),
-                          ("tag_valid", &metric.tag_valid),
-                          ("tag_id", &metric.tag_id),
-                          
-                          ("bucket", &single_influx.bucket),
-                          ("start", &config.template.flux.query_verify_record_range_start),
-                          ("measurement", &metric.measurement),
-                          
-                          // COMPARE only id + time // if needed can add _VALUE
-                          ("id", &generic_record.id.to_string()),
-                          ("dtif", utc_influx_format), // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
-                      ],
-                      config.flag.debug_template_formater
+    tuple_formater(&flux_template,
+                   &vec![
+                       ("tag_carrier", &metric.tag_carrier),
+                       ("tag_valid", &metric.tag_valid),
+                       ("tag_id", &metric.tag_id),
+                       
+                       ("bucket", &single_influx.bucket),
+                       ("start", &config.template.flux.query_verify_record_range_start),
+                       ("measurement", &metric.measurement),
+                       
+                       // COMPARE only id + time // if needed can add _VALUE
+                       ("id", &generic_record.id.to_string()),
+                       ("dtif", utc_influx_format), // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
+                   ],
+                   config.flag.debug_template_formater
     )
     
     /*
@@ -549,26 +501,26 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
                                  generic_record: &Record,
                                  metric: &TemplateSensors)  -> String {
 
-    my_tuple_formater(&metric.generic_lp,
-                      &vec![
-                          ("tag_machine", &metric.tag_machine),
-                          ("tag_carrier", &metric.tag_carrier),
-                          ("tag_valid", &metric.tag_valid),
-                          ("tag_id", &metric.tag_id),
-                          ("field", &metric.field),
-                          ("measurement", &generic_record.measurement),
-                          ("host", &generic_record.host),
-                          ("machine_id", &generic_record.machine),
-                          
-                          ("carrier", &generic_record.carrier),
-                          ("valid", &generic_record.valid),
-                          
-                          ("id", &generic_record.id),
-                          ("value", &generic_record.value.to_string()),
-
-                          ("ts", &generic_record.ts.to_string()),
-                      ],
-                      config.flag.debug_template_formater
+    tuple_formater(&metric.generic_lp,
+                   &vec![
+                       ("tag_machine", &metric.tag_machine),
+                       ("tag_carrier", &metric.tag_carrier),
+                       ("tag_valid", &metric.tag_valid),
+                       ("tag_id", &metric.tag_id),
+                       ("field", &metric.field),
+                       ("measurement", &generic_record.measurement),
+                       ("host", &generic_record.host),
+                       ("machine_id", &generic_record.machine),
+                       
+                       ("carrier", &generic_record.carrier),
+                       ("valid", &generic_record.valid),
+                       
+                       ("id", &generic_record.id),
+                       ("value", &generic_record.value.to_string()),
+                       
+                       ("ts", &generic_record.ts.to_string()),
+                   ],
+                   config.flag.debug_template_formater
     )
     
     /*
@@ -601,18 +553,18 @@ pub fn prepare_influx_format(config: &TomlConfig,
                              influx_inst: &Influx) -> (String, String, String, String, String) {
 
     // URI_WRITE 
-    let uri_write = my_tuple_formater(&format!("{}{}",
-                                               &config.template.curl.influx_uri_api,
-                                               &config.template.curl.influx_uri_write),
-                                      &vec![
-                                          ("secure", &influx_inst.secure),
-                                          ("server", &influx_inst.server),
-                                          ("port", &influx_inst.port.to_string()),
-                                          ("org", &influx_inst.org),
-                                          ("bucket", &influx_inst.bucket),
-                                          ("precision", &influx_inst.precision),
-                                      ],
-                                      config.flag.debug_template_formater
+    let uri_write = tuple_formater(&format!("{}{}",
+                                            &config.template.curl.influx_uri_api,
+                                            &config.template.curl.influx_uri_write),
+                                   &vec![
+                                       ("secure", &influx_inst.secure),
+                                       ("server", &influx_inst.server),
+                                       ("port", &influx_inst.port.to_string()),
+                                       ("org", &influx_inst.org),
+                                       ("bucket", &influx_inst.bucket),
+                                       ("precision", &influx_inst.precision),
+                                   ],
+                                   config.flag.debug_template_formater
     );
 
     /*
@@ -631,16 +583,16 @@ pub fn prepare_influx_format(config: &TomlConfig,
     */
 
     // URI_QUERY
-    let uri_query = my_tuple_formater(&format!("{}{}",
-                                               &config.template.curl.influx_uri_api,
-                                               &config.template.curl.influx_uri_query),
-                                      &vec![
-                                          ("secure", &influx_inst.secure),
-                                          ("server", &influx_inst.server),
-                                          ("port", &influx_inst.port.to_string()),
-                                          ("org", &influx_inst.org),
-                                      ],
-                                      config.flag.debug_template_formater
+    let uri_query = tuple_formater(&format!("{}{}",
+                                            &config.template.curl.influx_uri_api,
+                                            &config.template.curl.influx_uri_query),
+                                   &vec![
+                                       ("secure", &influx_inst.secure),
+                                       ("server", &influx_inst.server),
+                                       ("port", &influx_inst.port.to_string()),
+                                       ("org", &influx_inst.org),
+                                   ],
+                                   config.flag.debug_template_formater
     );
     
     /*
@@ -659,11 +611,11 @@ pub fn prepare_influx_format(config: &TomlConfig,
     
     // AUTH
 
-    let auth = my_tuple_formater(&config.template.curl.influx_auth,
-                                 &vec![
-                                     ("token", &influx_inst.token),
-                                 ],
-                                 config.flag.debug_template_formater
+    let auth = tuple_formater(&config.template.curl.influx_auth,
+                              &vec![
+                                  ("token", &influx_inst.token),
+                              ],
+                              config.flag.debug_template_formater
     );
     
     /*

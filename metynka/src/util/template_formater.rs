@@ -2,9 +2,9 @@ use strfmt::strfmt;
 use std::collections::HashMap;
 
 
-pub fn my_tuple_formater<'sf>(template: &String,
-                              pair: &Vec<(&str, &str)>,
-                              debug: bool) -> String {
+pub fn tuple_formater<'sf>(template: &String,
+                           pair: &Vec<(&str, &str)>,
+                           debug: bool) -> String {
     
     let template = String::from(template);
     let mut hash_map = HashMap::new();
@@ -24,7 +24,7 @@ pub fn my_tuple_formater<'sf>(template: &String,
 
 
 /*
-fn my_formater<'sf>(template: &String,
+fn formater<'sf>(template: &String,
                     fake_key: &Vec<&str>, 
                     fake_value: &Vec<&str>) -> String{
 
@@ -50,7 +50,7 @@ pub struct Pair {
 }
 
 
-fn my_struct_formater<'sf>(template: &String,
+fn struct_formater<'sf>(template: &String,
                           pair: &Vec<Pair>) -> String {
 
     let print_template = String::from(template);
@@ -64,3 +64,24 @@ fn my_struct_formater<'sf>(template: &String,
     strfmt(&print_template, &print_hash).unwrap()
 }
 */
+
+            /*
+            let print_formated =  formater(&print_template, 
+                                              &vec!["m", "d", "e"],
+                                              &vec![&metric.measurement,
+                                                    &config.work_dir,
+                                                    &err.to_string(),
+                                              ]
+            );
+            */
+
+            /*
+            let print_formated = struct_formater(
+                &print_template, 
+                &vec![
+                    Pair {key:"m".to_string(), value:metric.measurement.to_string()},
+                    Pair {key:"d".to_string(), value:config.work_dir.to_string()},
+                    Pair {key:"e".to_string(), value:err.to_string()},
+                ],
+            );
+            */

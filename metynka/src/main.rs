@@ -36,6 +36,7 @@ fn main() {
     }
     */
 
+    
     /*
     enum Example {
         Data(i32),
@@ -46,7 +47,6 @@ fn main() {
     
     dbg!(y); // prints 'y = 123'
     */
-    //_
 
     // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
