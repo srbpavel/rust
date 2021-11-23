@@ -17,33 +17,22 @@ mod measurement;
 //use crate::metynka::TemplateSensors;
 
 
+// /VARIOUS
+mod various;
+
+
 fn main() {
     // QUICK SAMPLE CODE TEST
-    // /*
 
-    let s = "foookin paavel";
-    println!("s: {}", &s);
-    let bytes = s.as_bytes(); // array of bytes
+    /*
+    let _s_string = String::from("foookin paavel");
+    //let some_words = various::parse_sentence(&_s_string); // String
     
-    for (i, &item) in bytes.iter().enumerate() { // iterator
-        println!("{} -> {} <- <{}>",
-                 format!("{:03}", i),
-                 format!("{:03}", &item),
-                 *&item as char, // dereference
-        );
-        
-        if item == b' ' { // space test
-            //return i;
-            println!("space at position: {} -> string before space: <{}> and after: <{}>",
-                     i,
-                     &s[0..i],
-                     &s[i+1..],
-                     )
-        }
-    }
+    let _s = "foookin paavel";
+    let some_words = various::parse_sentence(_s); // str
 
-    println!("len: {}", s.len());
-    // */
+    println!("\n#SOME_WORDS: {}", some_words);
+    */
 
     /*
     let line = "1\n2\n3\n4\nBUCKET";
