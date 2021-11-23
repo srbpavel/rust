@@ -56,7 +56,6 @@ impl CmdArgs {
         let case_sensitive = match args.next() {
             /* LONG WAY
             Some(arg) => if vec!["true", "false"].contains(&arg.to_lowercase().as_str()) {
-                //arg.to_lowercase().parse::<bool>().unwrap()
                 arg.to_lowercase().parse::<bool>().unwrap()
             } else {
                 return Err("CASE SENSITIVE not true/false BOOL")
@@ -378,7 +377,7 @@ pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
 
 
 pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error>> {
-    println!("\n#PARSE file_config -> TOML:\n{:}", &cmd_args.filename);
+    println!("\n#PARSE file_config -> TOML:\n{:}\n", &cmd_args.filename);
 
     let toml_file = fs::read_to_string(&cmd_args.filename).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error reading config file: {}\nREASON >>> {e}",

@@ -50,7 +50,7 @@ pub struct PreRecord {
 }
 
 
-// STRUCT compare via contains
+// compare STRUCT's via contains
 impl PartialEq for Record
 {
     fn eq(&self, other: &Self) -> bool {
@@ -148,7 +148,7 @@ pub fn backup_data(config: &TomlConfig,
         });
     }
 
-    // WE HAVE DIR and VERIFIED but PERMISION CAN CHANGE -> write is OK
+    // WE HAVE DIR and VERIFIED but still PERMISION's CAN CHANGE for FILE to WRITE
     if full_path.exists() {
         let today_file_name = full_path.join(format!("{t}_{n}_{m}.{e}",
                                                      t=&today_file_name,
@@ -235,7 +235,7 @@ pub fn backup_data(config: &TomlConfig,
             },
         };
 
-        /*
+        /* TRY TO FIND write true/false, but not in metadata ? 
         println!("\n@@@FILE:\nAAA: {:#?}\nBBB: {:#?}]\nCCC: {:#?}",
                  file.metadata(),
                  /*
@@ -324,10 +324,13 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
-                String::from(&metric.generic_query_verify_record),
-                String::from(&config.template.flux.query_verify_record_suffix),
+                //String::from(&metric.generic_query_verify_record),
+                //String::from(&config.template.flux.query_verify_record_suffix),
+                metric.generic_query_verify_record.to_string(),
+                config.template.flux.query_verify_record_suffix.to_string(),
         ),
-        false => String::from(&metric.generic_query_verify_record)
+        //false => String::from(&metric.generic_query_verify_record)
+        false => metric.generic_query_verify_record.to_string()
     };    
 
     tuple_formater(&flux_template,
@@ -550,13 +553,13 @@ pub fn parse_sensors_data(config: &TomlConfig,
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
     // METRICS
-    println!("\n#METRICS:\n{:?}", &config.metrics.keys());
+    //println!("\n#METRICS:\n{:?}", &config.metrics.keys());
 
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
-            println!("\n#MEASUREMENT: <{}> / {}",
-                     config.metrics[key].measurement,
-                     config.metrics[key].field,
+            println!("#METRIC: {metric} -> MEASUREMENT: {measurement}",
+                     measurement=config.metrics[key].measurement,
+                     metric=config.metrics[key].field,
             );
 
 

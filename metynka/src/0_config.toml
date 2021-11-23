@@ -12,6 +12,9 @@ debug_ts = false
 # future_use
 debug_ts_to_dt = false
 
+# display template string formating pairs
+debug_template_formater = false
+
 # view metric Struct parsed config data
 debug_metric_instances = false
 # RAW_JSON
@@ -30,12 +33,12 @@ debug_influx_auth = false
 debug_influx_output = false
 
 # query influx to verify write was successfull
-run_flux_verify_record = true # false
+run_flux_verify_record = false
 # add |> count() to [template.flux].query_verify_record
 add_flux_query_verify_record_suffix = false
 
-debug_flux_query = false
-debug_flux_result = false
+debug_flux_query = true # false
+debug_flux_result = true # false
 
 # search for QUERY in this CONFIG_FILE
 run_egrep = false
