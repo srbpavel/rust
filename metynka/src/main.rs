@@ -21,48 +21,8 @@ mod measurement;
 mod various;
 
 
+#[allow(unused)] // for quick sample test's at bottom
 fn main() {
-    // QUICK SAMPLE CODE TEST
-
-    /*
-    let _s_string = String::from("foookin paavel");
-    //let some_words = various::parse_sentence(&_s_string); // String
-    
-    let _s = "foookin paavel";
-    let some_words = various::parse_sentence(_s); // str
-
-    println!("\n#SOME_WORDS: {}", some_words);
-    */
-
-    /*
-    let line = "1\n2\n3\n4\nBUCKET";
-    
-    for num in line.lines() {
-        match num.parse::<u32>().map_or(666, |i| i * 2) {
-            n => println!("num: {} / <n: {:#?}>", num, n),
-        }
-        /*
-        match num.parse::<u8>().map(|i| i * 2) {
-            Ok(n) => println!("num: {} / <n: {:#?}>", num, n),
-            Err(why) => eprintln!("\n#ERROR: num: <{}> \n>>> REASON: {}", num, why),
-            //Err(..) => {},
-        }
-        */
-    }
-    */
-
-    
-    /*
-    enum Example {
-        Data(i32),
-    }
-    
-    let x = Example::Data(123); // wrap the data
-    let Example::Data(y) = x;   // unwrap the data via a pattern
-    
-    dbg!(y); // prints 'y = 123'
-    */
-
     // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
          eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
@@ -112,5 +72,62 @@ fn main() {
     measurement::parse_sensors_data(&config,
                                     &dt,
     );
+    // QUICK SAMPLE CODE TEST
+    // /*
+    let some_number = Some(false);
+    let some_string = Some("a string");
+    let absent_number: Option<i32> = None;
 
+    println!("\n<{:?}>\n<{:?}>\n<{:?}>",
+             some_number,
+             some_string,
+             absent_number,
+             );
+             
+    /*
+    println!("\n#ENUM: {} / {}",
+             four,
+             six,
+    );
+    */
+    // */
+    
+    /*
+    let _s_string = String::from("foookin paavel");
+    //let some_words = various::parse_sentence(&_s_string); // String
+    
+    let _s = "foookin paavel";
+    let some_words = various::parse_sentence(_s); // str
+
+    println!("\n#SOME_WORDS: {}", some_words);
+    */
+
+    /*
+    let line = "1\n2\n3\n4\nBUCKET";
+    
+    for num in line.lines() {
+        match num.parse::<u32>().map_or(666, |i| i * 2) {
+            n => println!("num: {} / <n: {:#?}>", num, n),
+        }
+        /*
+        match num.parse::<u8>().map(|i| i * 2) {
+            Ok(n) => println!("num: {} / <n: {:#?}>", num, n),
+            Err(why) => eprintln!("\n#ERROR: num: <{}> \n>>> REASON: {}", num, why),
+            //Err(..) => {},
+        }
+        */
+    }
+    */
+
+    
+    /*
+    enum Example {
+        Data(i32),
+    }
+    
+    let x = Example::Data(123); // wrap the data
+    let Example::Data(y) = x;   // unwrap the data via a pattern
+    
+    dbg!(y); // prints 'y = 123'
+    */
 }

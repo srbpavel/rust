@@ -154,7 +154,9 @@ pub struct AllInflux {
 pub struct Influx {
     pub name: String,
     pub status: bool,
+
     pub secure: String,
+
     pub server: String,
     pub port: u16,
 
@@ -393,6 +395,33 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         process::exit(1);
     });
 
+    // /*
+    //config field's verification // learn better way, let's say in Struct default ?
+    for single_influx in &toml_config.all_influx.values {
+        if !matches!(&single_influx.secure[..], "http" | "https") {
+            eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
+                      &cmd_args.filename,
+                      &single_influx.secure[..]);
+            
+            process::exit(1);
+        }
+        
+        /*
+        match &single_influx.secure[..] {
+            "http" => {},
+            "https" => {},
+            other => {
+                eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
+                          &cmd_args.filename,
+                          other);
+
+                process::exit(1);
+            },
+        }
+        */
+    }
+    // */
+    
     /*
     let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
     println!("\nTOML: {} <- {:?}",

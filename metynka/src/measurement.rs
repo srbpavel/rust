@@ -44,6 +44,12 @@ pub struct PreRecord {
     pub value: String,
     pub id: String,
 
+    /*
+    pub machine: String,
+    pub carrier: String,
+    pub valid: String,
+    */
+    
     pub host: String,
 
     pub ts: i64,    
@@ -660,6 +666,12 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                 id: single_sensor.name.to_string(),
                                 measurement: config.metrics[key].measurement.to_string(),
                                 host: config.host.to_string(),
+
+                                /*
+                                machine: String::from(""),
+                                carrier: String::from(""),
+                                valid: String::from(""),
+                                */
                             };
                     
                             // METRIC RECORD_LIST -> Vec<Record>
@@ -679,8 +691,23 @@ pub fn parse_sensors_data(config: &TomlConfig,
         }
     }
 
+
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
+        // match http/https -> future use
+        match &single_influx.secure[..] {
+            "http" => {
+                eprintln!("\nhttp://{}:{}", single_influx.server, single_influx.port);
+            },
+            "https" => {
+                eprintln!("\nhttps://{}:{}", single_influx.server, single_influx.port);
+            },
+            other => {
+                eprintln!("\n#WARNING:\ninvalid influx secure -> <{}>", other); // this should never happen as config init verification
+            },
+        }
+
+
         if single_influx.status {
 
             // ARGS for CURL
@@ -716,6 +743,18 @@ pub fn parse_sensors_data(config: &TomlConfig,
                     host: single_metric_result.host.to_string(),
                     //..single_metric_result // Record -> Record
                 };
+
+                //POKUS
+                /*
+                let update_single_record = PreRecord {
+                    machine: single_influx.machine_id.to_string(),
+                    carrier: single_influx.carrier.to_string(),
+                    valid: single_influx.flag_valid_default.to_string(),
+                    ..single_metric_result // * &
+                    
+                };
+                println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
+                */
 
                 // PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
