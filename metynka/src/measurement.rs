@@ -2,6 +2,7 @@ use std::process;
 use std::process::{Command, Stdio};
 
 use std::path::Path;
+
 use std::fs;
 use std::fs::{OpenOptions, File};
 
@@ -9,11 +10,11 @@ use std::io::Write;
 
 use std::any::{Any};
 
-use core::fmt::Debug; //use std::fmt::Debug;
+use std::fmt::Debug;
 
 pub use crate::util::ts::{Dt};
-use metynka::{TomlConfig, Influx, TemplateSensors};
 pub use crate::util::template_formater::tuple_formater;
+use metynka::{TomlConfig, Influx, TemplateSensors};
 
 
 // BACKUP CVS 
@@ -292,17 +293,6 @@ pub fn prepare_csv_header_format(config: &TomlConfig,
                    ],
                    config.flag.debug_template_formater
     )
-    /*
-    let csv_header_template = String::from(&metric.annotated_header);
-    let mut csv_header = HashMap::new();
-    csv_header.insert("tag_machine".to_string(), &metric.tag_machine);
-    csv_header.insert("tag_carrier".to_string(), &metric.tag_carrier);
-    csv_header.insert("tag_valid".to_string(), &metric.tag_valid);
-    csv_header.insert("tag_id".to_string(), &metric.tag_id);
-    csv_header.insert("field".to_string(), &metric.field);
-
-    return strfmt(&csv_header_template, &csv_header).unwrap()
-    */
 }
 
 
@@ -323,21 +313,6 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
                    ],
                    config.flag.debug_template_formater
     )
-
-    /*
-    let csv_record_template = String::from(&metric.csv_annotated);
-    let mut csv_record = HashMap::new();
-    csv_record.insert("measurement".to_string(), String::from(&record.measurement));
-    csv_record.insert("host".to_string(), String::from(&record.host));
-    csv_record.insert("machine".to_string(), String::from(&record.machine));
-    csv_record.insert("carrier".to_string(), String::from(&record.carrier));
-    csv_record.insert("valid".to_string(), String::from(&record.valid.to_string()));
-    csv_record.insert("ts".to_string(), String::from(&record.ts.to_string()));
-    csv_record.insert("id".to_string(), record.id.to_string());
-    csv_record.insert("value".to_string(), String::from(&record.value.to_string()));
-
-    return strfmt(&csv_record_template, &csv_record).unwrap()
-    */
 }
 
 
@@ -371,23 +346,6 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
                    ],
                    config.flag.debug_template_formater
     )
-    
-    /*
-    let mut flux = HashMap::new();
-    flux.insert("tag_carrier".to_string(), String::from(&metric.tag_carrier));
-    flux.insert("tag_valid".to_string(), String::from(&metric.tag_valid));
-    flux.insert("tag_id".to_string(), String::from(&metric.tag_id));
-    
-    flux.insert("bucket".to_string(), String::from(&single_influx.bucket));
-    flux.insert("start".to_string(), String::from(&config.template.flux.query_verify_record_range_start));
-    flux.insert("measurement".to_string(), String::from(&metric.measurement));
-
-    // COMPARE only id + time // if needed can add _VALUE
-    flux.insert("id".to_string(), String::from(&generic_record.id.to_string()));
-    flux.insert("dtif".to_string(), String::from(utc_influx_format)); // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
-
-    return strfmt(&flux_template, &flux).unwrap()
-    */
 }
 
 
@@ -399,6 +357,7 @@ pub fn os_call_curl_flux(config: &TomlConfig,
                          influx_query: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
+        /*
         .arg(&config.template.curl.param_insecure)
         .arg(&config.template.curl.param_request)
         .arg(&config.template.curl.param_post)
@@ -411,6 +370,22 @@ pub fn os_call_curl_flux(config: &TomlConfig,
         .arg(influx_header_content)
         .arg(&config.template.curl.param_data)
         .arg(influx_query) // #QUERY
+        */
+
+        .args([
+            &config.template.curl.param_insecure,
+            &config.template.curl.param_request,
+            &config.template.curl.param_post,
+            influx_uri, // #URI
+            &config.template.curl.param_header,
+            influx_auth, // #AUTH
+            &config.template.curl.param_header,
+            influx_header_accept,
+            &config.template.curl.param_header,
+            influx_header_content,
+            &config.template.curl.param_data,
+            influx_query,
+        ])// #QUERY
         .output().expect("failed to execute command");
 
     if config.flag.debug_flux_result {
@@ -443,8 +418,6 @@ stderr: {}",
 }
 
 
-//#[allow(dead_code)]
-//#[allow(unused_variables)]
 pub fn os_call_metric_pipe(config: &TomlConfig,
                            memory: &TemplateSensors) -> String {
 
@@ -479,6 +452,7 @@ pub fn os_call_curl(config: &TomlConfig,
                    single_sensor_lp: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
+        /*
         .arg(&config.template.curl.param_insecure)
         .arg(&config.template.curl.param_request)
         .arg(&config.template.curl.param_post)
@@ -487,6 +461,17 @@ pub fn os_call_curl(config: &TomlConfig,
         .arg(influx_auth) // #AUTH
         .arg(&config.template.curl.param_data)
         .arg(single_sensor_lp) // #LINE_PROTOCOL
+        */
+        .args([
+            &config.template.curl.param_insecure,
+            &config.template.curl.param_request,
+            &config.template.curl.param_post,
+            influx_uri, // #URI
+            &config.template.curl.param_header,
+            influx_auth, // #AUTH
+            &config.template.curl.param_data,
+            single_sensor_lp,
+        ])// #LINE_PROTOCOL
         .output().expect("failed to execute command");
 
     if config.flag.debug_influx_output {
@@ -522,30 +507,6 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
                    ],
                    config.flag.debug_template_formater
     )
-    
-    /*
-    let generic_lp_template = String::from(&metric.generic_lp);
-    let mut generic_lp = HashMap::new();
-    generic_lp.insert("tag_machine".to_string(), String::from(&metric.tag_machine));
-    generic_lp.insert("tag_carrier".to_string(), String::from(&metric.tag_carrier));
-    generic_lp.insert("tag_valid".to_string(), String::from(&metric.tag_valid));
-    generic_lp.insert("tag_id".to_string(), String::from(&metric.tag_id));
-    generic_lp.insert("field".to_string(), String::from(&metric.field));
-
-    generic_lp.insert("measurement".to_string(), String::from(&generic_record.measurement));
-    generic_lp.insert("host".to_string(), String::from(&generic_record.host));
-    generic_lp.insert("machine_id".to_string(), String::from(&generic_record.machine));
-
-    generic_lp.insert("carrier".to_string(), String::from(&generic_record.carrier));
-    generic_lp.insert("valid".to_string(), String::from(&generic_record.valid));
-
-    generic_lp.insert("id".to_string(), String::from(&generic_record.id));
-    generic_lp.insert("value".to_string(), String::from(&generic_record.value.to_string()));
-
-    generic_lp.insert("ts".to_string(), String::from(&generic_record.ts.to_string()));
-
-    return strfmt(&generic_lp_template, &generic_lp).unwrap()
-    */
 }
 
 
@@ -567,21 +528,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
                                    config.flag.debug_template_formater
     );
 
-    /*
-    let uri_write_template = String::from(format!("{}{}",
-                                                  &config.template.curl.influx_uri_api,
-                                                  &config.template.curl.influx_uri_write,
-    ));
-    
-    let mut uri_data = HashMap::new();
-    uri_data.insert("secure".to_string(), String::from(&influx_inst.secure));
-    uri_data.insert("server".to_string(), String::from(&influx_inst.server));
-    uri_data.insert("port".to_string(), String::from(&influx_inst.port.to_string()));
-    uri_data.insert("org".to_string(), String::from(&influx_inst.org));
-    uri_data.insert("bucket".to_string(), String::from(&influx_inst.bucket));
-    uri_data.insert("precision".to_string(), String::from(&influx_inst.precision));
-    */
-
     // URI_QUERY
     let uri_query = tuple_formater(&format!("{}{}",
                                             &config.template.curl.influx_uri_api,
@@ -595,20 +541,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
                                    config.flag.debug_template_formater
     );
     
-    /*
-    let uri_query_template = String::from(format!("{}{}",
-                                                  &config.template.curl.influx_uri_api,
-                                                  &config.template.curl.influx_uri_query,
-    ));
-    
-    let mut uri_query_data = HashMap::new();
-    uri_query_data.insert("secure".to_string(), String::from(&influx_inst.secure));
-    uri_query_data.insert("server".to_string(), String::from(&influx_inst.server));
-    uri_query_data.insert("port".to_string(), String::from(&influx_inst.port.to_string()));
-    uri_query_data.insert("org".to_string(), String::from(&influx_inst.org));
-    */
-    
-    
     // AUTH
 
     let auth = tuple_formater(&config.template.curl.influx_auth,
@@ -618,12 +550,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
                               config.flag.debug_template_formater
     );
     
-    /*
-    let auth_template = String::from(&config.template.curl.influx_auth);
-    let mut auth_data = HashMap::new();
-    auth_data.insert("token".to_string(), String::from(&influx_inst.token));
-    */
-
     // ACCEPT
     let accept_template = String::from(&config.template.curl.influx_accept);
 
@@ -636,15 +562,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
      accept_template,
      content_template,
     )
-        
-    /*
-    (strfmt(&uri_write_template, &uri_data).unwrap(),
-     strfmt(&uri_query_template, &uri_query_data).unwrap(),
-     strfmt(&auth_template, &auth_data).unwrap(),
-     accept_template,
-     content_template,
-    )
-    */
 }
 
 
