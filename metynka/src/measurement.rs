@@ -357,21 +357,6 @@ pub fn os_call_curl_flux(config: &TomlConfig,
                          influx_query: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
-        /*
-        .arg(&config.template.curl.param_insecure)
-        .arg(&config.template.curl.param_request)
-        .arg(&config.template.curl.param_post)
-        .arg(influx_uri) // #URI
-        .arg(&config.template.curl.param_header)
-        .arg(influx_auth) // #AUTH
-        .arg(&config.template.curl.param_header)
-        .arg(influx_header_accept)
-        .arg(&config.template.curl.param_header)
-        .arg(influx_header_content)
-        .arg(&config.template.curl.param_data)
-        .arg(influx_query) // #QUERY
-        */
-
         .args([
             &config.template.curl.param_insecure,
             &config.template.curl.param_request,
@@ -384,8 +369,8 @@ pub fn os_call_curl_flux(config: &TomlConfig,
             &config.template.curl.param_header,
             influx_header_content,
             &config.template.curl.param_data,
-            influx_query,
-        ])// #QUERY
+            influx_query, // #QUERY
+        ])
         .output().expect("failed to execute command");
 
     if config.flag.debug_flux_result {
@@ -452,16 +437,6 @@ pub fn os_call_curl(config: &TomlConfig,
                    single_sensor_lp: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
-        /*
-        .arg(&config.template.curl.param_insecure)
-        .arg(&config.template.curl.param_request)
-        .arg(&config.template.curl.param_post)
-        .arg(influx_uri) // #URI
-        .arg(&config.template.curl.param_header)
-        .arg(influx_auth) // #AUTH
-        .arg(&config.template.curl.param_data)
-        .arg(single_sensor_lp) // #LINE_PROTOCOL
-        */
         .args([
             &config.template.curl.param_insecure,
             &config.template.curl.param_request,
@@ -470,8 +445,8 @@ pub fn os_call_curl(config: &TomlConfig,
             &config.template.curl.param_header,
             influx_auth, // #AUTH
             &config.template.curl.param_data,
-            single_sensor_lp,
-        ])// #LINE_PROTOCOL
+            single_sensor_lp, // #LINE_PROTOCOL
+        ])
         .output().expect("failed to execute command");
 
     if config.flag.debug_influx_output {
