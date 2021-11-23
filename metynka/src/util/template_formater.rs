@@ -13,10 +13,10 @@ pub fn tuple_formater<'sf>(template: &String,
     
     for t in pair {
         if debug {
-            println!(" {} <- {}", t.0, t.1);
+            println!(" {} <- {}", t.0, t.1); 
         }
         
-        hash_map.insert(t.0.to_string(), String::from(t.1));
+        hash_map.insert(t.0.to_string(), String::from(t.1)); // not testing t.0 and t.1 presence
     }
     
     strfmt(&template, &hash_map).unwrap()

@@ -19,6 +19,32 @@ mod measurement;
 
 fn main() {
     // QUICK SAMPLE CODE TEST
+    // /*
+
+    let s = "foookin paavel";
+    println!("s: {}", &s);
+    let bytes = s.as_bytes(); // array of bytes
+    
+    for (i, &item) in bytes.iter().enumerate() { // iterator
+        println!("{} -> {} <- <{}>",
+                 format!("{:03}", i),
+                 format!("{:03}", &item),
+                 *&item as char, // dereference
+        );
+        
+        if item == b' ' { // space test
+            //return i;
+            println!("space at position: {} -> string before space: <{}> and after: <{}>",
+                     i,
+                     &s[0..i],
+                     &s[i+1..],
+                     )
+        }
+    }
+
+    println!("len: {}", s.len());
+    // */
+
     /*
     let line = "1\n2\n3\n4\nBUCKET";
     
