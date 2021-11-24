@@ -9,6 +9,9 @@ use std::process;
 
 use std::collections::HashMap;
 
+mod util;
+pub use util::template_formater::tuple_formater;
+
 
 pub struct CmdArgs {
     // when modified DO NOT forget to change ARG_COUNT verification -> learn to count struct descendants / not via hash_map
@@ -171,6 +174,30 @@ pub struct Influx {
 }
 
 
+impl Default for Influx {
+    fn default() -> Influx {
+        Influx {
+            name: "NAME".to_string(),
+            status: false,
+
+            secure: "https".to_string(),
+            
+            server: "localhost".to_string(),
+            port: 8086,
+            
+            bucket: "BUCKET".to_string(),
+            token: "TOKEN".to_string(),
+            org: "ORG".to_string(),
+            precision: "ms".to_string(),
+
+            machine_id: "MACHINE".to_string(),
+            carrier: "CARRIER".to_string(),
+            flag_valid_default: true,
+        }
+    }
+}
+
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {
     pub flag_status: bool,
@@ -241,6 +268,90 @@ pub struct Sensor {
     pub name: String,
     pub pointer: String,
 }
+
+
+fn verify_influx_config(filename: &String,
+                       influx: &Influx) {
+
+    let err_msg = "\n#ERROR: config file: {file} -> influx settings \"{variable}={value}\" {msg}";
+    
+    let token_str = &influx.token[..];
+    if matches!(token_str, "") { // EMPTY
+        eprintln!("{}", tuple_formater(&err_msg.to_string(),
+                                       &vec![
+                                           ("file", &filename),
+                                           ("variable", "token"),
+                                           ("value", token_str),
+                                           ("msg", "is EMPTY"),
+                                       ],
+                                       false
+        ));
+        process::exit(1);
+    }
+
+    let secure_str = &influx.secure[..];
+    if !matches!(secure_str, "http" | "https") {
+        eprintln!("{}", tuple_formater(&err_msg.to_string(),
+                                       &vec![
+                                           ("file", &filename),
+                                           ("variable", "secure"),
+                                           ("value", secure_str),
+                                           ("msg", "is not http/https"),
+                                       ],
+                                       false
+        ));
+        process::exit(1);
+
+    }
+}
+
+
+/*
+fn verify_influx_token(filename: &String,
+                       token: &String) {
+
+    let token_str = &token[..];
+
+    if matches!(token_str, "") {
+        eprintln!("\n#ERROR: config file: {} -> influx settings \"token={}\" is EMPTY",
+                  &filename,
+                  token_str);
+        
+            process::exit(1);
+    }
+}
+*/
+
+
+/*
+fn verify_influx_secure(filename: &String,
+                        secure: &String) {
+
+    let secure_str = &secure[..];
+
+    if !matches!(secure_str, "http" | "https") {
+        eprintln!("\n#ERROR: config file: {} -> influx settings \"secure={}\" is not http/https",
+                  &filename,
+                  secure_str);
+        
+            process::exit(1);
+    }
+
+    /*
+    match &secure[..] {
+        "http" => {},
+        "https" => {},
+        other => {
+            eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
+                      &filename,
+                      other);
+            
+        process::exit(1);
+        },
+    }
+    */
+}
+*/
 
 
 #[cfg(test)]
@@ -398,26 +509,18 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
     // /*
     //config field's verification // learn better way, let's say in Struct default ?
     for single_influx in &toml_config.all_influx.values {
-        if !matches!(&single_influx.secure[..], "http" | "https") {
-            eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
-                      &cmd_args.filename,
-                      &single_influx.secure[..]);
-            
-            process::exit(1);
-        }
+
+        verify_influx_config(&cmd_args.filename,
+                             &single_influx);
         
         /*
-        match &single_influx.secure[..] {
-            "http" => {},
-            "https" => {},
-            other => {
-                eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
-                          &cmd_args.filename,
-                          other);
+        //SECURE
+        verify_influx_secure(&cmd_args.filename,
+                            &single_influx.secure);
 
-                process::exit(1);
-            },
-        }
+        //TOKEN
+        verify_influx_token(&cmd_args.filename,
+                            &single_influx.token);
         */
     }
     // */

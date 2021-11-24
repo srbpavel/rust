@@ -11,6 +11,7 @@ pub struct Dt {
 }
 
 
+#[allow(dead_code)]
 pub fn ts_now(debug: bool) -> Dt {
     let local = Local::now();
     let utc = Utc::now();

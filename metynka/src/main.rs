@@ -73,7 +73,10 @@ fn main() {
                                     &dt,
     );
     // QUICK SAMPLE CODE TEST
-    // /*
+
+
+
+    /*
     let some_number = Some(false);
     let some_string = Some("a string");
     let absent_number: Option<i32> = None;
@@ -83,14 +86,7 @@ fn main() {
              some_string,
              absent_number,
              );
-             
-    /*
-    println!("\n#ENUM: {} / {}",
-             four,
-             six,
-    );
     */
-    // */
     
     /*
     let _s_string = String::from("foookin paavel");
