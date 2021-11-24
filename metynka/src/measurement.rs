@@ -617,19 +617,19 @@ pub fn parse_sensors_data(config: &TomlConfig,
                         }
                     };
 
-                // TO KEEP IN MIND
+                    // TO KEEP IN MIND
                 
-                /* !panic if WRONG POINTER path
-                let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
-                */
+                    /* !panic if WRONG POINTER path
+                    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
+                     */
                 
-                /* EXIT if WRONG POINTER path but we want to get rid of all exit
-                let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
+                    /* EXIT if WRONG POINTER path but we want to get rid of all exit
+                    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
                     eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
-                              single_sensor.pointer);
+                    single_sensor.pointer);
                     process::exit(1);
-                });
-                */
+                    });
+                    */
 
                     // DEBUG true/false SENSORS
                     if config.flag.debug_pointer_output {
@@ -693,14 +693,26 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
 
     // INFLUX INSTANCES
+    run_all_influx_instances(&config,
+                             & mut result_list,
+                             & metric_result_list,
+                             &dt);
+
+    /*
     for single_influx in &config.all_influx.values {
         // match http/https -> future use
         match &single_influx.secure.to_lowercase()[..] {
             "http" => {
-                eprintln!("\nhttp://{}:{}", single_influx.server, single_influx.port);
+                eprintln!("\n{} / http://{}:{}",
+                          single_influx.status,
+                          single_influx.server,
+                          single_influx.port);
             },
             "https" => {
-                eprintln!("\nhttps://{}:{}", single_influx.server, single_influx.port);
+                eprintln!("\n{} / https://{}:{}",
+                          single_influx.status,
+                          single_influx.server,
+                          single_influx.port);
             },
             other => {
                 eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
@@ -708,7 +720,6 @@ pub fn parse_sensors_data(config: &TomlConfig,
                           other); // this should never happen as config init verification
             },
         }
-
 
         if single_influx.status {
 
@@ -731,8 +742,9 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", &influx_auth);
             }
 
-
             //METRIC_RESULT_LIST
+            
+            
             for single_metric_result in &metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
                 let new_single_metric_result = Record {
                     ts: single_metric_result.ts,
@@ -780,26 +792,17 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
                 // OS_CMD <- GENERIC FLUX_QUERY
                 if config.flag.run_flux_verify_record {
-                    let generic_influx_query = prepare_generic_flux_query_format(
+                    run_flux_query(
                         &config,
+                        &config.metrics[&single_metric_result.key.to_string()],
                         &single_influx,
                         &new_single_metric_result,
-                        &config.metrics[&single_metric_result.key.to_string()],
-                    
-                        &dt.utc_influx_format);
-                        
-                    if config.flag.debug_flux_query {
-                        println!("\n#QUERY:\n{}",
-                                 generic_influx_query,
-                        );
-                    }
-
-                    os_call_curl_flux(&config,
-                                      &influx_uri_query,
-                                      &influx_auth,
-                                      &influx_accept,
-                                      &influx_content,
-                                      &generic_influx_query);
+                        &dt.utc_influx_format,
+                        &influx_uri_query,
+                        &influx_auth,
+                        &influx_accept,
+                        &influx_content,
+                    );
                 }
                 
                 // RECORD_LIST -> Vec<Record>
@@ -808,7 +811,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 }
             } /* for single_metric */
         } /* single_influx.status*/
-    } /* all_influx.values */
+    } */ /* all_influx.values */
     
     // BACKUP
     for key in config.metrics.keys() {
@@ -819,4 +822,158 @@ pub fn parse_sensors_data(config: &TomlConfig,
                         &config.metrics[key]);
         }
     }
+}
+
+
+fn run_flux_query(config: &TomlConfig,
+                  config_metric: &TemplateSensors,
+                  
+                  single_influx: &Influx,
+                  metric_result: &Record,
+                  
+                  utc_influx_format: &String,
+                  
+                  influx_uri_query: &String,
+                  influx_auth: &String,
+                  influx_accept: &String,
+                  influx_content: &String) {
+
+    let generic_influx_query = prepare_generic_flux_query_format(
+        &config,
+        &single_influx,
+        &metric_result,
+        &config_metric,
+        &utc_influx_format);
+    
+    if config.flag.debug_flux_query {
+        println!("\n#QUERY:\n{}",
+                 generic_influx_query,
+        );
+    }
+    
+    os_call_curl_flux(&config,
+                      &influx_uri_query,
+                      &influx_auth,
+                      &influx_accept,
+                      &influx_content,
+                      &generic_influx_query);
+}
+
+
+fn run_all_influx_instances(config: &TomlConfig,
+                            result_list: & mut Vec<Record>,
+                            metric_result_list: &Vec<PreRecord>,
+                            dt: &Dt) {
+
+    for single_influx in &config.all_influx.values {
+        // MATCH HTTP/HTTPS -> future use
+        match &single_influx.secure.to_lowercase()[..] {
+            "http" => {
+                eprintln!("\n{} / http://{}:{}",
+                          single_influx.status,
+                          single_influx.server,
+                          single_influx.port);
+            },
+            "https" => {
+                eprintln!("\n{} / https://{}:{}",
+                          single_influx.status,
+                          single_influx.server,
+                          single_influx.port);
+            },
+            other => {
+                eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
+                          single_influx.server,
+                          other); // this should never happen as config init verification
+            },
+        }
+        
+        if single_influx.status {
+            
+            // ARGS for CURL
+            let (influx_uri_write,
+                 influx_uri_query,
+                 influx_auth,
+                 influx_accept,
+                 influx_content ) = prepare_influx_format(&config, &single_influx); // TUPLE OF 5
+            
+            if config.flag.debug_influx_uri {
+                println!("\n#URI<{n}>:\n{w}\n{q}",
+                         n=single_influx.name,
+                         w=&influx_uri_write,
+                         q=&influx_uri_query
+                );
+            }
+            
+            if config.flag.debug_influx_auth {
+                println!("\n#AUTH:\n{}", &influx_auth);
+            }
+            
+            //METRIC_RESULT_LIST
+            for single_metric_result in metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
+                let new_single_metric_result = Record {
+                    ts: single_metric_result.ts,
+                    value: single_metric_result.value.to_string(),
+                    carrier: single_influx.carrier.to_string(),
+                    id: single_metric_result.id.to_string(),
+                    valid: single_influx.flag_valid_default.to_string(),
+                    machine: single_influx.machine_id.to_string(),
+                    measurement: single_metric_result.measurement.to_string(),
+                    host: single_metric_result.host.to_string(),
+                    //..single_metric_result // Record -> Record
+                };
+                
+                //POKUS
+                /*
+                let update_single_record = PreRecord {
+                machine: single_influx.machine_id.to_string(),
+                carrier: single_influx.carrier.to_string(),
+                valid: single_influx.flag_valid_default.to_string(),
+                ..single_metric_result // * &
+                
+            };
+                println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
+                 */
+                
+                // PreRecord <- Record populated with Influx properties
+                if config.flag.debug_metric_record {
+                    println!("\n{:?}", new_single_metric_result);
+                }
+                
+                // LP via Record
+                let generic_lp = prepare_generic_lp_format(&config,
+                                                           &new_single_metric_result,
+                                                           &config.metrics[&single_metric_result.key.to_string()]);
+                
+                if config.flag.debug_influx_lp {
+                    println!("\n#LP:\n{}", generic_lp);
+                }
+                
+                // OS_CMD <- CURL
+                os_call_curl(&config,
+                             &influx_uri_write,
+                             &influx_auth,
+                             &generic_lp);
+                
+                // OS_CMD <- GENERIC FLUX_QUERY
+                if config.flag.run_flux_verify_record {
+                    run_flux_query(
+                        &config,
+                        &config.metrics[&single_metric_result.key.to_string()],
+                        &single_influx,
+                        &new_single_metric_result,
+                        &dt.utc_influx_format,
+                        &influx_uri_query,
+                        &influx_auth,
+                        &influx_accept,
+                        &influx_content,
+                    );
+                }
+                
+                // RECORD_LIST -> Vec<Record>
+                if !result_list.contains(&new_single_metric_result) { 
+                    result_list.push(new_single_metric_result)
+                }
+            } /* for single_metric */
+        } /* single_influx.status*/
+    } /* all_influx.values */
 }

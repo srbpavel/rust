@@ -292,42 +292,6 @@ fn verify_influx_contains_field(allowed_values: &Vec<&str>,
 }
 
 
-fn verify_influx_empty_field_loop(filename: &String,
-                                  influx: &Influx) -> Vec<bool>{
-
-    let mut bool_list = Vec::new();
-    
-    let fields_to_verify_non_empty = vec![
-        // VARIABLE_NAME / VALUE
-        ("name", &influx.name),
-        ("server", &influx.server),
-        ("bucket", &influx.bucket),
-        ("token", &influx.token),
-        ("org", &influx.org),
-        ("machine_id", &influx.machine_id),
-        ("carrier", &influx.carrier),
-    ];
-    
-    for f in &fields_to_verify_non_empty {
-        let (field_name, field_str) = (&f.0, &f.1[..]);
-        
-        bool_list.push(verify_influx_empty_field(field_str,
-                                                 &vec![
-                                                     ("influx_instance", &influx.name), 
-                                                     ("file", &filename),
-                                                     ("variable",
-                                                      &format!("{}", field_name)
-                                                     ),
-                                                     ("value", field_str),
-                                                     ("msg", "is EMPTY"),
-                                                 ])
-        )
-    }
-
-    bool_list
-}
-
-
 fn verify_influx_contains_field_loop(filename: &String,
                                      influx: &Influx,
                                      mut bool_list: Vec<bool>) -> Vec<bool>{
@@ -360,6 +324,42 @@ fn verify_influx_contains_field_loop(filename: &String,
                                                         ),
                                                     ],
         ))
+    }
+
+    bool_list
+}
+
+
+fn verify_influx_empty_field_loop(filename: &String,
+                                  influx: &Influx) -> Vec<bool>{
+
+    let mut bool_list = Vec::new();
+    
+    let fields_to_verify_non_empty = vec![
+        // VARIABLE_NAME / VALUE
+        ("name", &influx.name),
+        ("server", &influx.server),
+        ("bucket", &influx.bucket),
+        ("token", &influx.token),
+        ("org", &influx.org),
+        ("machine_id", &influx.machine_id),
+        ("carrier", &influx.carrier),
+    ];
+    
+    for f in &fields_to_verify_non_empty {
+        let (field_name, field_str) = (&f.0, &f.1[..]);
+        
+        bool_list.push(verify_influx_empty_field(field_str,
+                                                 &vec![
+                                                     ("influx_instance", &influx.name), 
+                                                     ("file", &filename),
+                                                     ("variable",
+                                                      &format!("{}", field_name)
+                                                     ),
+                                                     ("value", field_str),
+                                                     ("msg", "is EMPTY"),
+                                                 ])
+        )
     }
 
     bool_list
