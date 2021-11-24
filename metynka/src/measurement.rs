@@ -703,7 +703,9 @@ pub fn parse_sensors_data(config: &TomlConfig,
                 eprintln!("\nhttps://{}:{}", single_influx.server, single_influx.port);
             },
             other => {
-                eprintln!("\n#WARNING:\ninvalid influx secure -> <{}>", other); // this should never happen as config init verification
+                eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
+                          single_influx.server,
+                          other); // this should never happen as config init verification
             },
         }
 

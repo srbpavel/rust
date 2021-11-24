@@ -270,38 +270,151 @@ pub struct Sensor {
 }
 
 
+fn verify_influx_contains_field(members: &Vec<&str>,
+                                query: &str,
+                                tuple_list: &Vec<(&str, &str)>) -> bool {
+    
+    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
+
+    if !members.contains(&query) {
+        eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
+                                       &tuple_list, // hash_map pair
+                                       false // debug flag
+        ));
+        
+        false
+
+    } else {
+        true
+    }
+}
+
+
+fn verify_influx_empty_field(query: &str,
+                             tuple_list: &Vec<(&str, &str)>) -> bool {
+    
+    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" {msg}\n\n>>> EXIT";
+    
+    if matches!(query, "") { // EMPTY
+        eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
+                                       &tuple_list, // hash_map pair
+                                       false // debug flag
+        ));
+        
+        false
+    }
+    else {
+        true
+    }
+}
+            
+
 fn verify_influx_config(filename: &String,
                        influx: &Influx) {
 
-    let err_msg = "\n#ERROR: config file: {file} -> influx settings \"{variable}={value}\" {msg}";
+    let mut bool_list = Vec::new();
     
-    let token_str = &influx.token[..];
-    if matches!(token_str, "") { // EMPTY
-        eprintln!("{}", tuple_formater(&err_msg.to_string(),
-                                       &vec![
-                                           ("file", &filename),
-                                           ("variable", "token"),
-                                           ("value", token_str),
-                                           ("msg", "is EMPTY"),
-                                       ],
-                                       false
-        ));
-        process::exit(1);
+    let fields_to_verify_non_empty = vec![
+        // variable_name / value
+        ("name", &influx.name),
+        ("server", &influx.server),
+        ("bucket", &influx.bucket),
+        ("token", &influx.token),
+        ("org", &influx.org),
+        ("machine_id", &influx.machine_id),
+        ("carrier", &influx.carrier),
+    ];
+
+    for f in &fields_to_verify_non_empty {
+        let field_name = &f.0;
+        let field_str = &f.1[..];
+        bool_list.push(verify_influx_empty_field(field_str,
+                                                 &vec![
+                                                     ("influx_instance", &influx.name), 
+                                                     ("file", &filename),
+                                                     ("variable",
+                                                      &format!("{}", field_name)
+                                                     ),
+                                                     ("value", field_str),
+                                                     ("msg", "is EMPTY"),
+                                                 ])
+        )
     }
 
-    let secure_str = &influx.secure[..];
-    if !matches!(secure_str, "http" | "https") {
-        eprintln!("{}", tuple_formater(&err_msg.to_string(),
-                                       &vec![
-                                           ("file", &filename),
-                                           ("variable", "secure"),
-                                           ("value", secure_str),
-                                           ("msg", "is not http/https"),
-                                       ],
-                                       false
-        ));
-        process::exit(1);
+    //#let secure_str = &influx.secure[..];
+    //let secure_str = String::from(&influx.secure);
 
+    /* #
+    let match_list = vec!["http",
+                          "https",
+    ];
+    */
+    
+    //let match_list = vec![String::from("http"),
+    //                      String::from("https"),
+    //];
+    
+    //if !matches!(secure_str, "http" | "https") {
+    //if match_list.contains(String::from(secure_str).to_lowercase()) {
+    //if match_list.contains(&secure_str) {
+
+
+    let fields_to_verify_contains = vec![
+        // variable_name / value / allowed values
+        ("secure", &influx.secure[..], vec!["http", "https"]),
+        ("precision", &influx.precision[..], vec!["s", "ms", "ns"]),
+    ];
+    
+
+    for fc in &fields_to_verify_contains {
+        let field_name = &fc.0;
+        let field_value = &fc.1;
+        let field_members = &fc.2;
+        
+        bool_list.push(verify_influx_contains_field(
+            &field_members,
+            &field_value,
+            &vec![
+                ("influx_instance", &influx.name), 
+                ("file", &filename),
+                ("variable",
+                 &format!("{}", field_name)
+                ),
+                ("value", field_value),
+                ("members",
+                 &format!("{:?}", field_members)
+                ),
+            ],
+        ))
+    }
+
+        //if !match_list.contains(&secure_str) {
+        /*
+        if !f.0.contains(&f.1) {
+            eprintln!("SECURE: {}", tuple_formater(&err_msg.to_string(),
+                                                   &vec![
+                                                       ("influx_instance", &influx.server), 
+                                                       ("file", &filename),
+                                                       ("variable", "secure"),
+                                                       ("value", &f.1),
+                                                       ("msg", &f.2),
+                                                   ],
+                                                   false));
+
+            bool_list.push(false)
+        } else {
+            bool_list.push(true)
+        }}
+        */
+    
+    if bool_list.contains(&false) {
+        // /*
+        eprintln!("{:#?}\n>>> EXIT",
+                  &influx
+        );
+        // */
+
+        process::exit(1);
     }
 }
 
