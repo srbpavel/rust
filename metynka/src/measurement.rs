@@ -695,7 +695,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // INFLUX INSTANCES
     for single_influx in &config.all_influx.values {
         // match http/https -> future use
-        match &single_influx.secure[..] {
+        match &single_influx.secure.to_lowercase()[..] {
             "http" => {
                 eprintln!("\nhttp://{}:{}", single_influx.server, single_influx.port);
             },

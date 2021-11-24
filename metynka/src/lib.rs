@@ -276,7 +276,7 @@ fn verify_influx_contains_field(allowed_values: &Vec<&str>,
     
     let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
 
-    if !allowed_values.contains(&value) { // only allowed values
+    if !allowed_values.contains(&&value.to_lowercase()[..]) { // only allowed values
         eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
                                        &msg_tuple_list, // hash_map pair
                                        false // debug flag
@@ -312,10 +312,12 @@ fn verify_influx_empty_field(value: &str,
 fn verify_influx_config(filename: &String,
                        influx: &Influx) {
 
+    // RESULT LIST of BOOL's
     let mut bool_list = Vec::new();
-    
+
+    // EMPTY FIELDS
     let fields_to_verify_non_empty = vec![
-        // variable_name / value
+        // VARIABLE_NAME / VALUE
         ("name", &influx.name),
         ("server", &influx.server),
         ("bucket", &influx.bucket),
@@ -326,8 +328,7 @@ fn verify_influx_config(filename: &String,
     ];
 
     for f in &fields_to_verify_non_empty {
-        let field_name = &f.0;
-        let field_str = &f.1[..];
+        let (field_name, field_str) = (&f.0, &f.1[..]);
         
         bool_list.push(verify_influx_empty_field(field_str,
                                                  &vec![
@@ -341,36 +342,34 @@ fn verify_influx_config(filename: &String,
                                                  ])
         )
     }
-
+    
+    // ONLY ALLOWED VALUES in FIELDS
     let fields_to_verify_contains = vec![
-        // variable_name / value / allowed values
+        // VARIABLE_NAME / VALUE / ONLY ALLOWED VALUES
         ("secure", &influx.secure[..], vec!["http", "https"]), // from config
         ("precision", &influx.precision[..], vec!["s", "ms", "ns"]), //from_config
     ];
     
-
     for fc in &fields_to_verify_contains {
-        let field_name = &fc.0;
-        let field_value = &fc.1;
-        let field_members = &fc.2;
+        let (field_name, field_value, field_members) = (&fc.0, &fc.1, &fc.2);
         
-        bool_list.push(verify_influx_contains_field(
-            &field_members,
-            &field_value,
-            &vec![
-                ("influx_instance", &influx.name), 
-                ("file", &filename),
-                ("variable",
-                 &format!("{}", field_name)
-                ),
-                ("value", field_value),
-                ("members",
-                 &format!("{:?}", field_members)
-                ),
-            ],
+        bool_list.push(verify_influx_contains_field(&field_members,
+                                                    &field_value,
+                                                    &vec![
+                                                        ("influx_instance", &influx.name), 
+                                                        ("file", &filename),
+                                                        ("variable",
+                                                         &format!("{}", field_name)
+                                                        ),
+                                                        ("value", field_value),
+                                                        ("members",
+                                                         &format!("{:?}", field_members)
+                                                        ),
+                                                    ],
         ))
     }
 
+    // EXIT if any FALSE
     if bool_list.contains(&false) {
         eprintln!("{:#?}\n>>> EXIT",
                   &influx
