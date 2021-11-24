@@ -14,7 +14,17 @@ use std::fmt::Debug;
 
 pub use crate::util::ts::{Dt};
 pub use crate::util::template_formater::tuple_formater;
-use metynka::{TomlConfig, Influx, TemplateSensors};
+use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
+
+
+#[derive(Debug)]
+pub struct InfluxCall {
+    pub uri_write: String,
+    pub uri_query: String,
+    pub auth: String,
+    pub accept: String,
+    pub content: String,
+}
 
 
 // BACKUP CVS 
@@ -330,12 +340,9 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
-                //String::from(&metric.generic_query_verify_record),
-                //String::from(&config.template.flux.query_verify_record_suffix),
                 metric.generic_query_verify_record.to_string(),
                 config.template.flux.query_verify_record_suffix.to_string(),
         ),
-        //false => String::from(&metric.generic_query_verify_record)
         false => metric.generic_query_verify_record.to_string()
     };    
 
@@ -495,7 +502,8 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
 
 
 pub fn prepare_influx_format(config: &TomlConfig,
-                             influx_inst: &Influx) -> (String, String, String, String, String) {
+                             //influx_inst: &Influx) -> (String, String, String, String, String) {
+            influx_inst: &Influx) -> InfluxCall {
 
     // URI_WRITE 
     let uri_write = tuple_formater(&format!("{}{}",
@@ -540,12 +548,21 @@ pub fn prepare_influx_format(config: &TomlConfig,
     // CONTENT
     let content_template = String::from(&config.template.curl.influx_content);
 
+    InfluxCall {uri_write: uri_write,
+                uri_query: uri_query,
+                auth: auth,
+                accept: accept_template,
+                content: content_template,
+    }
+    
+    /*
     (uri_write,
      uri_query,
      auth,
      accept_template,
      content_template,
     )
+    */
 }
 
 
@@ -558,9 +575,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // METRIC_RESULT_LIST
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
-    // METRICS
-    //println!("\n#METRICS:\n{:?}", &config.metrics.keys());
-
+    // loop via METRICS
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
             println!("#METRIC: {metric} -> MEASUREMENT: {measurement}",
@@ -568,121 +583,24 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      metric=config.metrics[key].field,
             );
 
-
             // OS CALL program or pipe_program
-            let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
-                // no PIPE
-                false => {
-                    let metric_stdout = os_call_metric(&config,
-                                                       &config.metrics[key]);
-
-                    serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                        eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
-                        process::exit(1);
-                    })
-                },
-
-                // PIPE is here
-                true => {
-                    let metric_stdout = os_call_metric_pipe(&config,
-                                                       &config.metrics[key]);
-
-                    serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                        eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
-                        process::exit(1);
-                    })
-                }
-            };
+            let metric_json: serde_json::Value = os_call_program(&config,
+                                                                 key);
             
+            // loop via SENSORS
             for single_sensor in &config.metrics[key].values {
                 if single_sensor.status {
                     // JSON single POINTER
-                    let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
-                        Some(value) => {
-                            if config.flag.debug_pointer_output {
-                                println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
-                                         v=value);
-                            }
-                            
-                            (Some(value), true)
-                        },
-
-                        None => {
-                            println!("\n#POINTER_PATH: !!! NONE !!!");
-                            eprintln!("\nWARNING: Problem parsing METRIC: {m} -> JSON PATH: {jp}",
-                                      jp=&single_sensor.pointer,
-                                      m=config.metrics[key].measurement,
-                            );
-                            (None, false)
-                        }
-                    };
-
-                    // TO KEEP IN MIND
-                
-                    /* !panic if WRONG POINTER path
-                    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
-                     */
-                
-                    /* EXIT if WRONG POINTER path but we want to get rid of all exit
-                    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
-                    eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
-                    single_sensor.pointer);
-                    process::exit(1);
-                    });
-                    */
-
-                    // DEBUG true/false SENSORS
-                    if config.flag.debug_pointer_output {
-                        println!("path_status: {ps}\nstatus: {s}\nname: {n}\npointer: {p}\nvalue: {v:?}",
-                                 s=single_sensor.status,
-                                 n=single_sensor.name,
-                                 p=single_sensor.pointer,
-                                 v=&single_sensor_pointer_value,
-                                 ps=&pointer_path_status,
-                        );
-                    }
-
-                    // JSON PATH failed
-                    if pointer_path_status {
-                        let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
-                            Some(value) => {
-                                if config.flag.debug_pointer_output {
-                                    println!("unwrap_some: {s} / {s:?}",
-                                             s=value);
-                                }
-                                verify_pointer_type(&value.to_string())
-                            },
-                            None => {
-                                eprintln!("unwrap: !!! none !!!");
-                                process::exit(1); // tohle neumim nahradit, ale nemelo by nastat ?
-                            }
-                        };
+                    parse_json_via_pointer(&config,
+                                           & mut metric_result_list,
+                                           &single_sensor,
+                                           &metric_json,
+                                           &key,
+                                           &dt);
                     
-                        if pointer_type_status {
-                            let single_record = PreRecord {
-                                key:key.to_string(),
-                                ts: dt.ts,
-                                value: pointer_parsed_float.to_string(),
-                                id: single_sensor.name.to_string(),
-                                measurement: config.metrics[key].measurement.to_string(),
-                                host: config.host.to_string(),
-
-                                /*
-                                machine: String::from(""),
-                                carrier: String::from(""),
-                                valid: String::from(""),
-                                */
-                            };
-                    
-                            // METRIC RECORD_LIST -> Vec<Record>
-                            if !metric_result_list.contains(&single_record) { 
-                                metric_result_list.push(single_record)
-                            }
-                        }
-                    } /* path status */
                 } /* if single_sensorstatus */
             } /* for single_sensor in each metric*/
-        }
+        } /* if metric status */
     } /* for key in metrics */
 
     if config.flag.debug_metric_record {
@@ -691,128 +609,12 @@ pub fn parse_sensors_data(config: &TomlConfig,
         }
     }
 
-
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
                              & mut result_list,
                              & metric_result_list,
                              &dt);
 
-    /*
-    for single_influx in &config.all_influx.values {
-        // match http/https -> future use
-        match &single_influx.secure.to_lowercase()[..] {
-            "http" => {
-                eprintln!("\n{} / http://{}:{}",
-                          single_influx.status,
-                          single_influx.server,
-                          single_influx.port);
-            },
-            "https" => {
-                eprintln!("\n{} / https://{}:{}",
-                          single_influx.status,
-                          single_influx.server,
-                          single_influx.port);
-            },
-            other => {
-                eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
-                          single_influx.server,
-                          other); // this should never happen as config init verification
-            },
-        }
-
-        if single_influx.status {
-
-            // ARGS for CURL
-            let (influx_uri_write,
-                 influx_uri_query,
-                 influx_auth,
-                 influx_accept,
-                 influx_content ) = prepare_influx_format(&config, &single_influx); // TUPLE OF 5
-            
-            if config.flag.debug_influx_uri {
-                println!("\n#URI<{n}>:\n{w}\n{q}",
-                         n=single_influx.name,
-                         w=&influx_uri_write,
-                         q=&influx_uri_query
-                );
-            }
-            
-            if config.flag.debug_influx_auth {
-                println!("\n#AUTH:\n{}", &influx_auth);
-            }
-
-            //METRIC_RESULT_LIST
-            
-            
-            for single_metric_result in &metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
-                let new_single_metric_result = Record {
-                    ts: single_metric_result.ts,
-                    value: single_metric_result.value.to_string(),
-                    carrier: single_influx.carrier.to_string(),
-                    id: single_metric_result.id.to_string(),
-                    valid: single_influx.flag_valid_default.to_string(),
-                    machine: single_influx.machine_id.to_string(),
-                    measurement: single_metric_result.measurement.to_string(),
-                    host: single_metric_result.host.to_string(),
-                    //..single_metric_result // Record -> Record
-                };
-
-                //POKUS
-                /*
-                let update_single_record = PreRecord {
-                    machine: single_influx.machine_id.to_string(),
-                    carrier: single_influx.carrier.to_string(),
-                    valid: single_influx.flag_valid_default.to_string(),
-                    ..single_metric_result // * &
-                    
-                };
-                println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
-                */
-
-                // PreRecord <- Record populated with Influx properties
-                if config.flag.debug_metric_record {
-                    println!("\n{:?}", new_single_metric_result);
-                }
-                
-                // LP via Record
-                let generic_lp = prepare_generic_lp_format(&config,
-                                                           &new_single_metric_result,
-                                                           &config.metrics[&single_metric_result.key.to_string()]);
-
-                if config.flag.debug_influx_lp {
-                    println!("\n#LP:\n{}", generic_lp);
-                }
-
-                // OS_CMD <- CURL
-                os_call_curl(&config,
-                             &influx_uri_write,
-                             &influx_auth,
-                             &generic_lp);
-
-                // OS_CMD <- GENERIC FLUX_QUERY
-                if config.flag.run_flux_verify_record {
-                    run_flux_query(
-                        &config,
-                        &config.metrics[&single_metric_result.key.to_string()],
-                        &single_influx,
-                        &new_single_metric_result,
-                        &dt.utc_influx_format,
-                        &influx_uri_query,
-                        &influx_auth,
-                        &influx_accept,
-                        &influx_content,
-                    );
-                }
-                
-                // RECORD_LIST -> Vec<Record>
-                if !result_list.contains(&new_single_metric_result) { 
-                    result_list.push(new_single_metric_result)
-                }
-            } /* for single_metric */
-        } /* single_influx.status*/
-    } */ /* all_influx.values */
-    
     // BACKUP
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
@@ -832,11 +634,14 @@ fn run_flux_query(config: &TomlConfig,
                   metric_result: &Record,
                   
                   utc_influx_format: &String,
+                  influx: &InfluxCall) {
                   
+                  /*
                   influx_uri_query: &String,
                   influx_auth: &String,
                   influx_accept: &String,
                   influx_content: &String) {
+                  */
 
     let generic_influx_query = prepare_generic_flux_query_format(
         &config,
@@ -852,10 +657,16 @@ fn run_flux_query(config: &TomlConfig,
     }
     
     os_call_curl_flux(&config,
+                      &influx.uri_query,
+                      &influx.auth,
+                      &influx.accept,
+                      &influx.content,
+                      /*
                       &influx_uri_query,
                       &influx_auth,
                       &influx_accept,
                       &influx_content,
+                      */
                       &generic_influx_query);
 }
 
@@ -890,22 +701,27 @@ fn run_all_influx_instances(config: &TomlConfig,
         if single_influx.status {
             
             // ARGS for CURL
+
+            /*
             let (influx_uri_write,
                  influx_uri_query,
                  influx_auth,
                  influx_accept,
                  influx_content ) = prepare_influx_format(&config, &single_influx); // TUPLE OF 5
+            */
+
+            let influx_properties = prepare_influx_format(&config, &single_influx);
             
             if config.flag.debug_influx_uri {
                 println!("\n#URI<{n}>:\n{w}\n{q}",
                          n=single_influx.name,
-                         w=&influx_uri_write,
-                         q=&influx_uri_query
+                         w=influx_properties.uri_write, //&influx_uri_write,
+                         q=influx_properties.uri_query, //&influx_uri_query
                 );
             }
             
             if config.flag.debug_influx_auth {
-                println!("\n#AUTH:\n{}", &influx_auth);
+                println!("\n#AUTH:\n{}", influx_properties.auth);//&influx_auth);
             }
             
             //METRIC_RESULT_LIST
@@ -930,7 +746,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 valid: single_influx.flag_valid_default.to_string(),
                 ..single_metric_result // * &
                 
-            };
+                };
                 println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
                  */
                 
@@ -950,8 +766,8 @@ fn run_all_influx_instances(config: &TomlConfig,
                 
                 // OS_CMD <- CURL
                 os_call_curl(&config,
-                             &influx_uri_write,
-                             &influx_auth,
+                             &influx_properties.uri_write,//&influx_uri_write,
+                             &influx_properties.auth,//&influx_auth,
                              &generic_lp);
                 
                 // OS_CMD <- GENERIC FLUX_QUERY
@@ -962,10 +778,13 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &single_influx,
                         &new_single_metric_result,
                         &dt.utc_influx_format,
-                        &influx_uri_query,
-                        &influx_auth,
-                        &influx_accept,
-                        &influx_content,
+                        &influx_properties,
+                        /*
+                        &influx_properties.uri_query,//&influx_uri_query,
+                        &influx_properties.auth,//&influx_auth,
+                        &influx_properties.accept,//&influx_accept,
+                        &influx_properties.content,//&influx_content,
+                        */
                     );
                 }
                 
@@ -976,4 +795,127 @@ fn run_all_influx_instances(config: &TomlConfig,
             } /* for single_metric */
         } /* single_influx.status*/
     } /* all_influx.values */
+}
+
+fn os_call_program(config: &TomlConfig,
+                   key: &String) -> serde_json::Value {
+
+    let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
+        // no PIPE
+        false => {
+            let metric_stdout = os_call_metric(&config,
+                                               &config.metrics[key]);
+            
+            serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
+                process::exit(1);
+            })
+        },
+        
+        // PIPE is here
+        true => {
+            let metric_stdout = os_call_metric_pipe(&config,
+                                                    &config.metrics[key]);
+            
+            serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
+                eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
+                process::exit(1);
+            })
+        }
+    };
+
+    metric_json
+}
+
+
+fn parse_json_via_pointer(config: &TomlConfig,
+                          metric_result_list: & mut Vec<PreRecord>,
+                          single_sensor: &Sensor,
+                          metric_json: &serde_json::Value,
+                          key: &String,
+                          dt: &Dt) {
+
+    let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
+        Some(value) => {
+            if config.flag.debug_pointer_output {
+                println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
+                         v=value);
+            }
+            
+            (Some(value), true)
+        },
+        
+        None => {
+            println!("\n#POINTER_PATH: !!! NONE !!!");
+            eprintln!("\nWARNING: Problem parsing METRIC: {m} -> JSON PATH: {jp}",
+                      jp=&single_sensor.pointer,
+                      m=config.metrics[key].measurement,
+            );
+            (None, false)
+        }
+    };
+
+    // TO KEEP IN MIND
+    
+    /* !panic if WRONG POINTER path
+    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
+     */
+    
+    /* EXIT if WRONG POINTER path but we want to get rid of all exit
+    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
+    eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
+    single_sensor.pointer);
+    process::exit(1);
+    });
+    */
+    
+    // DEBUG true/false SENSORS
+    if config.flag.debug_pointer_output {
+        println!("path_status: {ps}\nstatus: {s}\nname: {n}\npointer: {p}\nvalue: {v:?}",
+                 s=single_sensor.status,
+                 n=single_sensor.name,
+                 p=single_sensor.pointer,
+                 v=&single_sensor_pointer_value,
+                 ps=&pointer_path_status,
+        );
+    }
+    
+    // JSON PATH failed
+    if pointer_path_status {
+        let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
+            Some(value) => {
+                if config.flag.debug_pointer_output {
+                    println!("unwrap_some: {s} / {s:?}",
+                             s=value);
+                }
+                verify_pointer_type(&value.to_string())
+            },
+            None => {
+                eprintln!("unwrap: !!! none !!!");
+                process::exit(1); // tohle neumim nahradit, ale nemelo by nastat ?
+            }
+        };
+        
+        if pointer_type_status {
+            let single_record = PreRecord {
+                key:key.to_string(),
+                ts: dt.ts,
+                value: pointer_parsed_float.to_string(),
+                id: single_sensor.name.to_string(),
+                measurement: config.metrics[key].measurement.to_string(),
+                host: config.host.to_string(),
+                
+                /*
+                machine: String::from(""),
+                carrier: String::from(""),
+                valid: String::from(""),
+                */
+            };
+            
+            // METRIC RECORD_LIST -> Vec<Record>
+            if !metric_result_list.contains(&single_record) { 
+                metric_result_list.push(single_record)
+            }
+        }
+    }
 }
