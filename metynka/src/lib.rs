@@ -270,15 +270,15 @@ pub struct Sensor {
 }
 
 
-fn verify_influx_contains_field(members: &Vec<&str>,
-                                query: &str,
-                                tuple_list: &Vec<(&str, &str)>) -> bool {
+fn verify_influx_contains_field(allowed_values: &Vec<&str>,
+                                value: &str,
+                                msg_tuple_list: &Vec<(&str, &str)>) -> bool {
     
     let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
 
-    if !members.contains(&query) {
+    if !allowed_values.contains(&value) { // only allowed values
         eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
-                                       &tuple_list, // hash_map pair
+                                       &msg_tuple_list, // hash_map pair
                                        false // debug flag
         ));
         
@@ -290,14 +290,14 @@ fn verify_influx_contains_field(members: &Vec<&str>,
 }
 
 
-fn verify_influx_empty_field(query: &str,
-                             tuple_list: &Vec<(&str, &str)>) -> bool {
+fn verify_influx_empty_field(value: &str,
+                             msg_tuple_list: &Vec<(&str, &str)>) -> bool {
     
     let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" {msg}\n\n>>> EXIT";
     
-    if matches!(query, "") { // EMPTY
+    if matches!(value, "") { // EMPTY
         eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
-                                       &tuple_list, // hash_map pair
+                                       &msg_tuple_list, // hash_map pair
                                        false // debug flag
         ));
         
@@ -328,6 +328,7 @@ fn verify_influx_config(filename: &String,
     for f in &fields_to_verify_non_empty {
         let field_name = &f.0;
         let field_str = &f.1[..];
+        
         bool_list.push(verify_influx_empty_field(field_str,
                                                  &vec![
                                                      ("influx_instance", &influx.name), 
@@ -341,28 +342,10 @@ fn verify_influx_config(filename: &String,
         )
     }
 
-    //#let secure_str = &influx.secure[..];
-    //let secure_str = String::from(&influx.secure);
-
-    /* #
-    let match_list = vec!["http",
-                          "https",
-    ];
-    */
-    
-    //let match_list = vec![String::from("http"),
-    //                      String::from("https"),
-    //];
-    
-    //if !matches!(secure_str, "http" | "https") {
-    //if match_list.contains(String::from(secure_str).to_lowercase()) {
-    //if match_list.contains(&secure_str) {
-
-
     let fields_to_verify_contains = vec![
         // variable_name / value / allowed values
-        ("secure", &influx.secure[..], vec!["http", "https"]),
-        ("precision", &influx.precision[..], vec!["s", "ms", "ns"]),
+        ("secure", &influx.secure[..], vec!["http", "https"]), // from config
+        ("precision", &influx.precision[..], vec!["s", "ms", "ns"]), //from_config
     ];
     
 
@@ -388,83 +371,13 @@ fn verify_influx_config(filename: &String,
         ))
     }
 
-        //if !match_list.contains(&secure_str) {
-        /*
-        if !f.0.contains(&f.1) {
-            eprintln!("SECURE: {}", tuple_formater(&err_msg.to_string(),
-                                                   &vec![
-                                                       ("influx_instance", &influx.server), 
-                                                       ("file", &filename),
-                                                       ("variable", "secure"),
-                                                       ("value", &f.1),
-                                                       ("msg", &f.2),
-                                                   ],
-                                                   false));
-
-            bool_list.push(false)
-        } else {
-            bool_list.push(true)
-        }}
-        */
-    
     if bool_list.contains(&false) {
-        // /*
         eprintln!("{:#?}\n>>> EXIT",
                   &influx
         );
-        // */
-
         process::exit(1);
     }
 }
-
-
-/*
-fn verify_influx_token(filename: &String,
-                       token: &String) {
-
-    let token_str = &token[..];
-
-    if matches!(token_str, "") {
-        eprintln!("\n#ERROR: config file: {} -> influx settings \"token={}\" is EMPTY",
-                  &filename,
-                  token_str);
-        
-            process::exit(1);
-    }
-}
-*/
-
-
-/*
-fn verify_influx_secure(filename: &String,
-                        secure: &String) {
-
-    let secure_str = &secure[..];
-
-    if !matches!(secure_str, "http" | "https") {
-        eprintln!("\n#ERROR: config file: {} -> influx settings \"secure={}\" is not http/https",
-                  &filename,
-                  secure_str);
-        
-            process::exit(1);
-    }
-
-    /*
-    match &secure[..] {
-        "http" => {},
-        "https" => {},
-        other => {
-            eprintln!("\n#ERROR: config file: {} -> influx settings 'secure={}' is not http/https",
-                      &filename,
-                      other);
-            
-        process::exit(1);
-        },
-    }
-    */
-}
-*/
 
 
 #[cfg(test)]
