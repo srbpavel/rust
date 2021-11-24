@@ -101,8 +101,10 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
             match as_string.parse::<f64>() {
                 Err(_why) => {
                     // JSON VALUE wrapped with "
-                    // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
-                    let float_via_replace = str::replace(as_string, "\"", "").parse::<f64>().unwrap();
+                    let float_via_replace = str::replace(as_string, "\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
+                        .trim()
+                        .parse::<f64>()
+                        .unwrap(); // not safe
 
                     /*
                     println!("   ERROR_to_f64: {w} REPLACE: <{r}> / debug: {r:?}",
@@ -134,6 +136,82 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 }
 
 
+fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
+    match OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(&today_file_name)
+    {
+        Ok(file) => (file, true),
+
+        // FAIL TO OPEN FOR WRITE
+        Err(why) => {
+            eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
+                      &today_file_name.display(),
+                      why);
+
+            // OPEN FOR READ -> this instead EXIT as i did not find any better yet
+            (OpenOptions::new()
+             .read(true)
+             .open(&today_file_name)
+             .expect("FAILED TO OPEN FILE just for READ"),
+             false)
+        },
+    }
+}
+
+
+fn create_new_dir(config: &TomlConfig,
+                  full_path: &Path,
+                  measurement: &String) {
+
+    fs::create_dir_all(&full_path).unwrap_or_else(|err| {
+        let print_formated = tuple_formater(&"\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}".to_string(),
+                                            &vec![
+                                                ("m", &measurement),
+                                                ("d", &config.work_dir),
+                                                ("e", &err.to_string())
+                                            ],
+                                            config.flag.debug_template_formater
+        );
+        
+        println!("{}", print_formated);
+        eprintln!("{}", print_formated);
+        
+    });
+}
+
+
+fn create_new_file(today_file_name: &Path) -> File {
+    match File::create(&today_file_name) { // LEARN TO write TEST for this
+        Err(why) => {
+            eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
+                      &today_file_name.display(),
+                      why);
+
+            // CREATE NEW IF NOT EXISTS
+            OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open(&today_file_name)
+                .expect("FAILED TO OPEN FILE")
+                //.unwrap() // ALSO NEED TEST
+        },
+        
+        Ok(file) => file,
+    }
+}
+
+
+fn csv_display_header(datatype: &String,
+                      tags_and_fields: String) {
+    println!("{}\n{}",
+             &datatype,
+             tags_and_fields,
+    );
+}
+
+
 pub fn backup_data(config: &TomlConfig,
                    result_list: &Vec<Record>,
                    today_file_name: &String,
@@ -141,27 +219,14 @@ pub fn backup_data(config: &TomlConfig,
 
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
     /* FOR TEST error handling */
-    //let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
+    // let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
     //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION write ROOT
-    //println!(" @@@ DEBUG @@@ FULL_PATH: {:#?}", full_path);
-    //_
     
     // DIR CREATE if not EXISTS
     if !full_path.exists() {
-        fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-            let print_formated = tuple_formater(&"\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}".to_string(),
-                                                   &vec![
-                                                       ("m", &metric.measurement),
-                                                       ("d", &config.work_dir),
-                                                       ("e", &err.to_string())
-                                                   ],
-                                                config.flag.debug_template_formater
-            );
-            
-            println!("{}", print_formated);
-            eprintln!("{}", print_formated);
-            
-        });
+        create_new_dir(&config,
+                       &full_path,
+                       &metric.measurement);
     }
 
     // WE HAVE DIR and VERIFIED but still PERMISION's CAN CHANGE for FILE to WRITE
@@ -183,89 +248,29 @@ pub fn backup_data(config: &TomlConfig,
                                                    &metric);
     
         if !today_file_name.exists() {
-            let mut file = match File::create(&today_file_name) { // LEARN TO write TEST for this
-                Err(why) => {
-                    eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
-                              &today_file_name.display(),
-                              why);
+            // GET OLD FILE for append OR NEW 
+            let mut file = create_new_file(&today_file_name);
 
-                    // uz nevim proc to tu mam? PODLE ME KDYZ ZAKLADAM NOVEJ SOUBOR
-                    OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .open(&today_file_name)
-                        .expect("FAILED TO OPEN FILE")
-                        //.unwrap() // ALSO NEED TEST
-                },
-                
-                Ok(file) => file,
-            };
-
-            // TEST if DIR+FILE OK but FULL_DISC
+            // TEST if DIR+FILE OK but what about FULL_DISC ?
             // CSV_DATATYPE
-            writeln!(file, "{}", &metric.annotated_datatype).unwrap_or_else(|err| {  // TAG_ID
+            writeln!(file, "{}", &metric.annotated_datatype).unwrap_or_else(|err| {
                 eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                //process::exit(1);  // this will not exit but raise ALARM
             });
 
             // CSV_HEADER
             writeln!(file, "{}", csv_header).unwrap_or_else(|err| {
                 eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                //process::exit(1);  // this will not exit but raise ALARM
             });
-
-            // you have it twice, fix it to have it only once
-            if config.flag.debug_backup {
-                println!("{}\n{}",
-                         &metric.annotated_datatype,
-                         csv_header,
-                );
-            }
-        }
-        else {
-            if config.flag.debug_backup {
-                println!("{}\n{}",
-                         &metric.annotated_datatype,
-                         csv_header,
-                );
-            }
         }
 
-        let (mut file, file_status) = match OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(&today_file_name)
-        {
-            Ok(file) => (file, true),
+        if config.flag.debug_backup {
+            csv_display_header(&metric.annotated_datatype,
+                               csv_header);
+        }
+        
+        let (mut file, file_status) = open_file_to_append(&today_file_name);
 
-            Err(why) => {
-                eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
-                          &today_file_name.display(),
-                          why);
-
-                (OpenOptions::new()
-                 .read(true)
-                 .open(&today_file_name)
-                 .expect("FAILED TO OPEN FILE just for READ"),
-                 false)
-            },
-        };
-
-        /* TRY TO FIND write true/false, but not in metadata ? 
-        println!("\n@@@FILE:\nAAA: {:#?}\nBBB: {:#?}]\nCCC: {:#?}",
-                 file.metadata(),
-                 /*
-                 match file.metadata() {
-                     Ok(data) => data,
-                     Err(_) => process::exit(1)
-                 },
-                 */
-                 file.metadata().unwrap().permissions(),
-                 file); // cannot acces File field ? as this is method
-        */
-       
         if !file_status {
-            println!("\n@@@ WE CANNOT WRITE as READ_ONLY"); // DEL when done
             println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:?}", result_list);
         }
         else {
@@ -284,7 +289,6 @@ pub fn backup_data(config: &TomlConfig,
                     // APPEND SINGLE RECORD to backup_file
                     writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
                         eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                        //process::exit(1);  // this will not exit but raise ALARM
                     });
                 }
             }
@@ -398,7 +402,12 @@ pub fn os_call_metric(config: &TomlConfig,
     
     let sensor_output = Command::new(&metric.program)
         .args(&metric.args)
-        .output().expect("failed to execute command");
+        .output()
+        //.expect("failed to execute command"); // not safe
+        .unwrap_or_else(|err| {
+            eprintln!("\nEXIT: Problem parsing METRIC PROGRAM from OS CALL program\nREASON >>> {}", err);
+            process::exit(1); // fix this not to exit but skip record
+        });
     
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
@@ -421,13 +430,23 @@ pub fn os_call_metric_pipe(config: &TomlConfig,
 
     let cmd_output = Command::new(&memory.program)
         .args(&memory.args)
-        .stdout(Stdio::piped()).spawn().unwrap();
+        //.stdout(Stdio::piped()).spawn().unwrap(); // NOT SAFE -> change
+        .stdout(Stdio::piped()).spawn().unwrap_or_else(|err| {
+            eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL program\nREASON >>> {}", err);
+            process::exit(1); // fix this not to exit but skip record
+        });
 
+    
     let cmd_pipe_output = Command::new(&memory.pipe_program)
         .args(&memory.pipe_args)
-        .stdin(cmd_output.stdout.unwrap())
-        .output().expect("failed to execute command");
-
+        .stdin(cmd_output.stdout.unwrap()) // NOT SAFE -> change
+        .output()
+        //.expect("failed to execute command")//; // catch also error here, otherwise !panic
+        .unwrap_or_else(|err| {
+            eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL pipe\nREASON >>> {}", err);
+            process::exit(1); // fix this not to exit but skip record
+        });
+        
     let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
     let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
 
@@ -572,6 +591,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
             // OS CALL program or pipe_program
             let metric_json: serde_json::Value = os_call_program(&config,
                                                                  key);
+
+            //TEST JSON or skip
             
             // loop via SENSORS
             for single_sensor in &config.metrics[key].values {
@@ -615,10 +636,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
 fn run_flux_query(config: &TomlConfig,
                   config_metric: &TemplateSensors,
-                  
                   single_influx: &Influx,
                   metric_result: &Record,
-                  
                   utc_influx_format: &String,
                   influx: &InfluxCall) {
 
@@ -634,7 +653,7 @@ fn run_flux_query(config: &TomlConfig,
                  generic_influx_query,
         );
     }
-    
+
     os_call_curl_flux(&config,
                       &influx,
                       &generic_influx_query);
@@ -751,6 +770,7 @@ fn run_all_influx_instances(config: &TomlConfig,
     } /* all_influx.values */
 }
 
+
 fn os_call_program(config: &TomlConfig,
                    key: &String) -> serde_json::Value {
 
@@ -762,8 +782,8 @@ fn os_call_program(config: &TomlConfig,
             
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
-                process::exit(1);
-            })
+                process::exit(1); // fix this not to exit but skip record
+            }) 
         },
         
         // PIPE is here
@@ -773,7 +793,7 @@ fn os_call_program(config: &TomlConfig,
             
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
-                process::exit(1);
+                process::exit(1); // fix this not to exit but skip record
             })
         }
     };
@@ -834,7 +854,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
         );
     }
     
-    // JSON PATH failed
+    // valid JSON PATH
     if pointer_path_status {
         let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
             Some(value) => {

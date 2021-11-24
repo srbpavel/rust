@@ -150,28 +150,29 @@ file_extension = "csv"
 # vector of influx: Struct instances
 [all_influx]
 #name: "default"		-> instance_id
-#status: true			-> on/off
+#status: true			-> true/false <- prepare and import data
 
-#secure: 			-> http/https 
+#secure: 			-> http/https <- only allowed values
 #server: "ruth"			-> ip or hostname
-#port: 8086
+#port: 8086			-> port
 
 #bucket: "test_rust"		-> DO NOT FORGET TO CREATE
 #token	 			-> TOKEN
-#org: "foookin_paavel"
+#org: "foookin_paavel"		-> ORG
 #precision: "ms"		-> 1636918801582 / MS format len() 13
 
 #TAGS
 #machine_id: "spongebob"	-> now same as host but normaly another machine like T4_labjack / esp32 / ...
 #carrier: "cargo" 	     	-> future_use
-#flag_valid_default:  true	-> for flux filtering invalid data before delete
+#flag_valid_default:  true	-> true/false <- for flux filtering invalid data before delete
 
 # DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        {name = "default", status = true, secure = "https", server = "ruth", port = 8086, bucket = "test_rust", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
        {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_test_rust", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
        {name = "public", status = false, secure = "https", server = "komar", port = 8086, bucket = "public_test_rust", token = "TOKEN", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
-       #{name = "public", status = false, secure = "https", server = "komar", port = 8086, bucket = "public_test_rust", token = "", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+       {name = "ERROR_TESTER", status = false, secure = "HTTPS", server = "hrobarik", port = 8086, bucket = "BUCKET", token = "TOKEN", org = "ORG", precision = "ms", machine_id = "MACHINE_ID", carrier = "CARRIER", flag_valid_default = true},
+        #{name = "", status = false, secure = "", server = "", port = 8086, bucket = "", token = "", org = "", precision = "ms", machine_id = "", carrier = "", flag_valid_default = true},
        ]
 
 

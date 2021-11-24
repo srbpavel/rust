@@ -104,7 +104,7 @@ pub struct Flag {
     pub debug_new_config: bool,
     
     pub debug_ts: bool,
-    pub debug_ts_to_dt: bool, // obsolete to DEL ?
+    pub debug_ts_to_dt: bool, // obsolete to DEL
 
     pub debug_template_formater: bool,
     
@@ -147,8 +147,6 @@ pub struct Delay {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllInflux {
-    //values: [i32; 3], // fixed array with three int's
-    //values: Vec<i32>, // unlimited size vector
     pub values: Vec<Influx>,
 }
 
@@ -271,27 +269,6 @@ pub struct Sensor {
 }
 
 
-fn verify_influx_contains_field(allowed_values: &Vec<&str>,
-                                value: &str,
-                                msg_tuple_list: &Vec<(&str, &str)>) -> bool {
-    
-    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
-
-    if !allowed_values.contains(&&value.to_lowercase()[..]) { // ONLY ALLOWED VALUES
-        eprintln!("{}", tuple_formater(&err_msg.to_string(),
-                                       &msg_tuple_list,
-                                       false // flag HARDCODED -> no need to debug
-        ));
-        
-        false
-
-    } else {
-
-        true
-    }
-}
-
-
 fn verify_influx_contains_field_loop(filename: &String,
                                      influx: &Influx,
                                      mut bool_list: Vec<bool>) -> Vec<bool>{
@@ -327,6 +304,27 @@ fn verify_influx_contains_field_loop(filename: &String,
     }
 
     bool_list
+}
+
+
+fn verify_influx_contains_field(allowed_values: &Vec<&str>,
+                                value: &str,
+                                msg_tuple_list: &Vec<(&str, &str)>) -> bool {
+    
+    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
+
+    if !allowed_values.contains(&&value.to_lowercase()[..]) { // ONLY ALLOWED VALUES
+        eprintln!("{}", tuple_formater(&err_msg.to_string(),
+                                       &msg_tuple_list,
+                                       false // HARDCODED -> no need to debug
+        ));
+        
+        false
+
+    } else {
+
+        true
+    }
 }
 
 
@@ -371,10 +369,10 @@ fn verify_influx_empty_field(value: &str,
     
     let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" {msg}\n\n>>> EXIT";
     
-    if matches!(value, "") { // look for EMPTY
+    if matches!(value, "") { // search for EMPTY field values
         eprintln!("{}", tuple_formater(&err_msg.to_string(),
                                        &msg_tuple_list,
-                                       false // flag HARDCODED -> no need to debug
+                                       false // HARDCODED -> no need to debug
         ));
         
         false
@@ -395,8 +393,8 @@ fn verify_influx_config(filename: &String,
 
     // ONLY ALLOWED VALUES in FIELDS
     let bool_list = verify_influx_contains_field_loop(filename,
-                                                        influx,
-                                                        bool_list);
+                                                      influx,
+                                                      bool_list);
 
     // EXIT if any FALSE
     if bool_list.contains(&false) {
@@ -560,13 +558,10 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         process::exit(1);
     });
 
-    //config field's verification // learn better way, let's say in Struct default ?
+    // CONFIG FIELD's validation -> learn better way, let's say via Struct default ?
     for single_influx in &toml_config.all_influx.values {
-
         verify_influx_config(&cmd_args.filename,
                              &single_influx);
-        
-
     }
     
     /*
