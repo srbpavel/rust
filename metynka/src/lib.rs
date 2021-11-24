@@ -173,7 +173,7 @@ pub struct Influx {
     pub flag_valid_default: bool,
 }
 
-
+/*
 impl Default for Influx {
     fn default() -> Influx {
         Influx {
@@ -196,6 +196,7 @@ impl Default for Influx {
         }
     }
 }
+*/
 
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -276,46 +277,26 @@ fn verify_influx_contains_field(allowed_values: &Vec<&str>,
     
     let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" value  not in {members}\n\n>>> EXIT";
 
-    if !allowed_values.contains(&&value.to_lowercase()[..]) { // only allowed values
-        eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
-                                       &msg_tuple_list, // hash_map pair
-                                       false // debug flag
+    if !allowed_values.contains(&&value.to_lowercase()[..]) { // ONLY ALLOWED VALUES
+        eprintln!("{}", tuple_formater(&err_msg.to_string(),
+                                       &msg_tuple_list,
+                                       false // flag HARDCODED -> no need to debug
         ));
         
         false
 
     } else {
+
         true
     }
 }
 
 
-fn verify_influx_empty_field(value: &str,
-                             msg_tuple_list: &Vec<(&str, &str)>) -> bool {
-    
-    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" {msg}\n\n>>> EXIT";
-    
-    if matches!(value, "") { // EMPTY
-        eprintln!("{}", tuple_formater(&err_msg.to_string(), // template
-                                       &msg_tuple_list, // hash_map pair
-                                       false // debug flag
-        ));
-        
-        false
-    }
-    else {
-        true
-    }
-}
-            
+fn verify_influx_empty_field_loop(filename: &String,
+                                  influx: &Influx) -> Vec<bool>{
 
-fn verify_influx_config(filename: &String,
-                       influx: &Influx) {
-
-    // RESULT LIST of BOOL's
     let mut bool_list = Vec::new();
-
-    // EMPTY FIELDS
+    
     let fields_to_verify_non_empty = vec![
         // VARIABLE_NAME / VALUE
         ("name", &influx.name),
@@ -326,7 +307,7 @@ fn verify_influx_config(filename: &String,
         ("machine_id", &influx.machine_id),
         ("carrier", &influx.carrier),
     ];
-
+    
     for f in &fields_to_verify_non_empty {
         let (field_name, field_str) = (&f.0, &f.1[..]);
         
@@ -342,16 +323,28 @@ fn verify_influx_config(filename: &String,
                                                  ])
         )
     }
-    
-    // ONLY ALLOWED VALUES in FIELDS
+
+    bool_list
+}
+
+
+fn verify_influx_contains_field_loop(filename: &String,
+                                     influx: &Influx,
+                                     mut bool_list: Vec<bool>) -> Vec<bool>{
+
     let fields_to_verify_contains = vec![
         // VARIABLE_NAME / VALUE / ONLY ALLOWED VALUES
-        ("secure", &influx.secure[..], vec!["http", "https"]), // from config
-        ("precision", &influx.precision[..], vec!["s", "ms", "ns"]), //from_config
+        ("secure", &influx.secure[..], vec!["http", "https"]),
+        ("precision", &influx.precision[..], vec!["s", "ms", "ns"]), // future use -> for now only MS format
     ];
     
     for fc in &fields_to_verify_contains {
-        let (field_name, field_value, field_members) = (&fc.0, &fc.1, &fc.2);
+        let (field_name,
+             field_value,
+             field_members) = (&fc.0,
+                               &fc.1,
+                               &fc.2,
+        );
         
         bool_list.push(verify_influx_contains_field(&field_members,
                                                     &field_value,
@@ -361,13 +354,49 @@ fn verify_influx_config(filename: &String,
                                                         ("variable",
                                                          &format!("{}", field_name)
                                                         ),
-                                                        ("value", field_value),
+                                                        ("value", &field_value),
                                                         ("members",
                                                          &format!("{:?}", field_members)
                                                         ),
                                                     ],
         ))
     }
+
+    bool_list
+}
+
+
+fn verify_influx_empty_field(value: &str,
+                             msg_tuple_list: &Vec<(&str, &str)>) -> bool {
+    
+    let err_msg = "\n#ERROR: config file: {file} influx <{influx_instance}> settings \"{variable}={value}\" {msg}\n\n>>> EXIT";
+    
+    if matches!(value, "") { // look for EMPTY
+        eprintln!("{}", tuple_formater(&err_msg.to_string(),
+                                       &msg_tuple_list,
+                                       false // flag HARDCODED -> no need to debug
+        ));
+        
+        false
+    }
+    else {
+
+        true
+    }
+}
+            
+
+fn verify_influx_config(filename: &String,
+                       influx: &Influx) {
+
+    // EMPTY FIELDS
+    let bool_list = verify_influx_empty_field_loop(filename,
+                                                   influx);
+
+    // ONLY ALLOWED VALUES in FIELDS
+    let bool_list = verify_influx_contains_field_loop(filename,
+                                                        influx,
+                                                        bool_list);
 
     // EXIT if any FALSE
     if bool_list.contains(&false) {
@@ -531,32 +560,22 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         process::exit(1);
     });
 
-    // /*
     //config field's verification // learn better way, let's say in Struct default ?
     for single_influx in &toml_config.all_influx.values {
 
         verify_influx_config(&cmd_args.filename,
                              &single_influx);
         
-        /*
-        //SECURE
-        verify_influx_secure(&cmd_args.filename,
-                            &single_influx.secure);
 
-        //TOKEN
-        verify_influx_token(&cmd_args.filename,
-                            &single_influx.token);
-        */
     }
-    // */
     
     /*
+    use toml::Value;
     let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
-    println!("\nTOML: {} <- {:?}",
+    println!("\nTOML: {:#?} <- {:?}",
              fookume["foookin"],
-             fookume,
-    );
-     */
+             fookume,);
+    */
 
     Ok(toml_config)
 }
