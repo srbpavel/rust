@@ -366,10 +366,7 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
 
 
 pub fn os_call_curl_flux(config: &TomlConfig,
-                         influx_uri: &String,
-                         influx_auth: &String,
-                         influx_header_accept: &String,
-                         influx_header_content: &String,
+                         influx: &InfluxCall,
                          influx_query: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
@@ -377,13 +374,13 @@ pub fn os_call_curl_flux(config: &TomlConfig,
             &config.template.curl.param_insecure,
             &config.template.curl.param_request,
             &config.template.curl.param_post,
-            influx_uri, // #URI
+            &influx.uri_query, // #URI
             &config.template.curl.param_header,
-            influx_auth, // #AUTH
+            &influx.auth, // #AUTH
             &config.template.curl.param_header,
-            influx_header_accept,
+            &influx.accept,
             &config.template.curl.param_header,
-            influx_header_content,
+            &influx.content,
             &config.template.curl.param_data,
             influx_query, // #QUERY
         ])
@@ -448,18 +445,17 @@ stderr: {}",
 
 
 pub fn os_call_curl(config: &TomlConfig,
-                   influx_uri: &String,
-                   influx_auth: &String,
-                   single_sensor_lp: &String) {
+                    influx: &InfluxCall,
+                    single_sensor_lp: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
         .args([
             &config.template.curl.param_insecure,
             &config.template.curl.param_request,
             &config.template.curl.param_post,
-            influx_uri, // #URI
+            &influx.uri_write, // #URI
             &config.template.curl.param_header,
-            influx_auth, // #AUTH
+            &influx.auth, // #AUTH
             &config.template.curl.param_data,
             single_sensor_lp, // #LINE_PROTOCOL
         ])
@@ -502,8 +498,7 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
 
 
 pub fn prepare_influx_format(config: &TomlConfig,
-                             //influx_inst: &Influx) -> (String, String, String, String, String) {
-            influx_inst: &Influx) -> InfluxCall {
+                             influx_inst: &Influx) -> InfluxCall {
 
     // URI_WRITE 
     let uri_write = tuple_formater(&format!("{}{}",
@@ -554,15 +549,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
                 accept: accept_template,
                 content: content_template,
     }
-    
-    /*
-    (uri_write,
-     uri_query,
-     auth,
-     accept_template,
-     content_template,
-    )
-    */
 }
 
 
@@ -635,13 +621,6 @@ fn run_flux_query(config: &TomlConfig,
                   
                   utc_influx_format: &String,
                   influx: &InfluxCall) {
-                  
-                  /*
-                  influx_uri_query: &String,
-                  influx_auth: &String,
-                  influx_accept: &String,
-                  influx_content: &String) {
-                  */
 
     let generic_influx_query = prepare_generic_flux_query_format(
         &config,
@@ -657,16 +636,7 @@ fn run_flux_query(config: &TomlConfig,
     }
     
     os_call_curl_flux(&config,
-                      &influx.uri_query,
-                      &influx.auth,
-                      &influx.accept,
-                      &influx.content,
-                      /*
-                      &influx_uri_query,
-                      &influx_auth,
-                      &influx_accept,
-                      &influx_content,
-                      */
+                      &influx,
                       &generic_influx_query);
 }
 
@@ -701,27 +671,18 @@ fn run_all_influx_instances(config: &TomlConfig,
         if single_influx.status {
             
             // ARGS for CURL
-
-            /*
-            let (influx_uri_write,
-                 influx_uri_query,
-                 influx_auth,
-                 influx_accept,
-                 influx_content ) = prepare_influx_format(&config, &single_influx); // TUPLE OF 5
-            */
-
             let influx_properties = prepare_influx_format(&config, &single_influx);
             
             if config.flag.debug_influx_uri {
                 println!("\n#URI<{n}>:\n{w}\n{q}",
                          n=single_influx.name,
-                         w=influx_properties.uri_write, //&influx_uri_write,
-                         q=influx_properties.uri_query, //&influx_uri_query
+                         w=influx_properties.uri_write,
+                         q=influx_properties.uri_query,
                 );
             }
             
             if config.flag.debug_influx_auth {
-                println!("\n#AUTH:\n{}", influx_properties.auth);//&influx_auth);
+                println!("\n#AUTH:\n{}", influx_properties.auth);
             }
             
             //METRIC_RESULT_LIST
@@ -766,8 +727,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 
                 // OS_CMD <- CURL
                 os_call_curl(&config,
-                             &influx_properties.uri_write,//&influx_uri_write,
-                             &influx_properties.auth,//&influx_auth,
+                             &influx_properties,
                              &generic_lp);
                 
                 // OS_CMD <- GENERIC FLUX_QUERY
@@ -779,12 +739,6 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &new_single_metric_result,
                         &dt.utc_influx_format,
                         &influx_properties,
-                        /*
-                        &influx_properties.uri_query,//&influx_uri_query,
-                        &influx_properties.auth,//&influx_auth,
-                        &influx_properties.accept,//&influx_accept,
-                        &influx_properties.content,//&influx_content,
-                        */
                     );
                 }
                 
