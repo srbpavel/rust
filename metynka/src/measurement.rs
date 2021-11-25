@@ -12,8 +12,8 @@ use std::any::{Any};
 
 use std::fmt::Debug;
 
-pub use crate::util::ts::{Dt};
-pub use crate::util::template_formater::tuple_formater;
+use crate::util::ts::{Dt};
+use crate::util::template_formater::tuple_formater;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 
@@ -212,11 +212,11 @@ fn csv_display_header(datatype: &String,
 }
 
 
-pub fn backup_data(config: &TomlConfig,
-                   result_list: &Vec<Record>,
-                   today_file_name: &String,
-                   metric: &TemplateSensors) {
-
+fn backup_data(config: &TomlConfig,
+               result_list: &Vec<Record>,
+               today_file_name: &String,
+               metric: &TemplateSensors) {
+    
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
     /* FOR TEST error handling */
     // let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
@@ -300,8 +300,8 @@ pub fn backup_data(config: &TomlConfig,
 }
 
 
-pub fn prepare_csv_header_format(config: &TomlConfig,
-                                 metric: &TemplateSensors) -> String {
+fn prepare_csv_header_format(config: &TomlConfig,
+                             metric: &TemplateSensors) -> String {
 
     tuple_formater(&metric.annotated_header, 
                    &vec![
@@ -316,9 +316,9 @@ pub fn prepare_csv_header_format(config: &TomlConfig,
 }
 
 
-pub fn prepare_csv_record_format(config: &TomlConfig,
-                                 record: &Record,
-                                 metric: &TemplateSensors) -> String {
+fn prepare_csv_record_format(config: &TomlConfig,
+                             record: &Record,
+                             metric: &TemplateSensors) -> String {
 
     tuple_formater(&metric.csv_annotated, 
                    &vec![
@@ -336,11 +336,11 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
 }
 
 
-pub fn prepare_generic_flux_query_format(config: &TomlConfig,
-                                         single_influx: &Influx,
-                                         generic_record: &Record,
-                                         metric: &TemplateSensors,
-                                         utc_influx_format: &String) -> String {
+fn prepare_generic_flux_query_format(config: &TomlConfig,
+                                     single_influx: &Influx,
+                                     generic_record: &Record,
+                                     metric: &TemplateSensors,
+                                     utc_influx_format: &String) -> String {
 
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
@@ -369,9 +369,49 @@ pub fn prepare_generic_flux_query_format(config: &TomlConfig,
 }
 
 
-pub fn os_call_curl_flux(config: &TomlConfig,
-                         influx: &InfluxCall,
-                         influx_query: &String) {
+fn parse_flux_result(stdout: Vec<u8>,
+                     _stderr: Vec<u8>) {
+
+    /* future use 
+    let error_data = String::from_utf8(stderr).expect("Found invalid UTF-8");
+    eprintln!("STDERR: {:#?}", error_data);
+    */
+
+    let data = String::from_utf8(stdout).expect("Found invalid UTF-8");
+    
+    if data.len() < 1 {
+        eprintln!("WARNING: flux result len: {}", data.len());
+    }
+    
+    let lines = data.lines();
+    
+    for line in lines {
+        if !line.contains("value") && line.trim().len() != 0 {
+            match line.split(",").last() {
+                Some(value) => match value.parse::<u64>() {
+                    Ok(1) => {
+                        println!("flux result count: {}", //\n{:#?}",
+                                 1,
+                        );
+                    },
+                    _ => { println!("WARNING: flux result: not 1\nREASON >>> {}\n",
+                                    data,
+                    );
+                    },
+                },
+                _ => { println!("flux RESULT: EMPTY\nREASON >>> {}\n",
+                                data,
+                );
+                }
+            }
+        }
+    }
+}
+
+
+fn os_call_curl_flux(config: &TomlConfig,
+                     influx: &InfluxCall,
+                     influx_query: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
         .args([
@@ -390,15 +430,16 @@ pub fn os_call_curl_flux(config: &TomlConfig,
         ])
         .output().expect("failed to execute command");
 
+    // parse FLUX stdout responde
     if config.flag.debug_flux_result {
-        // NO stderr for now
-        println!("\n#QUERY_RESULT:stdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+        parse_flux_result(curl_output.stdout,
+                          curl_output.stderr)
     }
 }
 
 
-pub fn os_call_metric(config: &TomlConfig,
-                      metric: &TemplateSensors) -> String {
+fn os_call_metric(config: &TomlConfig,
+                  metric: &TemplateSensors) -> String {
     
     let sensor_output = Command::new(&metric.program)
         .args(&metric.args)
@@ -425,8 +466,8 @@ stderr: {}",
 }
 
 
-pub fn os_call_metric_pipe(config: &TomlConfig,
-                           memory: &TemplateSensors) -> String {
+fn os_call_metric_pipe(config: &TomlConfig,
+                       memory: &TemplateSensors) -> String {
 
     let cmd_output = Command::new(&memory.program)
         .args(&memory.args)
@@ -463,9 +504,9 @@ stderr: {}",
 }
 
 
-pub fn os_call_curl(config: &TomlConfig,
-                    influx: &InfluxCall,
-                    single_sensor_lp: &String) {
+fn os_call_curl(config: &TomlConfig,
+                influx: &InfluxCall,
+                single_sensor_lp: &String) {
 
     let curl_output = Command::new(&config.template.curl.program)
         .args([
@@ -488,9 +529,9 @@ pub fn os_call_curl(config: &TomlConfig,
 }
 
 
-pub fn prepare_generic_lp_format(config: &TomlConfig,
-                                 generic_record: &Record,
-                                 metric: &TemplateSensors)  -> String {
+fn prepare_generic_lp_format(config: &TomlConfig,
+                             generic_record: &Record,
+                             metric: &TemplateSensors)  -> String {
 
     tuple_formater(&metric.generic_lp,
                    &vec![
@@ -516,9 +557,9 @@ pub fn prepare_generic_lp_format(config: &TomlConfig,
 }
 
 
-pub fn prepare_influx_format(config: &TomlConfig,
-                             influx_inst: &Influx) -> InfluxCall {
-
+fn prepare_influx_format(config: &TomlConfig,
+                         influx_inst: &Influx) -> InfluxCall {
+    
     // URI_WRITE 
     let uri_write = tuple_formater(&format!("{}{}",
                                             &config.template.curl.influx_uri_api,

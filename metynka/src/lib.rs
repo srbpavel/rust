@@ -70,7 +70,7 @@ impl CmdArgs {
                 eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
                 process::exit(1);
             }),
-            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
+            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen but we need to cover ?
         };
 
         return Ok(CmdArgs {query, filename, case_sensitive});
@@ -389,12 +389,14 @@ fn verify_influx_config(filename: &String,
 
     // EMPTY FIELDS
     let bool_list = verify_influx_empty_field_loop(filename,
-                                                   influx);
+                                                   influx,
+    );
 
     // ONLY ALLOWED VALUES in FIELDS
     let bool_list = verify_influx_contains_field_loop(filename,
                                                       influx,
-                                                      bool_list);
+                                                      bool_list,
+    );
 
     // EXIT if any FALSE
     if bool_list.contains(&false) {

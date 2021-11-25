@@ -7,10 +7,11 @@ use std::process;
 
 // /UTIL/TS
 mod util;
-pub use util::ts as timestamp;
+use util::ts as timestamp;
 
 // /SENSORS
 mod measurement;
+//use measurement::parse_sensors_data;
 
 // DEBUG -> measurement
 //use metynka::{TomlConfig, Influx};
@@ -69,9 +70,11 @@ fn main() {
     }
 
     // SENSOR
+    //parse_sensors_data(&config,
     measurement::parse_sensors_data(&config,
                                     &dt,
     );
+
     // QUICK SAMPLE CODE TEST
 
 
