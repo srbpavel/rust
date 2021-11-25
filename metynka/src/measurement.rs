@@ -54,11 +54,11 @@ pub struct PreRecord {
     pub value: String,
     pub id: String,
 
-    /*
+    // /*
     pub machine: String,
     pub carrier: String,
     pub valid: String,
-    */
+    // */
     
     pub host: String,
 
@@ -394,14 +394,16 @@ fn parse_flux_result(stdout: Vec<u8>,
                                  1,
                         );
                     },
-                    _ => { println!("WARNING: flux result: not 1\nREASON >>> {}\n",
-                                    data,
-                    );
+                    _ => {
+                        println!("WARNING: flux result: not 1\nDATA >>> {}\n",
+                                 data,
+                        );
                     },
                 },
-                _ => { println!("flux RESULT: EMPTY\nREASON >>> {}\n",
-                                data,
-                );
+                _ => {
+                    println!("flux RESULT: EMPTY\nDATA >>> {}\n",
+                             data,
+                    );
                 }
             }
         }
@@ -660,7 +662,9 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
                              & mut result_list,
-                             & metric_result_list,
+                             //& metric_result_list,
+                             //metric_result_list,
+                             & mut metric_result_list,
                              &dt);
 
     // BACKUP
@@ -703,7 +707,9 @@ fn run_flux_query(config: &TomlConfig,
 
 fn run_all_influx_instances(config: &TomlConfig,
                             result_list: & mut Vec<Record>,
-                            metric_result_list: &Vec<PreRecord>,
+                            //metric_result_list: & Vec<PreRecord>,
+                            //metric_result_list: Vec<PreRecord>,
+                            metric_result_list: & mut Vec<PreRecord>,
                             dt: &Dt) {
 
     for single_influx in &config.all_influx.values {
@@ -746,7 +752,8 @@ fn run_all_influx_instances(config: &TomlConfig,
             }
             
             //METRIC_RESULT_LIST
-            for single_metric_result in metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
+            //for single_metric_result in metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
+            for single_metric_result in metric_result_list.into_iter() { // neumim updatovat Struct in Vec !!! borrow ERR
                 let new_single_metric_result = Record {
                     ts: single_metric_result.ts,
                     value: single_metric_result.value.to_string(),
@@ -756,7 +763,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                     machine: single_influx.machine_id.to_string(),
                     measurement: single_metric_result.measurement.to_string(),
                     host: single_metric_result.host.to_string(),
-                    //..single_metric_result // Record -> Record
+                    //..single_metric_result // PreRecord -> Record
                 };
                 
                 //POKUS
@@ -769,7 +776,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 
                 };
                 println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
-                 */
+                */
                 
                 // PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
@@ -920,11 +927,11 @@ fn parse_json_via_pointer(config: &TomlConfig,
                 measurement: config.metrics[key].measurement.to_string(),
                 host: config.host.to_string(),
                 
-                /*
+                // /* POKUS
                 machine: String::from(""),
                 carrier: String::from(""),
                 valid: String::from(""),
-                */
+                // */
             };
             
             // METRIC RECORD_LIST -> Vec<Record>
