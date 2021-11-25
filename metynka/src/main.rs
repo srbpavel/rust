@@ -24,6 +24,16 @@ mod various;
 
 #[allow(unused)] // for quick sample test's at bottom
 fn main() {
+    // QUICK SAMPLE CODE TEST
+
+    /*
+    various::update_vector();
+    */
+
+    /*
+    various::update_struct();
+    */
+
     // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
          eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
@@ -77,7 +87,10 @@ fn main() {
 
     // QUICK SAMPLE CODE TEST
 
-
+    /*
+    various::update_struct();
+        
+    */
 
     /*
     let some_number = Some(false);

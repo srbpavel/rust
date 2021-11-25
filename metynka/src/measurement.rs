@@ -763,20 +763,16 @@ fn run_all_influx_instances(config: &TomlConfig,
                     machine: single_influx.machine_id.to_string(),
                     measurement: single_metric_result.measurement.to_string(),
                     host: single_metric_result.host.to_string(),
-                    //..single_metric_result // PreRecord -> Record
                 };
                 
                 //POKUS
                 /*
-                let update_single_record = PreRecord {
-                machine: single_influx.machine_id.to_string(),
-                carrier: single_influx.carrier.to_string(),
-                valid: single_influx.flag_valid_default.to_string(),
-                ..single_metric_result // * &
-                
-                };
-                println!("\n#PRE_RECORD <updated>:{:?}", update_single_record);
-                */
+                println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
+                single_metric_result.machine=single_influx.machine_id.to_string();
+                single_metric_result.carrier=single_influx.carrier.to_string();
+                single_metric_result.valid=single_influx.flag_valid_default.to_string();
+                println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
+                */                
                 
                 // PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
