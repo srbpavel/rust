@@ -171,31 +171,6 @@ pub struct Influx {
     pub flag_valid_default: bool,
 }
 
-/*
-impl Default for Influx {
-    fn default() -> Influx {
-        Influx {
-            name: "NAME".to_string(),
-            status: false,
-
-            secure: "https".to_string(),
-            
-            server: "localhost".to_string(),
-            port: 8086,
-            
-            bucket: "BUCKET".to_string(),
-            token: "TOKEN".to_string(),
-            org: "ORG".to_string(),
-            precision: "ms".to_string(),
-
-            machine_id: "MACHINE".to_string(),
-            carrier: "CARRIER".to_string(),
-            flag_valid_default: true,
-        }
-    }
-}
-*/
-
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {

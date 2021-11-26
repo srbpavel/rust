@@ -17,7 +17,6 @@ mod measurement;
 //use metynka::{TomlConfig, Influx};
 //use crate::metynka::TemplateSensors;
 
-
 // /VARIOUS
 mod various;
 
@@ -25,13 +24,8 @@ mod various;
 #[allow(unused)] // for quick sample test's at bottom
 fn main() {
     // QUICK SAMPLE CODE TEST
-
     /*
     various::update_vector();
-    */
-
-    /*
-    various::update_struct();
     */
 
     // COMMAND ARGS

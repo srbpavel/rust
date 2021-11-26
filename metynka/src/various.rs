@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-//use metynka::TemplateSensors;
 use crate::measurement::{PreRecord};
 
 
@@ -12,10 +11,19 @@ pub struct Horse {
 }
 
 
-//#[allow(unused_variables)]
+impl Default for Horse {
+    fn default() -> Horse {
+        Horse {
+            name: "NAME".to_string(),
+            color: "COLOR".to_string(),
+            age: 0,
+        }
+    }
+}
+
+
+
 #[allow(dead_code)]
-//#[allow(unused_assignments)]
-//#[allow(unused_mut)]
 pub fn update_vector() {
     let mut horses = vec![
         Horse {name: "metynka".to_string(),
@@ -26,6 +34,15 @@ pub fn update_vector() {
                    color: "brown".to_string(),
                    age: 6,
         },
+        // default -> EMPTY
+        //Horse::default(),
+
+        // default -> SOME FIELDS
+        Horse {name: "metik".to_string(),
+               ..Horse::default()
+        },
+        
+        // default -> ALL_FIELDS 
         Horse {name: "lord".to_string(),
                color: "chest nut".to_string(),
                age: 19,
@@ -41,14 +58,12 @@ pub fn update_vector() {
         ("white", "siml"),
     ]);
 
-    //println!("\n{:#?} / {:#?}", color_2_barva, color_2_barva.get("white"));
-    
     for horse in &mut horses {
-        // parted
+        // update -> parted
         horse.name = horse.name.to_uppercase();
         horse.age += 1;
         
-        // whole
+        // update -> whole Struct
         *horse = Horse {
             name: horse.name.to_uppercase(),
 
@@ -60,15 +75,10 @@ pub fn update_vector() {
                     None => &horse.color[..],
                 }
             ),
-            
-            //println!("\nBARVA: {:#?}", barva);
-
         };
-        
-        //println!("\n{:?}", horse);
     }
 
-    println!("\nHORSES cze:\n{:?}", horses);
+    println!("\nHORSES cze:\n{:#?}", horses);
 }
     
 

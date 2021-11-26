@@ -40,7 +40,6 @@ pub struct Record {
     pub valid: String,
 
     pub host: String,
-
     pub ts: i64,
 }
 
@@ -48,20 +47,16 @@ pub struct Record {
 #[derive(Debug)]
 pub struct PreRecord {
     pub key: String,
-
     pub measurement: String,
 
     pub value: String,
     pub id: String,
 
-    // /*
     pub machine: String,
     pub carrier: String,
     pub valid: String,
-    // */
     
     pub host: String,
-
     pub ts: i64,    
 }
 
@@ -151,6 +146,7 @@ fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
                       why);
 
             // OPEN FOR READ -> this instead EXIT as i did not find any better yet
+            // empty new Struct -> File { all fields with some values } DOES NOT HELP
             (OpenOptions::new()
              .read(true)
              .open(&today_file_name)
@@ -194,8 +190,7 @@ fn create_new_file(today_file_name: &Path) -> File {
                 .write(true)
                 .append(true)
                 .open(&today_file_name)
-                .expect("FAILED TO OPEN FILE")
-                //.unwrap() // ALSO NEED TEST
+                .expect("FAILED TO OPEN FILE") // ALSO NEED TEST
         },
         
         Ok(file) => file,
@@ -253,13 +248,10 @@ fn backup_data(config: &TomlConfig,
             let mut file = create_new_file(&today_file_name);
 
             // TEST if DIR+FILE OK but what about FULL_DISC ?
-            // CSV_DATATYPE
-            writeln!(file, "{}", &metric.annotated_datatype).unwrap_or_else(|err| {
-                eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-            });
-
-            // CSV_HEADER
-            writeln!(file, "{}", csv_header).unwrap_or_else(|err| {
+            writeln!(file, "{}\n{}",
+                     &metric.annotated_datatype,
+                     csv_header,
+            ).unwrap_or_else(|err| {
                 eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             });
         }
