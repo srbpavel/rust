@@ -61,6 +61,25 @@ pub struct PreRecord {
 }
 
 
+impl Default for PreRecord {
+    fn default() -> PreRecord {
+        PreRecord {
+            key: "KEY".to_string(),
+            ts: 0,
+            value: "0".to_string(),
+
+            id: "ID".to_string(),
+            measurement: "MEASUREMENT".to_string(),
+            host: "HOST".to_string(),
+            
+            machine: "MACHINE".to_string(),
+            carrier: "CARRIER".to_string(),
+            valid: "false".to_string(),
+        }
+    }
+}
+
+
 // compare STRUCT's via contains
 impl PartialEq for Record
 {
@@ -199,7 +218,7 @@ fn create_new_file(today_file_name: &Path) -> File {
 
 
 fn csv_display_header(datatype: &String,
-                      tags_and_fields: String) {
+                      tags_and_fields: &String) {
     println!("{}\n{}",
              &datatype,
              tags_and_fields,
@@ -242,7 +261,12 @@ fn backup_data(config: &TomlConfig,
         // format CSV HEADER
         let csv_header = prepare_csv_header_format(&config,
                                                    &metric);
-    
+
+        if config.flag.debug_backup {
+            csv_display_header(&metric.annotated_datatype,
+                               &csv_header);
+        }
+        
         if !today_file_name.exists() {
             // GET OLD FILE for append OR NEW 
             let mut file = create_new_file(&today_file_name);
@@ -256,11 +280,6 @@ fn backup_data(config: &TomlConfig,
             });
         }
 
-        if config.flag.debug_backup {
-            csv_display_header(&metric.annotated_datatype,
-                               csv_header);
-        }
-        
         let (mut file, file_status) = open_file_to_append(&today_file_name);
 
         if !file_status {
@@ -311,7 +330,6 @@ fn prepare_csv_header_format(config: &TomlConfig,
 
 fn prepare_csv_record_format(config: &TomlConfig,
                              record: &Record,
-                             //ppp record: &PreRecord,
                              metric: &TemplateSensors) -> String {
 
     tuple_formater(&metric.csv_annotated, 
@@ -333,7 +351,6 @@ fn prepare_csv_record_format(config: &TomlConfig,
 fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      single_influx: &Influx,
                                      generic_record: &Record,
-                                     //pppgeneric_record: &PreRecord,
                                      metric: &TemplateSensors,
                                      utc_influx_format: &String) -> String {
 
@@ -441,11 +458,11 @@ fn os_call_metric(config: &TomlConfig,
     let sensor_output = Command::new(&metric.program)
         .args(&metric.args)
         .output()
-        //.expect("failed to execute command"); // not safe
         .unwrap_or_else(|err| {
             eprintln!("\nEXIT: Problem parsing METRIC PROGRAM from OS CALL program\nREASON >>> {}", err);
-            process::exit(1); // fix this not to exit but skip record
+            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
         });
+        //.expect("failed to execute command"); // not safe
     
     let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
     let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
@@ -468,10 +485,9 @@ fn os_call_metric_pipe(config: &TomlConfig,
 
     let cmd_output = Command::new(&memory.program)
         .args(&memory.args)
-        //.stdout(Stdio::piped()).spawn().unwrap(); // NOT SAFE -> change
         .stdout(Stdio::piped()).spawn().unwrap_or_else(|err| {
             eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL program\nREASON >>> {}", err);
-            process::exit(1); // fix this not to exit but skip record
+            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
         });
 
     
@@ -479,12 +495,12 @@ fn os_call_metric_pipe(config: &TomlConfig,
         .args(&memory.pipe_args)
         .stdin(cmd_output.stdout.unwrap()) // NOT SAFE -> change
         .output()
-        //.expect("failed to execute command")//; // catch also error here, otherwise !panic
         .unwrap_or_else(|err| {
             eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL pipe\nREASON >>> {}", err);
-            process::exit(1); // fix this not to exit but skip record
+            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
         });
-        
+        //.expect("failed to execute command")//; // catch also error here, otherwise !panic
+    
     let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
     let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
 
@@ -528,7 +544,6 @@ fn os_call_curl(config: &TomlConfig,
 
 fn prepare_generic_lp_format(config: &TomlConfig,
                              generic_record: &Record,
-                             //ppp generic_record: &PreRecord,
                              metric: &TemplateSensors)  -> String {
 
     tuple_formater(&metric.generic_lp,
@@ -610,80 +625,10 @@ fn prepare_influx_format(config: &TomlConfig,
 }
 
 
-pub fn parse_sensors_data(config: &TomlConfig,
-                          dt: &Dt) {
-
-    // RESULT_LIST
-    let mut result_list: Vec<Record> = Vec::new();
-    //ppp+ let mut result_list: Vec<PreRecord> = Vec::new();
-    //ppp let mut result_list: Vec<PreRecord> = Vec::new();
-
-    // METRIC_RESULT_LIST
-    let mut metric_result_list: Vec<PreRecord> = Vec::new();
-
-    // loop via METRICS
-    for key in config.metrics.keys() {
-        if config.metrics[key].flag_status {
-            println!("#METRIC: {metric} -> MEASUREMENT: {measurement}",
-                     measurement=config.metrics[key].measurement,
-                     metric=config.metrics[key].field,
-            );
-
-            // OS CALL program or pipe_program
-            let metric_json: serde_json::Value = os_call_program(&config,
-                                                                 key);
-
-            //TEST JSON or skip
-            
-            // loop via SENSORS
-            for single_sensor in &config.metrics[key].values {
-                if single_sensor.status {
-                    // JSON single POINTER
-                    parse_json_via_pointer(&config,
-                                           & mut metric_result_list,
-                                           &single_sensor,
-                                           &metric_json,
-                                           &key,
-                                           &dt);
-                    
-                } /* if single_sensorstatus */
-            } /* for single_sensor in each metric*/
-        } /* if metric status */
-    } /* for key in metrics */
-
-    if config.flag.debug_metric_record {
-        for single_metric_result in &metric_result_list {
-            println!("\n {:?}", single_metric_result);
-        }
-    }
-
-    // INFLUX INSTANCES
-    run_all_influx_instances(&config,
-                             & mut result_list,
-                             //ppp &result_list,
-                             //& metric_result_list,
-                             //metric_result_list,
-                             & mut metric_result_list,
-                             //ppp& metric_result_list,
-                             &dt);
-
-    // BACKUP
-    for key in config.metrics.keys() {
-        if config.metrics[key].flag_status {
-            backup_data(&config,
-                        &result_list,
-                        &dt.today_file_name,
-                        &config.metrics[key]);
-        }
-    }
-}
-
-
 fn run_flux_query(config: &TomlConfig,
                   config_metric: &TemplateSensors,
                   single_influx: &Influx,
                   metric_result: &Record,
-                  //pppmetric_result: &PreRecord,
                   utc_influx_format: &String,
                   influx: &InfluxCall) {
 
@@ -708,36 +653,12 @@ fn run_flux_query(config: &TomlConfig,
 
 fn run_all_influx_instances(config: &TomlConfig,
                             result_list: & mut Vec<Record>,
-                            //ppp+ result_list: & mut Vec<PreRecord>,
-                            //ppp result_list: &Vec<PreRecord>,
-                            
-                            //metric_result_list: & Vec<PreRecord>,
-                            //metric_result_list: Vec<PreRecord>,
                             metric_result_list: & mut Vec<PreRecord>,
-                            //pppmetric_result_list: & Vec<PreRecord>,
                             dt: &Dt) {
 
     for single_influx in &config.all_influx.values {
         // MATCH HTTP/HTTPS -> future use
-        match &single_influx.secure.to_lowercase()[..] {
-            "http" => {
-                eprintln!("\n{} / http://{}:{}",
-                          single_influx.status,
-                          single_influx.server,
-                          single_influx.port);
-            },
-            "https" => {
-                eprintln!("\n{} / https://{}:{}",
-                          single_influx.status,
-                          single_influx.server,
-                          single_influx.port);
-            },
-            other => {
-                eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
-                          single_influx.server,
-                          other); // this should never happen as config init verification
-            },
-        }
+        arm_secure(&single_influx);
         
         if single_influx.status {
             
@@ -757,43 +678,35 @@ fn run_all_influx_instances(config: &TomlConfig,
             }
             
             //METRIC_RESULT_LIST
-            //for single_metric_result in metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
-            for single_metric_result in metric_result_list.into_iter() { // neumim updatovat Struct in Vec !!! borrow ERR
-            //ppp for single_metric_result in metric_result_list {
-                // /* ppp
+            for single_metric_result in metric_result_list.into_iter() {
                 let new_single_metric_result = Record {
-                    ts: single_metric_result.ts,
-                    value: single_metric_result.value.to_string(),
-                    carrier: single_influx.carrier.to_string(),
+                    measurement: single_metric_result.measurement.to_string(),
+
                     id: single_metric_result.id.to_string(),
+                    value: single_metric_result.value.to_string(),
+
+                    carrier: single_influx.carrier.to_string(),
                     valid: single_influx.flag_valid_default.to_string(),
                     machine: single_influx.machine_id.to_string(),
-                    measurement: single_metric_result.measurement.to_string(),
+
                     host: single_metric_result.host.to_string(),
+                    ts: single_metric_result.ts,
                 };
-                // */
                 
-                //POKUS
-                // /*
-                // println!("\n#PRE_RECORD <original>:{:#?}", single_metric_result);
-                // *&
+                // *& / UPDATE Struct, but still cannot use PreRecord in Vec !!!
                 single_metric_result.machine=single_influx.machine_id.to_string();
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
+                // DEBUG println!("<UPDATED> {:?}", single_metric_result);
 
-                // println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
-                // */                
-
-                // PreRecord <- Record populated with Influx properties
+                // display PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
                     println!("\n{:?}", new_single_metric_result);
-                    //ppp println!("\n{:?}", single_metric_result);
                 }
                 
                 // LP via Record
                 let generic_lp = prepare_generic_lp_format(&config,
                                                            &new_single_metric_result,
-                                                           //ppp &single_metric_result,
                                                            &config.metrics[&single_metric_result.key.to_string()],
                 );
                 
@@ -813,23 +726,14 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &config.metrics[&single_metric_result.key.to_string()],
                         &single_influx,
                         &new_single_metric_result,
-                        //ppp &single_metric_result,
                         &dt.utc_influx_format,
                         &influx_properties,
                     );
                 }
-                
-                /* // RECORD_LIST -> Vec<PreRecord>
-                if !result_list.contains(single_metric_result) { 
-                    result_list.push(single_metric_result)
-                }
-                */
 
-                // /*ppp
                 if !result_list.contains(&new_single_metric_result) { 
                     result_list.push(new_single_metric_result)
                 }
-                // */
             } /* for single_metric */
         } /* single_influx.status*/
     } /* all_influx.values */
@@ -847,7 +751,7 @@ fn os_call_program(config: &TomlConfig,
             
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
-                process::exit(1); // fix this not to exit but skip record
+                process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
             }) 
         },
         
@@ -858,12 +762,35 @@ fn os_call_program(config: &TomlConfig,
             
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
-                process::exit(1); // fix this not to exit but skip record
+                process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
             })
         }
     };
 
     metric_json
+}
+
+
+fn arm_secure(single_influx: &Influx) {
+    match &single_influx.secure.to_lowercase()[..] {
+        "http" => {
+            eprintln!("\n{} / http://{}:{}",
+                      single_influx.status,
+                      single_influx.server,
+                      single_influx.port);
+        },
+        "https" => {
+            eprintln!("\n{} / https://{}:{}",
+                      single_influx.status,
+                      single_influx.server,
+                      single_influx.port);
+        },
+        other => {
+            eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
+                      single_influx.server,
+                      other); // this should never happen as config init verification
+        },
+    }
 }
 
 
@@ -894,20 +821,6 @@ fn parse_json_via_pointer(config: &TomlConfig,
         }
     };
 
-    // TO KEEP IN MIND
-    
-    /* !panic if WRONG POINTER path
-    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap(); //&
-     */
-    
-    /* EXIT if WRONG POINTER path but we want to get rid of all exit
-    let single_sensor_pointer_value = metric_json.pointer(&single_sensor.pointer).unwrap_or_else(||{
-    eprintln!("\nEXIT: Problem parsing POINTER from METRIC JSON\nREASON >>> maybe not valid JSON path: <{}>",
-    single_sensor.pointer);
-    process::exit(1);
-    });
-    */
-    
     // DEBUG true/false SENSORS
     if config.flag.debug_pointer_output {
         println!("path_status: {ps}\nstatus: {s}\nname: {n}\npointer: {p}\nvalue: {v:?}",
@@ -931,7 +844,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
             },
             None => {
                 eprintln!("unwrap: !!! none !!!");
-                process::exit(1); // tohle neumim nahradit, ale nemelo by nastat ?
+                (0.0, false) // instead EXIT
             }
         };
         
@@ -943,18 +856,75 @@ fn parse_json_via_pointer(config: &TomlConfig,
                 id: single_sensor.name.to_string(),
                 measurement: config.metrics[key].measurement.to_string(),
                 host: config.host.to_string(),
-                
-                // /* POKUS
-                machine: String::from(""),
-                carrier: String::from(""),
-                valid: String::from(""),
-                // */
+                ..PreRecord::default()
             };
+
+            // DEBUG println!("{:?}", &single_record);
             
             // METRIC RECORD_LIST -> Vec<Record>
             if !metric_result_list.contains(&single_record) { 
                 metric_result_list.push(single_record)
             }
+        }
+    }
+}
+
+
+pub fn parse_sensors_data(config: &TomlConfig,
+                          dt: &Dt) {
+
+    // RESULT_LIST
+    let mut result_list: Vec<Record> = Vec::new();
+
+    // METRIC_RESULT_LIST
+    let mut metric_result_list: Vec<PreRecord> = Vec::new();
+
+    // loop via METRICS
+    for key in config.metrics.keys() {
+        if config.metrics[key].flag_status {
+            println!("#METRIC: {metric} -> MEASUREMENT: {measurement}",
+                     measurement=config.metrics[key].measurement,
+                     metric=config.metrics[key].field,
+            );
+
+            // OS CALL program or pipe_program
+            let metric_json: serde_json::Value = os_call_program(&config,
+                                                                 key);
+
+            // loop via SENSORS
+            for single_sensor in &config.metrics[key].values {
+                if single_sensor.status {
+                    // JSON single POINTER
+                    parse_json_via_pointer(&config,
+                                           & mut metric_result_list,
+                                           &single_sensor,
+                                           &metric_json,
+                                           &key,
+                                           &dt);
+                }
+            }
+        }
+    }
+
+    if config.flag.debug_metric_record {
+        for single_metric_result in &metric_result_list {
+            println!("\n {:?}", single_metric_result);
+        }
+    }
+
+    // INFLUX INSTANCES
+    run_all_influx_instances(&config,
+                             & mut result_list,
+                             & mut metric_result_list,
+                             &dt);
+
+    // BACKUP
+    for key in config.metrics.keys() {
+        if config.metrics[key].flag_status {
+            backup_data(&config,
+                        &result_list,
+                        &dt.today_file_name,
+                        &config.metrics[key]);
         }
     }
 }
