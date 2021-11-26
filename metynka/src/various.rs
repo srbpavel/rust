@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::measurement::{PreRecord};
+//use crate::measurement::{PreRecord};
 
 
 #[derive(Debug)]
@@ -56,7 +56,7 @@ pub fn update_vector() {
 
         // default -> SOME FIELDS
         Horse {name: "lupo".to_string(),
-               color: "White".to_string(),
+               color: "WHITE".to_string(),
                age: 7,
                ..Horse::default() // no need here
         },
@@ -87,10 +87,9 @@ pub fn update_vector() {
             age: horse.age,
 
             color: String::from(
-                match color_2_barva.get(&horse.color[..]) {
+                match color_2_barva.get(&horse.color.to_lowercase()[..]) {
                     Some(barva) => barva,
-                    //None => &horse.color[..],
-                    None => "COLOR", // color not found in hash, so default for FALSE flag verification
+                    None => "COLOR", // color not found in hash_map, so default for FALSE flag verification
                 }
             ),
 
@@ -121,89 +120,6 @@ pub fn update_vector() {
     );
 }
     
-
-#[allow(unused_variables)]
-#[allow(dead_code)]
-#[allow(unused_assignments)]
-#[allow(unused_mut)]
-pub fn update_struct() {
-    let mut list: Vec<&PreRecord> = Vec::new();
-
-    let mut first = &PreRecord {
-        key: "key".to_string(),
-        ts: 1234567890,
-        value: "".to_string(),
-        id: "id".to_string(),
-        measurement: "measurement".to_string(),
-        host: "host".to_string(),
-        machine: String::from(""),
-        carrier: String::from(""),
-        valid: String::from(""),
-    };
-
-    list.push(first);
-
-    println!("first: {:#?}",
-             first,
-    );
-    
-    let mut second = &PreRecord {
-        key: "KEY".to_string(),
-        ts: 9876543210,
-        value: "".to_string(),
-        id: "ID".to_string(),
-        measurement: "MEASUREMENT".to_string(),
-        host: "HOST".to_string(),
-        machine: String::from(""),
-        carrier: String::from(""),
-        valid: String::from(""),
-    };
-
-    list.push(second);
-
-    println!("second: {:#?}",
-             second,
-    );
-
-    for l in &mut list {
-        //let mut l = &PreRecord {
-
-        //*&l.key = String::from("k_k_k")
-
-
-        /*
-        let l = &PreRecord {
-            key: l.key.to_string(),
-            
-            ts: l.ts,
-            
-            id: l.id.to_string(),
-            measurement: l.measurement.to_string(),
-            host: l.host.to_string(),
-            machine: "machine".to_string(), //l.machine.to_string(),
-            carrier: "carrier".to_string(), //l.carrier.to_string(),
-            valid: "valid".to_string(), //l.valid.to_string(),
-            
-            //id: "II".to_string(), measurement: "MMM".to_string(), host: "HHH".to_string(), machine: String::from("MMM"), carrier: String::from("CCC"),
-            //valid: String::from("VVV"),
-            
-            value: "spongebob".to_string(),
-        };
-        */
-
-        /*
-        println!("l: {:#?}",
-                 &l,
-        );
-        */
-    }
-
-    println!("list: {:?}",
-             list,
-    );
-    
-}
-
 
 #[allow(dead_code)]
 pub fn parse_sentence(s: &str) -> usize {
