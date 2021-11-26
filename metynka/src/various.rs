@@ -1,6 +1,8 @@
-//use metynka::TemplateSensors;
+use std::collections::HashMap;
 
+//use metynka::TemplateSensors;
 use crate::measurement::{PreRecord};
+
 
 #[derive(Debug)]
 pub struct Horse {
@@ -25,38 +27,48 @@ pub fn update_vector() {
                    age: 6,
         },
         Horse {name: "lord".to_string(),
-               color: "chest_nut".to_string(),
+               color: "chest nut".to_string(),
                age: 19,
         },
     ];
 
-    for horse in &mut horses {
-        horse.age += 1;
-        horse.name = horse.name.to_uppercase();
+    println!("\n#HORSES_eng:\n{:?}", horses);
+    
+    let color_2_barva = HashMap::from([
+        ("black", "cerny"),
+        ("brown", "hnedak"),
+        ("chest_nut", "ryzak"),
+        ("white", "siml"),
+    ]);
 
+    //println!("\n{:#?} / {:#?}", color_2_barva, color_2_barva.get("white"));
+    
+    for horse in &mut horses {
+        // parted
+        horse.name = horse.name.to_uppercase();
+        horse.age += 1;
+        
+        // whole
         *horse = Horse {
             name: horse.name.to_uppercase(),
 
             age: horse.age,
 
-            color: match &horse.color[..] {
-                "black" => String::from("onyx"),
-                _ => String::from(&horse.color),
-            }
+            color: String::from(
+                match color_2_barva.get(&horse.color[..]) {
+                    Some(barva) => barva,
+                    None => &horse.color[..],
+                }
+            ),
+            
+            //println!("\nBARVA: {:#?}", barva);
+
         };
         
-        println!("\n{:?}", horse);
+        //println!("\n{:?}", horse);
     }
 
-    println!("\n{:#?}", horses);
-    
-    /*
-    let mut v = vec![100, 32, 57];
-    for i in &mut v {
-        *i += 50;
-    }
-    println!("{:#?}", v);
-    */
+    println!("\nHORSES cze:\n{:?}", horses);
 }
     
 

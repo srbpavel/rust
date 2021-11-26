@@ -214,6 +214,7 @@ fn csv_display_header(datatype: &String,
 
 fn backup_data(config: &TomlConfig,
                result_list: &Vec<Record>,
+               //pppresult_list: &Vec<PreRecord>,
                today_file_name: &String,
                metric: &TemplateSensors) {
     
@@ -318,6 +319,7 @@ fn prepare_csv_header_format(config: &TomlConfig,
 
 fn prepare_csv_record_format(config: &TomlConfig,
                              record: &Record,
+                             //ppp record: &PreRecord,
                              metric: &TemplateSensors) -> String {
 
     tuple_formater(&metric.csv_annotated, 
@@ -339,6 +341,7 @@ fn prepare_csv_record_format(config: &TomlConfig,
 fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      single_influx: &Influx,
                                      generic_record: &Record,
+                                     //pppgeneric_record: &PreRecord,
                                      metric: &TemplateSensors,
                                      utc_influx_format: &String) -> String {
 
@@ -533,6 +536,7 @@ fn os_call_curl(config: &TomlConfig,
 
 fn prepare_generic_lp_format(config: &TomlConfig,
                              generic_record: &Record,
+                             //ppp generic_record: &PreRecord,
                              metric: &TemplateSensors)  -> String {
 
     tuple_formater(&metric.generic_lp,
@@ -619,6 +623,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
+    //ppp+ let mut result_list: Vec<PreRecord> = Vec::new();
+    //ppp let mut result_list: Vec<PreRecord> = Vec::new();
 
     // METRIC_RESULT_LIST
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
@@ -662,9 +668,11 @@ pub fn parse_sensors_data(config: &TomlConfig,
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
                              & mut result_list,
+                             //ppp &result_list,
                              //& metric_result_list,
                              //metric_result_list,
                              & mut metric_result_list,
+                             //ppp& metric_result_list,
                              &dt);
 
     // BACKUP
@@ -683,6 +691,7 @@ fn run_flux_query(config: &TomlConfig,
                   config_metric: &TemplateSensors,
                   single_influx: &Influx,
                   metric_result: &Record,
+                  //pppmetric_result: &PreRecord,
                   utc_influx_format: &String,
                   influx: &InfluxCall) {
 
@@ -707,9 +716,13 @@ fn run_flux_query(config: &TomlConfig,
 
 fn run_all_influx_instances(config: &TomlConfig,
                             result_list: & mut Vec<Record>,
+                            //ppp+ result_list: & mut Vec<PreRecord>,
+                            //ppp result_list: &Vec<PreRecord>,
+                            
                             //metric_result_list: & Vec<PreRecord>,
                             //metric_result_list: Vec<PreRecord>,
                             metric_result_list: & mut Vec<PreRecord>,
+                            //pppmetric_result_list: & Vec<PreRecord>,
                             dt: &Dt) {
 
     for single_influx in &config.all_influx.values {
@@ -754,6 +767,8 @@ fn run_all_influx_instances(config: &TomlConfig,
             //METRIC_RESULT_LIST
             //for single_metric_result in metric_result_list { // neumim updatovat Struct in Vec !!! borrow ERR
             for single_metric_result in metric_result_list.into_iter() { // neumim updatovat Struct in Vec !!! borrow ERR
+            //ppp for single_metric_result in metric_result_list {
+                // /* ppp
                 let new_single_metric_result = Record {
                     ts: single_metric_result.ts,
                     value: single_metric_result.value.to_string(),
@@ -764,25 +779,31 @@ fn run_all_influx_instances(config: &TomlConfig,
                     measurement: single_metric_result.measurement.to_string(),
                     host: single_metric_result.host.to_string(),
                 };
+                // */
                 
                 //POKUS
-                /*
-                println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
+                // /*
+                // println!("\n#PRE_RECORD <original>:{:#?}", single_metric_result);
+                // *&
                 single_metric_result.machine=single_influx.machine_id.to_string();
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
-                println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
-                */                
-                
+
+                // println!("\n#PRE_RECORD <updated>:{:#?}", single_metric_result);
+                // */                
+
                 // PreRecord <- Record populated with Influx properties
                 if config.flag.debug_metric_record {
                     println!("\n{:?}", new_single_metric_result);
+                    //ppp println!("\n{:?}", single_metric_result);
                 }
                 
                 // LP via Record
                 let generic_lp = prepare_generic_lp_format(&config,
                                                            &new_single_metric_result,
-                                                           &config.metrics[&single_metric_result.key.to_string()]);
+                                                           //ppp &single_metric_result,
+                                                           &config.metrics[&single_metric_result.key.to_string()],
+                );
                 
                 if config.flag.debug_influx_lp {
                     println!("\n#LP:\n{}", generic_lp);
@@ -800,15 +821,23 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &config.metrics[&single_metric_result.key.to_string()],
                         &single_influx,
                         &new_single_metric_result,
+                        //ppp &single_metric_result,
                         &dt.utc_influx_format,
                         &influx_properties,
                     );
                 }
                 
-                // RECORD_LIST -> Vec<Record>
+                /* // RECORD_LIST -> Vec<PreRecord>
+                if !result_list.contains(single_metric_result) { 
+                    result_list.push(single_metric_result)
+                }
+                */
+
+                // /*ppp
                 if !result_list.contains(&new_single_metric_result) { 
                     result_list.push(new_single_metric_result)
                 }
+                // */
             } /* for single_metric */
         } /* single_influx.status*/
     } /* all_influx.values */
