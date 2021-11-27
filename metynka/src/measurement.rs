@@ -40,7 +40,7 @@ pub struct Record {
     pub valid: String,
 
     pub host: String,
-    pub ts: i64,
+    pub ts: u64,
 }
 
 
@@ -57,14 +57,14 @@ pub struct PreRecord {
     pub valid: String,
     
     pub host: String,
-    pub ts: i64,    
+    pub ts: u64,
 }
 
 
 impl PreRecord {
     pub fn new(config: &TomlConfig,
                key: &str,
-               ts: i64,
+               ts: u64,
                value: f64,
                id: &str) -> PreRecord {
 
@@ -892,7 +892,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
 
             // DEBUG println!("{:?}", &single_record);
             
-            // METRIC RECORD_LIST -> Vec<Record>
+            // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
             if !metric_result_list.contains(&single_record) { 
                 metric_result_list.push(single_record)
             }

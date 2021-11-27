@@ -3,7 +3,7 @@ use chrono::{Utc, Local, Datelike, Timelike};
 
 #[derive(Debug)]
 pub struct Dt {
-    pub ts: i64,
+    pub ts: u64,
     pub local_influx_format: String,
     pub utc_influx_format: String,
     pub today_file_name: String,
@@ -15,7 +15,7 @@ pub struct Dt {
 pub fn ts_now(debug: bool) -> Dt {
     let local = Local::now();
     let utc = Utc::now();
-    let ts: i64 = local.timestamp_millis();
+    let ts: u64 = local.timestamp_millis() as u64;
 
     // local - 1 HARDCODED -> niet goed jochie @= jaa matje
     let local_influx_format = format!("{:04}-{:02.}-{:02.}T{:02}:{:02.}:{:02.}.{}Z",
