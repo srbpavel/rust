@@ -61,13 +61,32 @@ pub struct PreRecord {
 }
 
 
-impl Default for PreRecord {
-    fn default() -> PreRecord {
+impl PreRecord {
+    pub fn new(config: &TomlConfig,
+               key: &str,
+               ts: i64,
+               value: f64,
+               id: &str) -> PreRecord {
+
+        // HERE I CAN put some TEST's to handle ERROR        
+        PreRecord {
+            key: key.to_string(),
+            ts: ts,
+            value: value.to_string(),
+            id: id.to_string(),
+            measurement: config.metrics[key].measurement.to_string(),
+            host: config.host.to_string(),
+            ..PreRecord::default()
+        }
+    }
+
+    
+    pub fn default() -> PreRecord {
         PreRecord {
             key: "KEY".to_string(),
             ts: 0,
             value: "0".to_string(),
-
+            
             id: "ID".to_string(),
             measurement: "MEASUREMENT".to_string(),
             host: "HOST".to_string(),
@@ -849,8 +868,19 @@ fn parse_json_via_pointer(config: &TomlConfig,
         };
         
         if pointer_type_status {
+            // /* IMPLEMENT new::
+            let single_record = PreRecord::new(
+                &config,
+                key,
+                dt.ts,
+                pointer_parsed_float,
+                &single_sensor.name,
+            );
+            // */
+            
+            /* FIELD: VALUE
             let single_record = PreRecord {
-                key:key.to_string(),
+                key: key.to_string(),
                 ts: dt.ts,
                 value: pointer_parsed_float.to_string(),
                 id: single_sensor.name.to_string(),
@@ -858,6 +888,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
                 host: config.host.to_string(),
                 ..PreRecord::default()
             };
+            */
 
             // DEBUG println!("{:?}", &single_record);
             
