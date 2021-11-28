@@ -18,56 +18,56 @@ use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 
 #[derive(Debug)]
-pub struct InfluxCall {
-    pub uri_write: String,
-    pub uri_query: String,
-    pub auth: String,
-    pub accept: String,
-    pub content: String,
+struct InfluxCall {
+    uri_write: String,
+    uri_query: String,
+    auth: String,
+    accept: String,
+    content: String,
 }
 
 
 // BACKUP CVS 
 #[derive(Debug)]
-pub struct Record {
-    pub measurement: String,
+struct Record {
+    measurement: String,
 
-    pub value: String,
-    pub id: String,
+    value: String,
+    id: String,
 
-    pub machine: String,
-    pub carrier: String,
-    pub valid: String,
+    machine: String,
+    carrier: String,
+    valid: String,
 
-    pub host: String,
-    pub ts: u64,
+    host: String,
+    ts: u64,
 }
 
 
 #[derive(Debug)]
-pub struct PreRecord {
-    pub key: String,
-    pub measurement: String,
+struct PreRecord {
+    key: String,
+    measurement: String,
 
-    pub value: String,
-    pub id: String,
+    value: String,
+    id: String,
 
-    pub machine: String,
-    pub carrier: String,
-    pub valid: String,
+    machine: String,
+    carrier: String,
+    valid: String,
     
-    pub host: String,
-    pub ts: u64,
+    host: String,
+    ts: u64,
 }
 
 
 impl PreRecord {
-    pub fn new(config: &TomlConfig,
-               key: &str,
-               ts: u64,
-               value: f64,
-               id: &str) -> PreRecord {
-
+    fn new(config: &TomlConfig,
+           key: &str,
+           ts: u64,
+           value: f64,
+           id: &str) -> PreRecord {
+        
         // HERE I CAN put some TEST's to handle ERROR        
         PreRecord {
             key: key.to_string(),
@@ -81,7 +81,7 @@ impl PreRecord {
     }
 
     
-    pub fn default() -> PreRecord {
+    fn default() -> PreRecord {
         PreRecord {
             key: "KEY".to_string(),
             ts: 0,
@@ -190,6 +190,12 @@ fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
              .open(&today_file_name)
              .expect("FAILED TO OPEN FILE just for READ"),
              false)
+
+            /*
+            (File::open(&today_file_name).
+             expect("FAILED TO OPEN FILE just for READ"),
+             false)
+            */
         },
     }
 }
@@ -868,7 +874,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
         };
         
         if pointer_type_status {
-            // /* IMPLEMENT new::
+            // /* IMPLEMENT ::new
             let single_record = PreRecord::new(
                 &config,
                 key,
