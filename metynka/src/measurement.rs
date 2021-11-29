@@ -119,10 +119,13 @@ impl PartialEq for PreRecord
 // https://doc.rust-lang.org/std/any/index.html
 // https://doc.rust-lang.org/std/any/trait.Any.html
 // DOUCIT + POCHOPIT zpusob volani
-fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
+//fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
+fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
     let value_any = value as &dyn Any;
 
-    let (value, status): (f64, bool) = match value_any.downcast_ref::<String>() {
+    //let (value, status): (f64, bool) = match value_any.downcast_ref::<String>() {
+    //let value: f64 = match value_any.downcast_ref::<String>() {
+    let value = match value_any.downcast_ref::<String>() {
         Some(as_string) => {             
             /*
             println!("STRING len: {len} / str: <{str}> / debug: {str:?}",
@@ -133,8 +136,31 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 
             match as_string.parse::<f64>() {
                 Err(_why) => {
+                    /*
+                    eprintln!("POINTER_TYPE: {:?} not f64\nREASON>>> {:?}",
+                              as_string,
+                              why,
+                    );
+                    */
+
                     // JSON VALUE wrapped with "
-                    let float_via_replace = str::replace(as_string, "\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
+                    match str::replace(as_string, "\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
+                        .trim()
+                        .parse::<f64>()
+                    { // not safe // NEED ERR handling
+                        Ok(value) => Some(value),
+                        Err(why) => {
+                            eprintln!("POINTER_TYPE_TRIM: {:?} not succed\nREASON>>> {:?}",
+                                      as_string,
+                                      why,
+                            );
+
+                            None
+                        }
+                    } 
+                    
+                    /* 2
+                    let float_via_replace = str::replace(as_string, "@\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
                         .trim()
                         .parse::<f64>()
                         .expect("JSOIN POINTER result not f64"); // not safe // NEED ERR handling
@@ -146,14 +172,17 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
                     );
                     */
 
-                    (float_via_replace, true)
+                    //(float_via_replace, true)
+                    float_via_replace
+                    2 */
                 },
                 Ok(number) => {
                     /*
                     println!("   FLOAT: {f} / debug: {f:?}", f=number);
                      */
                     
-                    (number, true)
+                    //(number, true)
+                    Some(number)
                 },
             }
         }
@@ -161,11 +190,14 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
         None => {
             println!("ANY: {:?}", value);
 
-            (0.0, false)
+            //(0.0, false)
+            //0.0 for Some
+            None
         }
     };
 
-    (value, status)
+    //(value, status)
+    value
 }
 
 
@@ -890,6 +922,62 @@ fn parse_json_via_pointer(config: &TomlConfig,
     
     // valid JSON PATH
     if pointer_path_status {
+        match single_sensor_pointer_value {
+            Some(value) => {
+                if config.flag.debug_pointer_output {
+                    println!("unwrap_some: {s} / {s:?}",
+                             s=value);
+                }
+
+                //let pointer_parsed_float = verify_pointer_type(&value.to_string()); //remove bool in here
+                match verify_pointer_type(&value.to_string()) {
+                    Some(value) => {
+
+                        let single_record = PreRecord::new(
+                            &config,
+                            key,
+                            dt.ts,
+                            //pointer_parsed_float,
+                            value,
+                            &single_sensor.name,
+                        );
+                        
+                        // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
+                        if !metric_result_list.contains(&single_record) { 
+                            metric_result_list.push(single_record)
+                        }
+                        
+                    },
+                    None => {
+                        eprintln!("unwrap: !!! none !!!");
+                    }
+                    
+                }
+
+                /*
+                let single_record = PreRecord::new(
+                    &config,
+                    key,
+                    dt.ts,
+                    pointer_parsed_float,
+                    &single_sensor.name,
+                );
+
+                // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
+                if !metric_result_list.contains(&single_record) { 
+                    metric_result_list.push(single_record)
+                }
+                */
+                
+            },
+            None => {
+                eprintln!("unwrap: !!! none !!!");
+
+            }
+        };
+        
+
+        /*
         let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
             Some(value) => {
                 if config.flag.debug_pointer_output {
@@ -933,7 +1021,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
             if !metric_result_list.contains(&single_record) { 
                 metric_result_list.push(single_record)
             }
-        }
+        }*/
     }
 }
 
@@ -952,7 +1040,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      metric=config.metrics[key].field,
             );
 
-            // input data for SENSORS in METRIC
+            // METRIC data
             let metric_json = os_call_program(&config,
                                               key);
 
@@ -972,57 +1060,10 @@ pub fn parse_sensors_data(config: &TomlConfig,
                     }
                 },
                 None => {
-                    eprintln!("ERROR: skip parsing -> metric: <{m}>",
+                    eprintln!("ERROR: skip parsing all sensor values in metric: <{m}>",
                               m=&key);
                 }
             }
-        
-        
-            /*
-            let valid_metric_json = match &metric_json {
-                Some(_json) => true,
-                None => {
-                    eprintln!("ERROR: skip parsing -> metric: <{m}>",
-                              m=&key);
-
-                    false
-                }
-            };
-            
-            // loop via SENSOR values
-            for single_sensor in &config.metrics[key].values {
-                //if single_sensor.status && valid_metric_json {
-                if single_sensor.status {
-                    // JSON single POINTER
-                    parse_json_via_pointer(&config,
-                                           & mut metric_result_list,
-                                           &single_sensor,
-                                           &metric_json.as_ref().unwrap(), // should be safe as pass match Some()
-                                           &key,
-                                           &dt);
-                    
-                    /*
-                    match &metric_json {
-                        Some(json) => {
-                            parse_json_via_pointer(&config,
-                                                   & mut metric_result_list,
-                                                   &single_sensor,
-                                                   &json,
-                                                   &key,
-                                                   &dt);
-
-                        },
-                        None => {
-                            /*
-                            eprintln!("\nERROR: skip parsing -> metric: <{m}> / sensor: <{s}>",
-                                      s=&single_sensor.name,
-                                      m=&key);
-                            */
-                        }
-                    }
-                    */
-                }
-            }*/
         }
     }
 
