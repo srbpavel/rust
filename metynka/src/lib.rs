@@ -249,7 +249,7 @@ fn verify_influx_contains_field_loop(filename: &String,
                                      mut bool_list: Vec<bool>) -> Vec<bool>{
 
     let fields_to_verify_contains = vec![
-        // VARIABLE_NAME / VALUE / ONLY ALLOWED VALUES
+        // VARIABLE_NAME / VALUE / only allowed VALUES
         ("secure", &influx.secure[..], vec!["http", "https"]),
         ("precision", &influx.precision[..], vec!["s", "ms", "ns"]), // future use -> for now only MS format
     ];

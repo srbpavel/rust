@@ -1,10 +1,8 @@
-//use std::process;
 use std::process::{Command, Stdio};
 
 use std::path::Path;
 
-use std::fs;
-use std::fs::{OpenOptions, File};
+use std::fs::{self, OpenOptions, File};
 
 use std::io::{self, Write};
 
@@ -126,6 +124,7 @@ fn trim_quotes(string: &str) -> Option<f64> {
     let trim_chars = ['"', '\''];
     
     match string
+        //.trim_matches(|p| p == '"' || p == '\'' )
         .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
         .parse::<f64>() {
         
@@ -152,11 +151,13 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
 
     let value = match value_any.downcast_ref::<String>() {
         Some(as_string) => {             
-            // JSON VALUE is f64 or TRIM " || ' 
+
             match as_string.parse::<f64>() {
+                // JSON VALUE not f64 -> TRIM " 
                 Err(_why) => {
                     trim_quotes(as_string)
                 },
+                // JSON VALUE is f64 
                 Ok(number) => {
                     Some(number)
                 },
@@ -281,10 +282,10 @@ fn backup_data(config: &TomlConfig,
         }
         
         if !today_file_name.exists() {
-            // GET OLD FILE for append OR NEW 
             let file = create_new_file(&today_file_name); //mut
 
             match file {
+                // TEST if DIR+FILE OK but what about FULL_DISC ?
                 Ok(mut file) => writeln!(file, "{}\n{}",
                                          &metric.annotated_datatype,
                                          csv_header,
@@ -293,18 +294,9 @@ fn backup_data(config: &TomlConfig,
                 }),
                 _ => ()
             }
-
-            /*
-            // TEST if DIR+FILE OK but what about FULL_DISC ?
-            writeln!(file, "{}\n{}",
-                     &metric.annotated_datatype,
-                     csv_header,
-            ).unwrap_or_else(|err| {
-                eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-            });
-            */
         }
 
+        // GET OLD FILE for append OR NEW 
         let file = open_file_to_append(&today_file_name); // mut
 
         match file {
@@ -487,10 +479,12 @@ fn os_call_curl_flux(config: &TomlConfig,
 fn os_call_metric(config: &TomlConfig,
                   metric: &TemplateSensors) -> Option<String> {
 
+    // os call program
     match Command::new(&metric.program)
         .args(&metric.args)
         .output() {
-            
+
+            // program ok
             Ok(data) => {
                 let sensor_stdout_string = String::from_utf8_lossy(&data.stdout);
                 let sensor_stderr_string = String::from_utf8_lossy(&data.stderr);
@@ -508,6 +502,7 @@ stderr: {}",
 
             },
 
+            // program error
             Err(why) => {
                 eprintln!("\nWARNING: Problem parsing METRIC <{}> OS CALL: program\nREASON >>> {}",
                           metric.measurement,
@@ -730,10 +725,9 @@ fn run_all_influx_instances(config: &TomlConfig,
 
     for single_influx in &config.all_influx.values {
         // MATCH HTTP/HTTPS -> future use
-        arm_secure(&single_influx);
+        /* arm_secure(&single_influx); */
         
         if single_influx.status {
-            
             // ARGS for CURL
             let influx_properties = prepare_influx_format(&config, &single_influx);
             
@@ -845,6 +839,8 @@ fn os_call_program(config: &TomlConfig,
 }
 
 
+//FUTURE USE
+#[allow(dead_code)]
 fn arm_secure(single_influx: &Influx) {
     match &single_influx.secure.to_lowercase()[..] {
         "http" => {
@@ -981,7 +977,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      metric=config.metrics[key].field,
             );
 
-            // METRIC data
+            // METRIC data <- OS_CALL
             let metric_json = os_call_program(&config,
                                               key);
 
