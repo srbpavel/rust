@@ -792,7 +792,8 @@ fn run_all_influx_instances(config: &TomlConfig,
 
 
 fn os_call_program(config: &TomlConfig,
-                   key: &String) -> serde_json::Value {
+                   //key: &String) -> serde_json::Value {
+                   key: &String) -> Option<serde_json::Value> {
                    //key: &String) -> Result<serde_json::Value, serde_json::Error> {
     
     match config.metrics[key].flag_pipe {
@@ -801,11 +802,22 @@ fn os_call_program(config: &TomlConfig,
             let metric_stdout = os_call_metric(&config,
                                                &config.metrics[key]);
 
+            match serde_json::from_str(&metric_stdout) {
+                Ok(value) => Some(value),
+                Err(err) => {
+                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
+
+                    None
+                },
+            }
+
+            /*
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
                 process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-                //Err(err)
-            }) 
+            })
+             */
+                
         },
         
         // PIPE is here
@@ -813,11 +825,21 @@ fn os_call_program(config: &TomlConfig,
             let metric_stdout = os_call_metric_pipe(&config,
                                                     &config.metrics[key]);
 
+            match serde_json::from_str(&metric_stdout) {
+                Ok(value) => Some(value),
+                Err(err) => {
+                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
+
+                    None
+                },
+            }
+            
+            /*
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
                 process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-                //Err(err)
             })
+             */
         }
     }
 }
@@ -960,26 +982,25 @@ pub fn parse_sensors_data(config: &TomlConfig,
             // loop via SENSORS
             for single_sensor in &config.metrics[key].values {
                 if single_sensor.status {
-                    /*
-                    match metric_json {
-                        Ok(value) => {
+                    match &metric_json {
+                        Some(value) => {
 
                             parse_json_via_pointer(&config,
                                                    & mut metric_result_list,
                                                    &single_sensor,
-                                                   &value, //&metric_json,
+                                                   &value,
                                                    &key,
                                                    &dt);
 
                         },
-                        //_ => {
-                        Err(why) => {
-                            process::exit(1);     
+                        None => {
+                            eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\n in metric: {m} skipp sensor: {s}",
+                                      s=&single_sensor.name,
+                                      m=&key);
                         }
                     }
-                    */
 
-                    // /*
+                    /*
                     // JSON single POINTER
                     parse_json_via_pointer(&config,
                                            & mut metric_result_list,
@@ -987,7 +1008,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                            &metric_json,
                                            &key,
                                            &dt);
-                    // */
+                    */
                 }
             }
         }
