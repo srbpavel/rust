@@ -2,26 +2,18 @@
 use std::env;
 use std::process;
 
-// /LIB.RS
-/* use metynka as bronco; */
-
 // /UTIL/TS
 mod util;
 use util::ts as timestamp;
 
 // /SENSORS
 mod measurement;
-//use measurement::parse_sensors_data;
-
-// DEBUG -> measurement
-//use metynka::{TomlConfig, Influx};
-//use crate::metynka::TemplateSensors;
 
 // /VARIOUS
 mod various;
 
 
-#[allow(unused)] // for quick sample test's at bottom
+#[allow(unused)]
 fn main() {
     // QUICK SAMPLE CODE TEST
     /*
@@ -74,18 +66,11 @@ fn main() {
     }
 
     // SENSOR
-    //parse_sensors_data(&config,
     measurement::parse_sensors_data(&config,
                                     &dt,
     );
 
     // QUICK SAMPLE CODE TEST
-
-    /*
-    various::update_struct();
-        
-    */
-
     /*
     let some_number = Some(false);
     let some_string = Some("a string");

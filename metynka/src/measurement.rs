@@ -6,7 +6,7 @@ use std::path::Path;
 use std::fs;
 use std::fs::{OpenOptions, File};
 
-use std::io::Write;
+use std::io::{self, Write};
 
 use std::any::{Any};
 
@@ -68,7 +68,7 @@ impl PreRecord {
            value: f64,
            id: &str) -> PreRecord {
         
-        // HERE I CAN put some TEST's to handle ERROR        
+        // HERE I CAN put some TEST's to handle ERROR / raise WARNING
         PreRecord {
             key: key.to_string(),
             ts: ts,
@@ -137,7 +137,7 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
                     let float_via_replace = str::replace(as_string, "\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
                         .trim()
                         .parse::<f64>()
-                        .unwrap(); // not safe
+                        .expect("JSOIN POINTER result not f64"); // not safe // NEED ERR handling
 
                     /*
                     println!("   ERROR_to_f64: {w} REPLACE: <{r}> / debug: {r:?}",
@@ -169,13 +169,15 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 }
 
 
-fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
+//fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
+fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
     match OpenOptions::new()
         .write(true)
         .append(true)
         .open(&today_file_name)
     {
-        Ok(file) => (file, true),
+        //Ok(file) => (file, true),
+        Ok(file) => Ok(file),
 
         // FAIL TO OPEN FOR WRITE
         Err(why) => {
@@ -185,15 +187,12 @@ fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
 
             // OPEN FOR READ -> this instead EXIT as i did not find any better yet
             // empty new Struct -> File { all fields with some values } DOES NOT HELP
+            Err(why)
+            /*
             (OpenOptions::new()
              .read(true)
              .open(&today_file_name)
              .expect("FAILED TO OPEN FILE just for READ"),
-             false)
-
-            /*
-            (File::open(&today_file_name).
-             expect("FAILED TO OPEN FILE just for READ"),
              false)
             */
         },
@@ -222,22 +221,27 @@ fn create_new_dir(config: &TomlConfig,
 }
 
 
-fn create_new_file(today_file_name: &Path) -> File {
+//fn create_new_file(today_file_name: &Path) -> File {
+fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> { //fff
     match File::create(&today_file_name) { // LEARN TO write TEST for this
         Err(why) => {
             eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
                       &today_file_name.display(),
                       why);
 
+            Err(why)
+
+            /*
             // CREATE NEW IF NOT EXISTS
             OpenOptions::new()
                 .write(true)
                 .append(true)
                 .open(&today_file_name)
-                .expect("FAILED TO OPEN FILE") // ALSO NEED TEST
+                .expect("FAILED TO OPEN FILE") // NEED ERR handling
+            */
         },
         
-        Ok(file) => file,
+        Ok(file) => Ok(file),
     }
 }
 
@@ -253,7 +257,6 @@ fn csv_display_header(datatype: &String,
 
 fn backup_data(config: &TomlConfig,
                result_list: &Vec<Record>,
-               //pppresult_list: &Vec<PreRecord>,
                today_file_name: &String,
                metric: &TemplateSensors) {
     
@@ -294,8 +297,19 @@ fn backup_data(config: &TomlConfig,
         
         if !today_file_name.exists() {
             // GET OLD FILE for append OR NEW 
-            let mut file = create_new_file(&today_file_name);
+            let file = create_new_file(&today_file_name); //mut
 
+            match file {
+                Ok(mut file) => writeln!(file, "{}\n{}",
+                                         &metric.annotated_datatype,
+                                         csv_header,
+                ).unwrap_or_else(|err| {
+                    eprintln!("\nERROR: APPEND DATA to file failed\nREASON: >>> {}", err)
+                }),
+                _ => ()
+            }
+
+            /*
             // TEST if DIR+FILE OK but what about FULL_DISC ?
             writeln!(file, "{}\n{}",
                      &metric.annotated_datatype,
@@ -303,31 +317,44 @@ fn backup_data(config: &TomlConfig,
             ).unwrap_or_else(|err| {
                 eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
             });
+            */
         }
 
-        let (mut file, file_status) = open_file_to_append(&today_file_name);
+        //let (mut file, file_status) = open_file_to_append(&today_file_name);
+        let file = open_file_to_append(&today_file_name); //mut
 
+        /*
         if !file_status {
             println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:?}", result_list);
         }
         else {
-            // RESULT_LIST
-            for single_record in result_list {
-                if &metric.measurement == &single_record.measurement {
-                    let csv_record = prepare_csv_record_format(&config,
-                                                               &single_record,
-                                                               &metric,
-                    );
-                    
-                    if config.flag.debug_backup {
-                        println!("{}", &csv_record);
+         */
+        match file {
+            Ok(mut file) => {
+                // RESULT_LIST
+                for single_record in result_list {
+                    if &metric.measurement == &single_record.measurement {
+                        let csv_record = prepare_csv_record_format(&config,
+                                                                   &single_record,
+                                                                   &metric,
+                        );
+                        
+                        if config.flag.debug_backup {
+                            println!("{}", &csv_record);
+                        }
+                        
+                        // APPEND SINGLE RECORD to backup_file
+                        writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+                            eprintln!("\nERROR: APPEND DATA to file failed\nREASON: >>> {}", err);
+                        });
                     }
-                    
-                    // APPEND SINGLE RECORD to backup_file
-                    writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
-                        eprintln!("\nERROR EXIT: APPEND DATA to file failed\nREASON: >>> {}", err);
-                    });
                 }
+            },
+
+            _ => {
+                println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
+                
+                ()
             }
         }
     } /* if full_path_create_status */
@@ -627,7 +654,6 @@ fn prepare_influx_format(config: &TomlConfig,
     );
     
     // AUTH
-
     let auth = tuple_formater(&config.template.curl.influx_auth,
                               &vec![
                                   ("token", &influx_inst.token),
@@ -767,16 +793,18 @@ fn run_all_influx_instances(config: &TomlConfig,
 
 fn os_call_program(config: &TomlConfig,
                    key: &String) -> serde_json::Value {
-
-    let metric_json: serde_json::Value = match config.metrics[key].flag_pipe {
+                   //key: &String) -> Result<serde_json::Value, serde_json::Error> {
+    
+    match config.metrics[key].flag_pipe {
         // no PIPE
         false => {
             let metric_stdout = os_call_metric(&config,
                                                &config.metrics[key]);
-            
+
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
                 process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
+                //Err(err)
             }) 
         },
         
@@ -784,15 +812,14 @@ fn os_call_program(config: &TomlConfig,
         true => {
             let metric_stdout = os_call_metric_pipe(&config,
                                                     &config.metrics[key]);
-            
+
             serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
                 eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
                 process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
+                //Err(err)
             })
         }
-    };
-
-    metric_json
+    }
 }
 
 
@@ -910,10 +937,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
 
-    // RESULT_LIST
     let mut result_list: Vec<Record> = Vec::new();
-
-    // METRIC_RESULT_LIST
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
     // loop via METRICS
@@ -925,12 +949,37 @@ pub fn parse_sensors_data(config: &TomlConfig,
             );
 
             // OS CALL program or pipe_program
+            /*
             let metric_json: serde_json::Value = os_call_program(&config,
                                                                  key);
+            */
+
+            let metric_json = os_call_program(&config,
+                                              key);
 
             // loop via SENSORS
             for single_sensor in &config.metrics[key].values {
                 if single_sensor.status {
+                    /*
+                    match metric_json {
+                        Ok(value) => {
+
+                            parse_json_via_pointer(&config,
+                                                   & mut metric_result_list,
+                                                   &single_sensor,
+                                                   &value, //&metric_json,
+                                                   &key,
+                                                   &dt);
+
+                        },
+                        //_ => {
+                        Err(why) => {
+                            process::exit(1);     
+                        }
+                    }
+                    */
+
+                    // /*
                     // JSON single POINTER
                     parse_json_via_pointer(&config,
                                            & mut metric_result_list,
@@ -938,6 +987,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                            &metric_json,
                                            &key,
                                            &dt);
+                    // */
                 }
             }
         }

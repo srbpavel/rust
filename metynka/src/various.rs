@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-//use crate::measurement::{PreRecord};
-
 
 #[derive(Debug)]
 pub struct Horse {
