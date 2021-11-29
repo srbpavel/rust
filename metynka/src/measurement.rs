@@ -801,17 +801,6 @@ fn os_call_program(config: &TomlConfig,
                                                &config.metrics[key]);
 
             verify_metric_output(&metric_stdout)
-
-            /*
-            match serde_json::from_str(&metric_stdout) {
-                Ok(value) => Some(value),
-                Err(err) => {
-                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
-
-                    None
-                },
-            }
-            */
         },
         
         // PIPE is here
@@ -820,17 +809,6 @@ fn os_call_program(config: &TomlConfig,
                                                     &config.metrics[key]);
 
             verify_metric_output(&metric_stdout)
-            
-            /*
-            match serde_json::from_str(&metric_stdout) {
-                Ok(value) => Some(value),
-                Err(err) => {
-                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program pipe\nREASON >>> {}", err);
-
-                    None
-                },
-            }
-            */
         }
     }
 }
@@ -974,31 +952,77 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      metric=config.metrics[key].field,
             );
 
+            // input data for SENSORS in METRIC
             let metric_json = os_call_program(&config,
                                               key);
 
-            // loop via SENSOR values
-            for single_sensor in &config.metrics[key].values {
-                if single_sensor.status {
-                    // JSON single POINTER
-                    match &metric_json {
-                        Some(value) => {
+            match &metric_json {
+                Some(json) => {
+                    for single_sensor in &config.metrics[key].values {
+                        if single_sensor.status {
+                            // JSON single POINTER
                             parse_json_via_pointer(&config,
                                                    & mut metric_result_list,
                                                    &single_sensor,
-                                                   &value,
+                                                   &json,
+                                                   &key,
+                                                   &dt);
+                            
+                        }
+                    }
+                },
+                None => {
+                    eprintln!("ERROR: skip parsing -> metric: <{m}>",
+                              m=&key);
+                }
+            }
+        
+        
+            /*
+            let valid_metric_json = match &metric_json {
+                Some(_json) => true,
+                None => {
+                    eprintln!("ERROR: skip parsing -> metric: <{m}>",
+                              m=&key);
+
+                    false
+                }
+            };
+            
+            // loop via SENSOR values
+            for single_sensor in &config.metrics[key].values {
+                //if single_sensor.status && valid_metric_json {
+                if single_sensor.status {
+                    // JSON single POINTER
+                    parse_json_via_pointer(&config,
+                                           & mut metric_result_list,
+                                           &single_sensor,
+                                           &metric_json.as_ref().unwrap(), // should be safe as pass match Some()
+                                           &key,
+                                           &dt);
+                    
+                    /*
+                    match &metric_json {
+                        Some(json) => {
+                            parse_json_via_pointer(&config,
+                                                   & mut metric_result_list,
+                                                   &single_sensor,
+                                                   &json,
                                                    &key,
                                                    &dt);
 
                         },
                         None => {
+                            /*
                             eprintln!("\nERROR: skip parsing -> metric: <{m}> / sensor: <{s}>",
                                       s=&single_sensor.name,
                                       m=&key);
+                            */
                         }
                     }
+                    */
                 }
-            }
+            }*/
         }
     }
 
@@ -1016,7 +1040,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     // BACKUP
     for key in config.metrics.keys() {
-        if config.metrics[key].flag_status && result_list.len() > 0 {
+        if config.metrics[key].flag_status && result_list.len() != 0 {
             backup_data(&config,
                         &result_list,
                         &dt.today_file_name,
