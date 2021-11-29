@@ -525,6 +525,7 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         eprintln!("\nEXIT: error reading config file: {}\nREASON >>> {e}",
                   c=&cmd_args.filename,
                   e=err);
+
         process::exit(1);
     });
 
@@ -532,6 +533,7 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
                   c=&cmd_args.filename,
                   e=err);
+
         process::exit(1);
     });
 
