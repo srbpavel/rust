@@ -1,4 +1,4 @@
-use std::process;
+//use std::process;
 use std::process::{Command, Stdio};
 
 use std::path::Path;
@@ -116,99 +116,70 @@ impl PartialEq for PreRecord
 }
 
 
+fn trim_quotes(string: &str) -> Option<f64> {
+    /*
+    match str::replace(string, "\"", "") // "string"
+        .trim()
+        .parse::<f64>() {
+    */
+
+    let trim_chars = ['"', '\''];
+    
+    match string
+        .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
+        .parse::<f64>() {
+        
+        Ok(number) => Some(number),
+        Err(why) => {
+            eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
+                      string,
+                      trim_chars,
+                      why,
+            );
+            
+            None
+        }
+    } 
+    
+}
+
+
 // https://doc.rust-lang.org/std/any/index.html
 // https://doc.rust-lang.org/std/any/trait.Any.html
 // DOUCIT + POCHOPIT zpusob volani
-//fn verify_pointer_type<T: Any + Debug>(value: &T) -> (f64, bool) {
 fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
     let value_any = value as &dyn Any;
 
-    //let (value, status): (f64, bool) = match value_any.downcast_ref::<String>() {
-    //let value: f64 = match value_any.downcast_ref::<String>() {
     let value = match value_any.downcast_ref::<String>() {
         Some(as_string) => {             
-            /*
-            println!("STRING len: {len} / str: <{str}> / debug: {str:?}",
-                     len=as_string.len(),
-                     str=as_string,
-            );
-            */
-
+            // JSON VALUE is f64 or TRIM " || ' 
             match as_string.parse::<f64>() {
                 Err(_why) => {
-                    /*
-                    eprintln!("POINTER_TYPE: {:?} not f64\nREASON>>> {:?}",
-                              as_string,
-                              why,
-                    );
-                    */
-
-                    // JSON VALUE wrapped with "
-                    match str::replace(as_string, "\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
-                        .trim()
-                        .parse::<f64>()
-                    { // not safe // NEED ERR handling
-                        Ok(value) => Some(value),
-                        Err(why) => {
-                            eprintln!("POINTER_TYPE_TRIM: {:?} not succed\nREASON>>> {:?}",
-                                      as_string,
-                                      why,
-                            );
-
-                            None
-                        }
-                    } 
-                    
-                    /* 2
-                    let float_via_replace = str::replace(as_string, "@\"", "") // TEST THIS insted replace -> https://doc.rust-lang.org/std/str/trait.FromStr.html
-                        .trim()
-                        .parse::<f64>()
-                        .expect("JSOIN POINTER result not f64"); // not safe // NEED ERR handling
-
-                    /*
-                    println!("   ERROR_to_f64: {w} REPLACE: <{r}> / debug: {r:?}",
-                             w = why,
-                             r = float_via_replace,
-                    );
-                    */
-
-                    //(float_via_replace, true)
-                    float_via_replace
-                    2 */
+                    trim_quotes(as_string)
                 },
                 Ok(number) => {
-                    /*
-                    println!("   FLOAT: {f} / debug: {f:?}", f=number);
-                     */
-                    
-                    //(number, true)
                     Some(number)
                 },
             }
         }
-
+        
         None => {
-            println!("ANY: {:?}", value);
+            println!("POINTER_TYPE_ANY: {:?}", value);
 
-            //(0.0, false)
-            //0.0 for Some
             None
         }
     };
 
-    //(value, status)
     value
 }
 
 
-//fn open_file_to_append(today_file_name: &Path) -> (File, bool) {
 fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
     match OpenOptions::new()
         .write(true)
         .append(true)
         .open(&today_file_name)
     {
-        //Ok(file) => (file, true),
         Ok(file) => Ok(file),
 
         // FAIL TO OPEN FOR WRITE
@@ -217,16 +188,7 @@ fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
                       &today_file_name.display(),
                       why);
 
-            // OPEN FOR READ -> this instead EXIT as i did not find any better yet
-            // empty new Struct -> File { all fields with some values } DOES NOT HELP
             Err(why)
-            /*
-            (OpenOptions::new()
-             .read(true)
-             .open(&today_file_name)
-             .expect("FAILED TO OPEN FILE just for READ"),
-             false)
-            */
         },
     }
 }
@@ -253,8 +215,7 @@ fn create_new_dir(config: &TomlConfig,
 }
 
 
-//fn create_new_file(today_file_name: &Path) -> File {
-fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> { //fff
+fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
     match File::create(&today_file_name) { // LEARN TO write TEST for this
         Err(why) => {
             eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
@@ -263,14 +224,6 @@ fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> { //fff
 
             Err(why)
 
-            /*
-            // CREATE NEW IF NOT EXISTS
-            OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open(&today_file_name)
-                .expect("FAILED TO OPEN FILE") // NEED ERR handling
-            */
         },
         
         Ok(file) => Ok(file),
@@ -293,9 +246,9 @@ fn backup_data(config: &TomlConfig,
                metric: &TemplateSensors) {
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
-    /* FOR TEST error handling */
+    /* FOR ERROR HANDLING TESTING */
     // let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
-    //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION write ROOT
+    //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION read/write USER or GROUP
     
     // DIR CREATE if not EXISTS
     if !full_path.exists() {
@@ -352,15 +305,8 @@ fn backup_data(config: &TomlConfig,
             */
         }
 
-        //let (mut file, file_status) = open_file_to_append(&today_file_name);
-        let file = open_file_to_append(&today_file_name); //mut
+        let file = open_file_to_append(&today_file_name); // mut
 
-        /*
-        if !file_status {
-            println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:?}", result_list);
-        }
-        else {
-         */
         match file {
             Ok(mut file) => {
                 // RESULT_LIST
@@ -384,6 +330,7 @@ fn backup_data(config: &TomlConfig,
             },
 
             _ => {
+                // LEARN to format Vec<Struct> into STR for tuple_formater
                 println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
                 
                 ()
@@ -468,7 +415,7 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 fn parse_flux_result(stdout: Vec<u8>,
                      _stderr: Vec<u8>) {
 
-    /* future use 
+    /* FUTURE USE 
     let error_data = String::from_utf8(stderr).expect("Found invalid UTF-8");
     eprintln!("STDERR: {:#?}", error_data);
     */
@@ -485,6 +432,7 @@ fn parse_flux_result(stdout: Vec<u8>,
         if !line.contains("value") && line.trim().len() != 0 {
             match line.split(",").last() {
                 Some(value) => match value.parse::<u64>() {
+                    // FUTURE USE
                     Ok(1) => {
                         println!("flux result count: {}", //\n{:#?}",
                                  1,
@@ -537,67 +485,108 @@ fn os_call_curl_flux(config: &TomlConfig,
 
 
 fn os_call_metric(config: &TomlConfig,
-                  metric: &TemplateSensors) -> String {
-    
-    let sensor_output = Command::new(&metric.program)
-        .args(&metric.args)
-        .output()
-        .unwrap_or_else(|err| {
-            eprintln!("\nEXIT: Problem parsing METRIC PROGRAM from OS CALL program\nREASON >>> {}", err);
-            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-        });
-        //.expect("failed to execute command"); // not safe
-    
-    let sensor_stdout_string = String::from_utf8_lossy(&sensor_output.stdout);
-    let sensor_stderr_string = String::from_utf8_lossy(&sensor_output.stderr);
+                  metric: &TemplateSensors) -> Option<String> {
 
-    if config.flag.debug_sensor_output {
-        println!("\n#METRIC SENSOR:
+    match Command::new(&metric.program)
+        .args(&metric.args)
+        .output() {
+            
+            Ok(data) => {
+                let sensor_stdout_string = String::from_utf8_lossy(&data.stdout);
+                let sensor_stderr_string = String::from_utf8_lossy(&data.stderr);
+                
+                if config.flag.debug_sensor_output {
+                    println!("\n#METRIC SENSOR:
 stdout: {}
 stderr: {}",
-                 sensor_stdout_string,
-                 sensor_stderr_string,
-        );
-    }
+                             sensor_stdout_string,
+                             sensor_stderr_string,
+                    );
+                }
+                
+                Some(sensor_stdout_string.to_string())
 
-    return sensor_stdout_string.to_string()
+            },
+
+            Err(why) => {
+                eprintln!("\nWARNING: Problem parsing METRIC <{}> OS CALL: program\nREASON >>> {}",
+                          metric.measurement,
+                          why);
+                
+                None
+            }
+        }
 }
 
 
 fn os_call_metric_pipe(config: &TomlConfig,
-                       memory: &TemplateSensors) -> String {
+                       metric: &TemplateSensors) -> Option<String> {
 
-    let cmd_output = Command::new(&memory.program)
-        .args(&memory.args)
-        .stdout(Stdio::piped()).spawn().unwrap_or_else(|err| {
-            eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL program\nREASON >>> {}", err);
-            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-        });
+    // os program call
+    match Command::new(&metric.program)
+        .args(&metric.args)
+        .stdout(Stdio::piped())
+        .spawn() {
 
-    
-    let cmd_pipe_output = Command::new(&memory.pipe_program)
-        .args(&memory.pipe_args)
-        .stdin(cmd_output.stdout.unwrap()) // NOT SAFE -> change
-        .output()
-        .unwrap_or_else(|err| {
-            eprintln!("\nEXIT: Problem parsing METRIC PIPE from OS CALL pipe\nREASON >>> {}", err);
-            process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-        });
-        //.expect("failed to execute command")//; // catch also error here, otherwise !panic
-    
-    let cmd_pipe_output_stdout = String::from_utf8_lossy(&cmd_pipe_output.stdout);
-    let cmd_pipe_output_stderr = String::from_utf8_lossy(&cmd_pipe_output.stderr);
-
-    if config.flag.debug_sensor_output {
-        println!("\n#MEMORY_SENSOR:
+            // program ok
+            Ok(data) => {
+                
+                // program stdout
+                match data.stdout {
+                    
+                    // stdout ok 
+                    Some(stdout) => {
+                        
+                        // | pipe call
+                        match Command::new(&metric.pipe_program)
+                            .args(&metric.pipe_args)
+                            .stdin(stdout) // data from os program call output
+                            .output() {
+                            
+                                // pipe ok 
+                                Ok(piped_data) => {
+                                    let cmd_pipe_output_stdout = String::from_utf8_lossy(&piped_data.stdout);
+                                    let cmd_pipe_output_stderr = String::from_utf8_lossy(&piped_data.stderr);
+                                    
+                                    if config.flag.debug_sensor_output {
+                                        println!("\n#METRIC_SENSOR:
 stdout: {}
 stderr: {}",
-                 cmd_pipe_output_stdout,
-                 cmd_pipe_output_stderr,
-        );
-    }
-
-    return cmd_pipe_output_stdout.to_string()
+                                                 cmd_pipe_output_stdout,
+                                                 cmd_pipe_output_stderr,
+                                        );
+                                    }
+                                    
+                                    Some(cmd_pipe_output_stdout.to_string())
+                                },
+                            
+                                // pipe error
+                                Err(why) => { eprintln!("\nWARNING: Problem parsing METRIC <{}> OS CALL PIPE: program_pipe\nREASON >>> {}",
+                                                        metric.measurement,
+                                                        why);
+                                              None
+                                }
+                            }
+                        
+                    },
+                    
+                    // program stdout error
+                    None => { eprintln!("\nWARNING: Problem parsing METRIC <{}> OS CALL PIPE: stdout",
+                                        metric.measurement);
+                              None
+                    } 
+                }
+            },
+            
+            // program error
+            Err(why) => {
+                eprintln!("\nWARNING: Problem parsing METRIC <{}> OS CALL PIPE: program\nREASON >>> {}",
+                          metric.measurement,
+                          why);
+                
+                None
+            }
+        }
 }
 
 
@@ -827,20 +816,30 @@ fn os_call_program(config: &TomlConfig,
                    key: &String) -> Option<serde_json::Value> {
     
     match config.metrics[key].flag_pipe {
-        // no PIPE
+        // no PIPE in OS_CALL
         false => {
-            let metric_stdout = os_call_metric(&config,
-                                               &config.metrics[key]);
+            match os_call_metric(&config,
+                                 &config.metrics[key]) {
+                
+                Some(data) => verify_metric_output(&data),
 
-            verify_metric_output(&metric_stdout)
+                None => {
+                    None
+                }
+            }
         },
         
-        // PIPE is here
+        // PIPE in OS_CALL
         true => {
-            let metric_stdout = os_call_metric_pipe(&config,
-                                                    &config.metrics[key]);
-
-            verify_metric_output(&metric_stdout)
+            match os_call_metric_pipe(&config,
+                                      &config.metrics[key]) {
+                
+                Some(data) => verify_metric_output(&data),
+                
+                None => {
+                    None
+                }
+            }
         }
     }
 }
@@ -868,7 +867,7 @@ fn arm_secure(single_influx: &Influx) {
     }
 }
 
-//vvv
+
 fn verify_metric_output(metric_stdout: &String) -> Option<serde_json::Value> {
 
     match serde_json::from_str(&metric_stdout) {
@@ -922,14 +921,20 @@ fn parse_json_via_pointer(config: &TomlConfig,
     
     // valid JSON PATH
     if pointer_path_status {
+        let err_msg_none = tuple_formater(&"JSON POINTER VALUE: metric: <{m}> unwrap: !!! none !!!".to_string(),
+                                          &vec![
+                                              ("m", key),
+                                          ],
+                                          false,
+        );
+        
         match single_sensor_pointer_value {
             Some(value) => {
                 if config.flag.debug_pointer_output {
-                    println!("unwrap_some: {s} / {s:?}",
+                    println!("JSON POINTER VALUE: {s} / {s:?}",
                              s=value);
                 }
 
-                //let pointer_parsed_float = verify_pointer_type(&value.to_string()); //remove bool in here
                 match verify_pointer_type(&value.to_string()) {
                     Some(value) => {
 
@@ -937,7 +942,6 @@ fn parse_json_via_pointer(config: &TomlConfig,
                             &config,
                             key,
                             dt.ts,
-                            //pointer_parsed_float,
                             value,
                             &single_sensor.name,
                         );
@@ -949,79 +953,16 @@ fn parse_json_via_pointer(config: &TomlConfig,
                         
                     },
                     None => {
-                        eprintln!("unwrap: !!! none !!!");
+                        eprintln!("{}", err_msg_none);
                     }
                     
                 }
-
-                /*
-                let single_record = PreRecord::new(
-                    &config,
-                    key,
-                    dt.ts,
-                    pointer_parsed_float,
-                    &single_sensor.name,
-                );
-
-                // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
-                if !metric_result_list.contains(&single_record) { 
-                    metric_result_list.push(single_record)
-                }
-                */
-                
             },
             None => {
-                eprintln!("unwrap: !!! none !!!");
+                eprintln!("{}", err_msg_none);
 
             }
         };
-        
-
-        /*
-        let (pointer_parsed_float, pointer_type_status): (f64, bool) = match single_sensor_pointer_value {
-            Some(value) => {
-                if config.flag.debug_pointer_output {
-                    println!("unwrap_some: {s} / {s:?}",
-                             s=value);
-                }
-                verify_pointer_type(&value.to_string())
-            },
-            None => {
-                eprintln!("unwrap: !!! none !!!");
-                (0.0, false) // instead EXIT
-            }
-        };
-        
-        if pointer_type_status {
-            // /* IMPLEMENT ::new
-            let single_record = PreRecord::new(
-                &config,
-                key,
-                dt.ts,
-                pointer_parsed_float,
-                &single_sensor.name,
-            );
-            // */
-            
-            /* FIELD: VALUE
-            let single_record = PreRecord {
-                key: key.to_string(),
-                ts: dt.ts,
-                value: pointer_parsed_float.to_string(),
-                id: single_sensor.name.to_string(),
-                measurement: config.metrics[key].measurement.to_string(),
-                host: config.host.to_string(),
-                ..PreRecord::default()
-            };
-            */
-
-            // DEBUG println!("{:?}", &single_record);
-            
-            // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
-            if !metric_result_list.contains(&single_record) { 
-                metric_result_list.push(single_record)
-            }
-        }*/
     }
 }
 
