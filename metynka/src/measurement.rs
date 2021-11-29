@@ -792,9 +792,7 @@ fn run_all_influx_instances(config: &TomlConfig,
 
 
 fn os_call_program(config: &TomlConfig,
-                   //key: &String) -> serde_json::Value {
                    key: &String) -> Option<serde_json::Value> {
-                   //key: &String) -> Result<serde_json::Value, serde_json::Error> {
     
     match config.metrics[key].flag_pipe {
         // no PIPE
@@ -802,6 +800,9 @@ fn os_call_program(config: &TomlConfig,
             let metric_stdout = os_call_metric(&config,
                                                &config.metrics[key]);
 
+            verify_metric_output(&metric_stdout)
+
+            /*
             match serde_json::from_str(&metric_stdout) {
                 Ok(value) => Some(value),
                 Err(err) => {
@@ -810,14 +811,7 @@ fn os_call_program(config: &TomlConfig,
                     None
                 },
             }
-
-            /*
-            serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
-                process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-            })
-             */
-                
+            */
         },
         
         // PIPE is here
@@ -825,21 +819,18 @@ fn os_call_program(config: &TomlConfig,
             let metric_stdout = os_call_metric_pipe(&config,
                                                     &config.metrics[key]);
 
+            verify_metric_output(&metric_stdout)
+            
+            /*
             match serde_json::from_str(&metric_stdout) {
                 Ok(value) => Some(value),
                 Err(err) => {
-                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program\nREASON >>> {}", err);
+                    eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program pipe\nREASON >>> {}", err);
 
                     None
                 },
             }
-            
-            /*
-            serde_json::from_str(&metric_stdout).unwrap_or_else(|err| {
-                eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL pipe_program\nREASON >>> {}", err);
-                process::exit(1); // FIX THIS NOT TO EXIT BUT SKIP RECORD
-            })
-             */
+            */
         }
     }
 }
@@ -863,6 +854,19 @@ fn arm_secure(single_influx: &Influx) {
             eprintln!("\n#WARNING:\ninvalid influx <{}> \"secure={}\"",
                       single_influx.server,
                       other); // this should never happen as config init verification
+        },
+    }
+}
+
+//vvv
+fn verify_metric_output(metric_stdout: &String) -> Option<serde_json::Value> {
+
+    match serde_json::from_str(&metric_stdout) {
+        Ok(value) => Some(value),
+        Err(err) => {
+            eprintln!("\nWARNING: Problem parsing METRIC JSON from OS CALL program pipe\nREASON >>> {}", err);
+            
+            None
         },
     }
 }
@@ -970,21 +974,15 @@ pub fn parse_sensors_data(config: &TomlConfig,
                      metric=config.metrics[key].field,
             );
 
-            // OS CALL program or pipe_program
-            /*
-            let metric_json: serde_json::Value = os_call_program(&config,
-                                                                 key);
-            */
-
             let metric_json = os_call_program(&config,
                                               key);
 
-            // loop via SENSORS
+            // loop via SENSOR values
             for single_sensor in &config.metrics[key].values {
                 if single_sensor.status {
+                    // JSON single POINTER
                     match &metric_json {
                         Some(value) => {
-
                             parse_json_via_pointer(&config,
                                                    & mut metric_result_list,
                                                    &single_sensor,
@@ -994,21 +992,11 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
                         },
                         None => {
-                            eprintln!("\nEXIT: Problem parsing METRIC JSON from OS CALL program\n in metric: {m} skipp sensor: {s}",
+                            eprintln!("\nERROR: skip parsing -> metric: <{m}> / sensor: <{s}>",
                                       s=&single_sensor.name,
                                       m=&key);
                         }
                     }
-
-                    /*
-                    // JSON single POINTER
-                    parse_json_via_pointer(&config,
-                                           & mut metric_result_list,
-                                           &single_sensor,
-                                           &metric_json,
-                                           &key,
-                                           &dt);
-                    */
                 }
             }
         }
@@ -1028,7 +1016,7 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     // BACKUP
     for key in config.metrics.keys() {
-        if config.metrics[key].flag_status {
+        if config.metrics[key].flag_status && result_list.len() > 0 {
             backup_data(&config,
                         &result_list,
                         &dt.today_file_name,
