@@ -114,6 +114,12 @@ impl PartialEq for PreRecord
 }
 
 
+fn debug_vector<T: Any + Debug>(vec: &Vec<T>) {
+    println!("\n#RECORDS: not SAVED into BACKUP !!! \n{r:#?}",
+             r=vec);
+}
+
+
 fn trim_quotes(string: &str) -> Option<f64> {
     /*
     match str::replace(string, "\"", "") // "string"
@@ -249,7 +255,7 @@ fn backup_data(config: &TomlConfig,
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
     /* FOR ERROR HANDLING TESTING */
-    // let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
+    //let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
     //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION read/write USER or GROUP
     
     // DIR CREATE if not EXISTS
@@ -323,15 +329,14 @@ fn backup_data(config: &TomlConfig,
             },
 
             _ => {
-                // LEARN to format Vec<Struct> into STR for tuple_formater / trait
-                println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
-                
+                debug_vector(result_list);
+
                 ()
             }
         }
     } /* if full_path_create_status */
     else {
-        println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
+        debug_vector(result_list);
     }
 }
 
@@ -949,9 +954,11 @@ pub fn parse_sensors_data(config: &TomlConfig,
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
     // loop via METRICS
+    println!("\n#METRIC:");
+    
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
-            println!("#METRIC: {metric} -> MEASUREMENT: {measurement}",
+            println!("{metric} -> MEASUREMENT: {measurement}",
                      measurement=config.metrics[key].measurement,
                      metric=config.metrics[key].field,
             );

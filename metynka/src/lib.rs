@@ -458,7 +458,7 @@ pub fn search_case_insensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 }
 
 
-pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
+pub fn search_case_sensitive<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
     // CASE SENSITIVE
 
     data
@@ -484,26 +484,26 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 
 
 // EGREP tutorial
-pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
+pub fn read_config(args: CmdArgs) -> Result<(), Box<dyn Error>> {
     /*
     let mut data = String::new();
-    fs::File::open(&config.filename)?.read_to_string(&mut data)?;
+    fs::File::open(&args.filename)?.read_to_string(&mut data)?;
      */
     
-    let data = fs::read_to_string(&config.filename)?;
+    let data = fs::read_to_string(&args.filename)?;
     
-    let results = match config.case_sensitive {
-        true => search(&config.query, &data),
-        false => search_case_insensitive(&config.query, &data)
+    let results = match args.case_sensitive {
+        true => search_case_sensitive(&args.query, &data),
+        false => search_case_insensitive(&args.query, &data)
     };
 
     let mut count: u8 = 0;
     let count_closure = |x: u8| -> u8 { x + 1 };
 
-    println!("\n#EGREP:\nfile: {f}\nquery: {q}\ncase_sensitive: {cs}\n\nRESULTS:",
-             f=&config.filename,
-             q=&config.query,
-             cs=config.case_sensitive);
+    println!("\n#EGREP:\nfile: {f}\nquery: \"{q}\"\ncase_sensitive: {cs}\n\nRESULTS:",
+             f=&args.filename,
+             q=&args.query,
+             cs=args.case_sensitive);
     
     for line in results {
         count = count_closure(count); // INSTEAD count += 1;
