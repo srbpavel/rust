@@ -220,4 +220,16 @@ pub fn parse_sentence(s: &str) -> usize {
     let Example::Data(y) = x;   // unwrap the data via a pattern
     
     dbg!(y); // prints 'y = 123'
+    */
+
+/*
+let s = format!("{:#?}", (1, 2));
+    match s.contains("\","){
+        true => {
+            let parts = s.matches("\",").collect::<Vec<&str>>();
+            parts.len()
+        },
+        _ => 1
+    }
+
  */
