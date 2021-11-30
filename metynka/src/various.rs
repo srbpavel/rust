@@ -95,7 +95,8 @@ pub fn update_vector() {
         };
 
         // valid flag via verification
-        horse.valid = if horse.age != 0 && // default age not updated
+        horse.valid = if
+            horse.age != 0 && // default age not updated
             horse.name != "NAME" && // name not updated
             horse.color !="COLOR" { // color not updated or not found in hash_map
                 true
@@ -105,11 +106,24 @@ pub fn update_vector() {
     }
 
     let all = horses.len();
-    // iter -> filter -> collect back to Vec
-    let valid = horses.iter().filter(|horse| horse.valid).collect::<Vec<&Horse>>();
-    // iter to be able to count
-    let valid_count = &valid.iter().count();
-    
+
+    // https://doc.rust-lang.org/book/ch13-03-improving-our-io-project.html
+    //let valid: Vec<_> = horses
+    let valid = horses
+        .into_iter()
+        .filter(|horse| horse.valid)
+        .map(|horse| {
+            Horse {
+                color:horse.color.to_uppercase(),
+                ..horse
+            }
+        })
+        .collect::<Vec<Horse>>();
+
+    let valid_count = &valid
+        .iter()
+        .count();
+
     println!("\n#HORSES >>> valid: {v} / invalid: {i} / all: {a}\n{f:#?}",
              a = all,
              v = valid_count,

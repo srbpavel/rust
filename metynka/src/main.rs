@@ -20,9 +20,9 @@ fn main() {
     
     // */
 
-    /*
+    // /*
     various::update_vector();
-    */
+    // */
 
     // COMMAND ARGS
     let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {

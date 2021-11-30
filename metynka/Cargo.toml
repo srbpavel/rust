@@ -13,3 +13,9 @@ chrono = "0.4.19" # https://crates.io/crates/chrono # DATE_TIME
 toml = "0.5.8" # https://crates.io/crates/toml # CONFIG
 strfmt = "0.1.6" # FORMAT template
 #derivative = "2.2.0"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3

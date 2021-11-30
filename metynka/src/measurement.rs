@@ -750,7 +750,8 @@ fn run_all_influx_instances(config: &TomlConfig,
             }
             
             //METRIC_RESULT_LIST <- measured sensors values data
-            for single_metric_result in metric_result_list.into_iter() {
+            //for single_metric_result in metric_result_list.into_iter() {
+            for single_metric_result in metric_result_list.iter_mut() { // https://doc.rust-lang.org/book/ch13-02-iterators.html
                 let new_single_metric_result = Record {
                     measurement: single_metric_result.measurement.to_string(),
 

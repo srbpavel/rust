@@ -515,7 +515,8 @@ pub fn read_config(args: CmdArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-
+/// parse toml config file as program argument
+///
 pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error>> {
     println!("\n#PARSE file_config -> TOML:\n{:}\n", &cmd_args.filename);
 
