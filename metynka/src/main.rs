@@ -21,7 +21,7 @@ fn main() {
     // */
 
     // /*
-    various::update_vector();
+    //various::update_vector();
     // */
 
     // COMMAND ARGS
@@ -82,7 +82,7 @@ fn main() {
         }
     }
     
-    // METRICS -> SENSORS -> influx import + csv_backup
+    // SENSORS
     measurement::parse_sensors_data(&config,
                                     &dt,
     );

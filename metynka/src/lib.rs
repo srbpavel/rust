@@ -66,11 +66,17 @@ impl CmdArgs {
             None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen ?
             */
 
-            Some(arg) => arg.to_lowercase().parse::<bool>().unwrap_or_else(|err| {
-                eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
+            Some(arg) => arg
+                .to_lowercase()
+                .parse::<bool>()
+                .unwrap_or_else(|err| {
+                    eprintln!("\nEXIT: CASE SENSITIVE argument not true/false\nREASON: >>> {}", err);
+                    process::exit(1);
+                }),
+            None => {
+                eprintln!("no CASE SENSITIVE cmd_argument"); // probably will never happen but we need to cover ?
                 process::exit(1);
-            }),
-            None => return Err("no CASE SENSITIVE cmd_argument"), // probably will never happen but we need to cover ?
+            }
         };
 
         return Ok(CmdArgs {query, filename, case_sensitive});
@@ -396,7 +402,6 @@ mod tests {
     fn one_result() {
         let query = "duct"; //SEARCH STRING
         // start's with \ no new_line \n
-        // tim padem se me vrati jen radek ktery obsahuje QUERY
         let contents = "\
 Rust:
 safe, fast, productive.

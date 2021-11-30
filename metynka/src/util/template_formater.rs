@@ -10,7 +10,7 @@ pub fn tuple_formater<'sf>(template: &String,
     let mut hash_map = HashMap::new();
     
     if debug { println!("\n#TUPLE_FORMATER:") }
-    
+
     for t in pair {
         if debug {
             println!(" {} <- {}", t.0, t.1); 

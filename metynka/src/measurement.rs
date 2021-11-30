@@ -10,6 +10,10 @@ use std::any::{Any};
 
 use std::fmt::Debug;
 
+use strfmt::strfmt;
+
+use std::collections::HashMap;
+
 use crate::util::ts::{Dt};
 use crate::util::template_formater::tuple_formater;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
@@ -114,9 +118,25 @@ impl PartialEq for PreRecord
 }
 
 
-fn debug_vector<T: Any + Debug>(vec: &Vec<T>) {
-    println!("\n#RECORDS: not SAVED into BACKUP !!! \n{r:#?}",
-             r=vec);
+/*
+debug_vector(result_list,
+             "\n#RECORDS: not SAVED into BACKUP !!! \n{r}",
+             "r",
+);
+*/
+fn _debug_vector<T: Any + Debug>(vec: &Vec<T>,
+                                 template: &str,
+                                 key: &str) {
+    
+    let template = String::from(template);
+
+    let hash_map = HashMap::from([
+        (key.to_string(),
+         format!("{:#?}", vec),
+        )
+    ]);
+
+    println!("{}", strfmt(&template, &hash_map).unwrap());
 }
 
 
@@ -133,7 +153,6 @@ fn trim_quotes(string: &str) -> Option<f64> {
         //.trim_matches(|p| p == '"' || p == '\'' )
         .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
         .parse::<f64>() {
-        
             Ok(number) => Some(number),
 
             Err(why) => {
@@ -254,7 +273,7 @@ fn backup_data(config: &TomlConfig,
                metric: &TemplateSensors) {
     
     let full_path = Path::new(&config.work_dir).join(&config.backup.dir);
-    /* FOR ERROR HANDLING TESTING */
+    /* FOR ERROR HANDLING TEST */
     //let full_path = Path::new("/root/").join(&config.backup.dir); // ROOT owner
     //let full_path = Path::new("/home/conan/").join(&config.backup.dir); // PERMISSION read/write USER or GROUP
     
@@ -329,14 +348,12 @@ fn backup_data(config: &TomlConfig,
             },
 
             _ => {
-                debug_vector(result_list);
-
-                ()
+                println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
             }
         }
-    } /* if full_path_create_status */
+    } /* if full_path.exists */
     else {
-        debug_vector(result_list);
+        println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
     }
 }
 
@@ -519,7 +536,7 @@ stderr: {}",
         }
 }
 
-
+// too long and too deep ?
 fn os_call_metric_pipe(config: &TomlConfig,
                        metric: &TemplateSensors) -> Option<String> {
 
