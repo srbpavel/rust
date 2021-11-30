@@ -150,6 +150,14 @@ pub fn parse_sentence(s: &str) -> usize {
 
     // QUICK SAMPLE CODE TEST
     /*
+    use toml::Value;
+    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
+    println!("\nTOML: {:#?} <- {:?}",
+             fookume["foookin"],
+             fookume,);
+    */
+
+    /*
     let some_number = Some(false);
     let some_string = Some("a string");
     let absent_number: Option<i32> = None;

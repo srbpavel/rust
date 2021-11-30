@@ -101,10 +101,7 @@ pub struct TomlConfig {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
-    pub debug_new_config: bool,
-    
     pub debug_ts: bool,
-    pub debug_ts_to_dt: bool, // obsolete to DEL
 
     pub debug_template_formater: bool,
     
@@ -486,13 +483,14 @@ pub fn search<'a>(query: &str, data: &'a str) -> Vec<&'a str> {
 }
 
 
+// EGREP tutorial
 pub fn read_config(config: CmdArgs) -> Result<(), Box<dyn Error>> {
-    let data = fs::read_to_string(&config.filename)?;
-
     /*
     let mut data = String::new();
     fs::File::open(&config.filename)?.read_to_string(&mut data)?;
-    */
+     */
+    
+    let data = fs::read_to_string(&config.filename)?;
     
     let results = match config.case_sensitive {
         true => search(&config.query, &data),
@@ -542,14 +540,6 @@ pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error
         verify_influx_config(&cmd_args.filename,
                              &single_influx);
     }
-    
-    /*
-    use toml::Value;
-    let fookume = "foookin = 'paavel'".parse::<Value>().unwrap();
-    println!("\nTOML: {:#?} <- {:?}",
-             fookume["foookin"],
-             fookume,);
-    */
 
     Ok(toml_config)
 }

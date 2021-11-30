@@ -7,11 +7,8 @@ work_dir = '/home/conan/soft/rust/metynka'
 
 
 [flag]
-debug_new_config = false
-
+# display date_time struct
 debug_ts = false
-# future_use
-debug_ts_to_dt = false
 
 # display template string formating pairs
 debug_template_formater = false
@@ -27,7 +24,7 @@ debug_metric_record = false
 
 # view influx Struct parsed config data
 debug_influx_instances = false
-# import line_protocol
+# line_protocol import format
 debug_influx_lp = false
 debug_influx_uri = true # false
 debug_influx_auth = false
@@ -37,9 +34,9 @@ debug_influx_output = false
 # query influx to verify write was successfull
 run_flux_verify_record = false
 # add |> count() to [template.flux].query_verify_record
-add_flux_query_verify_record_suffix = false
+add_flux_query_verify_record_suffix = true # false
 
-debug_flux_query = true # false
+debug_flux_query = false
 debug_flux_result = true # false
 
 # search for QUERY in this CONFIG_FILE

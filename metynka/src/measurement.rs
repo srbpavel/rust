@@ -128,18 +128,18 @@ fn trim_quotes(string: &str) -> Option<f64> {
         .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
         .parse::<f64>() {
         
-        Ok(number) => Some(number),
-        Err(why) => {
-            eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
-                      string,
-                      trim_chars,
-                      why,
-            );
-            
-            None
-        }
-    } 
-    
+            Ok(number) => Some(number),
+
+            Err(why) => {
+                eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
+                          string,
+                          trim_chars,
+                          why,
+                );
+                
+                None
+            }
+        } 
 }
 
 
@@ -152,12 +152,13 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
     let value = match value_any.downcast_ref::<String>() {
         Some(as_string) => {             
 
+            // JSON VALUE
             match as_string.parse::<f64>() {
-                // JSON VALUE not f64 -> TRIM " 
+                // not f64 -> TRIM " 
                 Err(_why) => {
                     trim_quotes(as_string)
                 },
-                // JSON VALUE is f64 
+                // is f64 
                 Ok(number) => {
                     Some(number)
                 },
@@ -322,7 +323,7 @@ fn backup_data(config: &TomlConfig,
             },
 
             _ => {
-                // LEARN to format Vec<Struct> into STR for tuple_formater
+                // LEARN to format Vec<Struct> into STR for tuple_formater / trait
                 println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
                 
                 ()
@@ -413,14 +414,14 @@ fn parse_flux_result(stdout: Vec<u8>,
     */
 
     let data = String::from_utf8(stdout).expect("Found invalid UTF-8");
+
+    let data_len = data.len();
     
-    if data.len() < 1 {
-        eprintln!("WARNING: flux result len: {}", data.len());
+    if data_len < 1 {
+        eprintln!("WARNING: flux result len: {}", data_len);
     }
     
-    let lines = data.lines();
-    
-    for line in lines {
+    for line in data.lines() {
         if !line.contains("value") && line.trim().len() != 0 {
             match line.split(",").last() {
                 Some(value) => match value.parse::<u64>() {
@@ -517,7 +518,7 @@ stderr: {}",
 fn os_call_metric_pipe(config: &TomlConfig,
                        metric: &TemplateSensors) -> Option<String> {
 
-    // os program call
+    // os call program
     match Command::new(&metric.program)
         .args(&metric.args)
         .stdout(Stdio::piped())
@@ -532,7 +533,7 @@ fn os_call_metric_pipe(config: &TomlConfig,
                     // stdout ok 
                     Some(stdout) => {
                         
-                        // | pipe call
+                        // | call pipe
                         match Command::new(&metric.pipe_program)
                             .args(&metric.pipe_args)
                             .stdin(stdout) // data from os program call output
@@ -743,7 +744,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", influx_properties.auth);
             }
             
-            //METRIC_RESULT_LIST
+            //METRIC_RESULT_LIST <- measured sensors values data
             for single_metric_result in metric_result_list.into_iter() {
                 let new_single_metric_result = Record {
                     measurement: single_metric_result.measurement.to_string(),
@@ -884,81 +885,59 @@ fn parse_json_via_pointer(config: &TomlConfig,
                           key: &String,
                           dt: &Dt) {
 
-    let (single_sensor_pointer_value, pointer_path_status) = match metric_json.pointer(&single_sensor.pointer) {
+    // DEBUG SENSOR values config
+    if config.flag.debug_pointer_output {
+        println!("\n#POINTER PATH:\nstatus: {s}\nname: {n}\npointer: {p}",
+                 s=single_sensor.status,
+                 n=single_sensor.name,
+                 p=single_sensor.pointer,
+        );
+    }
+
+    match metric_json.pointer(&single_sensor.pointer) {
         Some(value) => {
             if config.flag.debug_pointer_output {
-                println!("\n#POINTER_PATH: SOME: <{v}> / {v:?}",
-                         v=value);
+                println!("json pointer value: {s} / {s:?}",
+                         s=value);
             }
-            
-            (Some(value), true)
+                    
+            match verify_pointer_type(&value.to_string()) {
+                Some(value) => {
+                    let single_record = PreRecord::new(
+                        &config,
+                        key,
+                        dt.ts,
+                        value,
+                        &single_sensor.name,
+                    );
+                    
+                    // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
+                    if !metric_result_list.contains(&single_record) { 
+                        metric_result_list.push(single_record)
+                    }
+                    
+                },
+                None => {
+                    eprintln!("{}",
+                              tuple_formater(&"JSON POINTER VALUE: metric: <{m}> Option: None !!!".to_string(),
+                                             &vec![
+                                                 ("m", key),
+                                             ],
+                                             false,
+                              ),
+                    );
+                }
+                
+            }
         },
-        
+
         None => {
             println!("\n#POINTER_PATH: !!! NONE !!!");
             eprintln!("\nWARNING: Problem parsing METRIC: {m} -> JSON PATH: {jp}",
                       jp=&single_sensor.pointer,
                       m=config.metrics[key].measurement,
             );
-            (None, false)
         }
-    };
-
-    // DEBUG true/false SENSORS
-    if config.flag.debug_pointer_output {
-        println!("path_status: {ps}\nstatus: {s}\nname: {n}\npointer: {p}\nvalue: {v:?}",
-                 s=single_sensor.status,
-                 n=single_sensor.name,
-                 p=single_sensor.pointer,
-                 v=&single_sensor_pointer_value,
-                 ps=&pointer_path_status,
-        );
-    }
-    
-    // valid JSON PATH
-    if pointer_path_status {
-        let err_msg_none = tuple_formater(&"JSON POINTER VALUE: metric: <{m}> unwrap: !!! none !!!".to_string(),
-                                          &vec![
-                                              ("m", key),
-                                          ],
-                                          false,
-        );
-        
-        match single_sensor_pointer_value {
-            Some(value) => {
-                if config.flag.debug_pointer_output {
-                    println!("JSON POINTER VALUE: {s} / {s:?}",
-                             s=value);
-                }
-
-                match verify_pointer_type(&value.to_string()) {
-                    Some(value) => {
-
-                        let single_record = PreRecord::new(
-                            &config,
-                            key,
-                            dt.ts,
-                            value,
-                            &single_sensor.name,
-                        );
-                        
-                        // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
-                        if !metric_result_list.contains(&single_record) { 
-                            metric_result_list.push(single_record)
-                        }
-                        
-                    },
-                    None => {
-                        eprintln!("{}", err_msg_none);
-                    }
-                    
-                }
-            },
-            None => {
-                eprintln!("{}", err_msg_none);
-
-            }
-        };
     }
 }
 

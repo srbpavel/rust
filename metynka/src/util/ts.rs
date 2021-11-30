@@ -17,12 +17,11 @@ pub fn ts_now(debug: bool) -> Dt {
     let utc = Utc::now();
     let ts: u64 = local.timestamp_millis() as u64;
 
-    // local - 1 HARDCODED -> niet goed jochie @= jaa matje
     let local_influx_format = format!("{:04}-{:02.}-{:02.}T{:02}:{:02.}:{:02.}.{}Z",
                                       local.year(),
                                       local.month(),
                                       local.day(),
-                                      local.hour(), // -1
+                                      local.hour(),
                                       local.minute(),
                                       local.second(),
                                       &format!("{:09}", local.nanosecond())[0..3],
@@ -71,24 +70,3 @@ pub fn ts_now(debug: bool) -> Dt {
     
     return dt;
 }
-
-/*
-// FUTURE USE
-pub fn ts_to_datetime(timestamp: i64, debug: bool) -> DateTime<Local> {
-    let ts_sec: f64 = timestamp as f64 / 1000.0;
-    let sec: i64 = ts_sec.trunc() as i64;
-    let millis: u32 = (ts_sec.fract() * 1_000_000_000.0) as u32;
-
-    let nvdt = NaiveDateTime::from_timestamp(sec, millis); 
-
-    let dt_utc: DateTime<Utc> = DateTime::from_utc(nvdt, Utc);
-    let dt_local: DateTime<Local> = dt_utc.with_timezone(&Local);
-
-    if debug {
-        println!("ts_sec: {} sec: {} millis: {}", ts_sec, sec, millis);
-    	println!("\nnaive: {}\nutc:   {}\nlocal: {}", nvdt, dt_utc, dt_local);
-	}
-
-    return dt_local
-}
-*/
