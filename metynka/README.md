@@ -3,6 +3,10 @@
 toml_config -> measure sensors -> import influxdb + backup csv
 
 ```
+*/5 * * * * /home/conan/.cargo/bin/cargo run --manifest-path /home/conan/soft/rust/metynka/Cargo.toml BUCKET /home/conan/soft/rust/metynka/src/config.toml false 1>/home/conan/soft/rust/metynka/1_cron.log 2>/home/conan/soft/rust/metynka/2_cron.log
+```
+
+```
      1
      2  #COMMAND: Args {
      3      inner: [
