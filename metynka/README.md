@@ -1,6 +1,12 @@
 # metynka
 
-toml_config -> measure sensors -> import influxdb + backup csv
+<b>level 1 lesson</b>
+
+- read and parse toml config settings
+- measure metric sensors
+- prepare data and render influxdb template
+- import and backup
+
 
 ```
 */5 * * * * /home/conan/.cargo/bin/cargo run --manifest-path /home/conan/soft/rust/metynka/Cargo.toml BUCKET /home/conan/soft/rust/metynka/src/config.toml false 1>/home/conan/soft/rust/metynka/1_cron.log 2>/home/conan/soft/rust/metynka/2_cron.log
