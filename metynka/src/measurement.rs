@@ -29,23 +29,6 @@ struct InfluxCall {
 }
 
 
-// BACKUP CVS 
-#[derive(Debug)]
-struct Record {
-    measurement: String,
-
-    value: String,
-    id: String,
-
-    machine: String,
-    carrier: String,
-    valid: String,
-
-    host: String,
-    ts: u64,
-}
-
-
 #[derive(Debug)]
 struct PreRecord {
     key: String,
@@ -102,14 +85,6 @@ impl PreRecord {
 
 
 // compare STRUCT's via contains
-impl PartialEq for Record
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.id.eq(&other.id)
-    }
-}
-
-
 impl PartialEq for PreRecord
 {
     fn eq(&self, other: &Self) -> bool {
@@ -268,9 +243,7 @@ fn _csv_display_header(datatype: &String,
 
 
 fn backup_data(config: &TomlConfig,
-               //result_list: &Vec<Record>, //pr
                result_list: &Vec<PreRecord>, //backup 
-               //single_record: &PreRecord, 
                today_file_name: &String,
                metric: &TemplateSensors) {
     
@@ -296,22 +269,18 @@ fn backup_data(config: &TomlConfig,
         ));
 
         // FILE CREATE or APPEND
-        // /* BACKUP_H
         if config.flag.debug_backup {
             println!("\n#CSV_ANNOTATED: {}\n#", &today_file_name.display());
         }
-        // */
 
         // format CSV HEADER
         let csv_header = prepare_csv_header_format(&config,
                                                    &metric);
 
-        // /* BACKUP_H
         if config.flag.debug_backup {
             _csv_display_header(&metric.annotated_datatype,
                                 &csv_header);
         }
-        // */
         
         if !today_file_name.exists() {
             let file = create_new_file(&today_file_name); //mut
@@ -358,7 +327,6 @@ fn backup_data(config: &TomlConfig,
                 for single_record in result_list {
                     if &metric.measurement == &single_record.measurement {
                         let csv_record = prepare_csv_record_format(&config,
-                                                                   // &single_record, //pr
                                                                    &single_record,
                                                                    &metric,
                         );
@@ -406,7 +374,6 @@ fn prepare_csv_header_format(config: &TomlConfig,
 
 
 fn prepare_csv_record_format(config: &TomlConfig,
-                             //record: &Record,
                              record: &PreRecord,
                              metric: &TemplateSensors) -> String {
 
@@ -428,7 +395,6 @@ fn prepare_csv_record_format(config: &TomlConfig,
 
 fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      single_influx: &Influx,
-                                     //generic_record: &Record, //pr
                                      generic_pre_record: &PreRecord,
                                      metric: &TemplateSensors,
                                      utc_influx_format: &String) -> String {
@@ -452,7 +418,6 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
                        ("measurement", &metric.measurement),
                        
                        // COMPARE only id + time // if needed can add _VALUE
-                       //("id", &generic_record.id.to_string()), //pr
                        ("id", &generic_pre_record.id.to_string()),
                        ("dtif", utc_influx_format), // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
                    ],
@@ -461,7 +426,8 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 }
 
 
-fn parse_flux_result(stdout: Vec<u8>,
+fn parse_flux_result(config: &TomlConfig,
+                     stdout: Vec<u8>,
                      _stderr: Vec<u8>) {
 
     /* FUTURE USE 
@@ -476,29 +442,38 @@ fn parse_flux_result(stdout: Vec<u8>,
     if data_len < 1 {
         eprintln!("WARNING: flux result len: {}", data_len);
     }
-    
-    for line in data.lines() {
-        if !line.contains("value") && line.trim().len() != 0 {
-            match line.split(",").last() {
-                Some(value) => match value.parse::<u64>() {
-                    // FUTURE USE
-                    Ok(1) => {
-                        println!("flux result count: {}", //\n{:#?}",
-                                 1,
-                        );
-                    },
-                    _ => {
-                        println!("WARNING: flux result: not 1\nDATA >>> {}\n",
-                                 data,
-                        );
-                    },
-                },
-                _ => {
-                    println!("flux RESULT: EMPTY\nDATA >>> {}\n",
-                             data,
-                    );
+
+    match config.flag.add_flux_query_verify_record_suffix {
+        true => {
+            for line in data.lines() {
+                if !line.contains("value") && line.trim().len() != 0 {
+                    match line.split(",").last() {
+                        Some(value) => match value.parse::<u64>() {
+                            // FUTURE USE
+                            Ok(1) => {
+                                println!("flux result count: {}", //\n{:#?}",
+                                         1,
+                                );
+                            },
+                            _ => {
+                                println!("WARNING: flux result count: not 1\nDATA >>> {}\n",
+                                         data,
+                                );
+                            },
+                        },
+                        _ => {
+                            println!("flux RESULT count: EMPTY\nDATA >>> {}\n",
+                                     data,
+                            );
+                        }
+                    }
                 }
             }
+        },
+        false => {
+            println!("flux RESULT: {}",
+                     data,
+                     );
         }
     }
 }
@@ -525,11 +500,12 @@ fn os_call_curl_flux(config: &TomlConfig,
         ])
         .output().expect("failed to execute command");
 
-    // parse FLUX stdout responde
+    // parse FLUX stdout responde -> only when "flux |> count()" true
     if config.flag.debug_flux_result {
-        parse_flux_result(curl_output.stdout,
+        parse_flux_result(&config,
+                          curl_output.stdout,
                           curl_output.stderr)
-    }
+    } 
 }
 
 
@@ -570,7 +546,8 @@ stderr: {}",
         }
 }
 
-// too long and too deep ?
+
+// too long and too deep
 fn os_call_metric_pipe(config: &TomlConfig,
                        metric: &TemplateSensors) -> Option<String> {
 
@@ -668,7 +645,6 @@ fn os_call_curl(config: &TomlConfig,
 
 
 fn prepare_generic_lp_format(config: &TomlConfig,
-                             //generic_record: &Record, //pr
                              generic_pre_record: &PreRecord,
                              metric: &TemplateSensors)  -> String {
 
@@ -679,21 +655,7 @@ fn prepare_generic_lp_format(config: &TomlConfig,
                        ("tag_valid", &metric.tag_valid),
                        ("tag_id", &metric.tag_id),
                        ("field", &metric.field),
-                       /* Record
-                       ("measurement", &generic_record.measurement),
-                       ("host", &generic_record.host),
-                       ("machine_id", &generic_record.machine),
-                       
-                       ("carrier", &generic_record.carrier),
-                       ("valid", &generic_record.valid),
-                       
-                       ("id", &generic_record.id),
-                       ("value", &generic_record.value.to_string()),
-                       
-                       ("ts", &generic_record.ts.to_string()),
-                       */
 
-                       // /* PreRecord
                        ("measurement", &generic_pre_record.measurement),
                        ("host", &generic_pre_record.host),
                        ("machine_id", &generic_pre_record.machine),
@@ -705,7 +667,6 @@ fn prepare_generic_lp_format(config: &TomlConfig,
                        ("value", &generic_pre_record.value.to_string()),
                        
                        ("ts", &generic_pre_record.ts.to_string()),
-                       //*/
                    ],
                    config.flag.debug_template_formater
     )
@@ -769,7 +730,6 @@ fn prepare_influx_format(config: &TomlConfig,
 fn run_flux_query(config: &TomlConfig,
                   config_metric: &TemplateSensors,
                   single_influx: &Influx,
-                  //metric_result: &Record, //pr
                   metric_pre_result: &PreRecord,
                   utc_influx_format: &String,
                   influx: &InfluxCall) {
@@ -777,8 +737,7 @@ fn run_flux_query(config: &TomlConfig,
     let generic_influx_query = prepare_generic_flux_query_format(
         &config,
         &single_influx,
-        //&metric_result, //pr
-        &metric_pre_result, //pr
+        &metric_pre_result,
         &config_metric,
         &utc_influx_format);
     
@@ -795,7 +754,6 @@ fn run_flux_query(config: &TomlConfig,
 
 
 fn run_all_influx_instances(config: &TomlConfig,
-                            //result_list: & mut Vec<Record>,
                             metric_result_list: & mut Vec<PreRecord>,
                             dt: &Dt) {
 
@@ -819,51 +777,25 @@ fn run_all_influx_instances(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", influx_properties.auth);
             }
             
+            let _metric_result_list_len = metric_result_list.len();
+
             //METRIC_RESULT_LIST <- measured sensors values data
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
-            
+
             //for single_metric_result in metric_result_list.into_iter() { // owned values
-            
-            let _metric_result_list_len = metric_result_list.len();
-           
-            for single_metric_result in metric_result_list.iter_mut() { // mutable references
-
             // for single_metric_result in metric_result_list.iter() { // imutable references
-
-                /* 
-                let new_single_metric_result = Record {
-                    measurement: single_metric_result.measurement.to_string(),
-
-                    id: single_metric_result.id.to_string(),
-                    value: single_metric_result.value.to_string(),
-
-                    carrier: single_influx.carrier.to_string(),
-                    valid: single_influx.flag_valid_default.to_string(),
-                    machine: single_influx.machine_id.to_string(),
-
-                    host: single_metric_result.host.to_string(),
-                    ts: single_metric_result.ts,
-                };
-                */
-                
-                // *& / UPDATE Struct, but still cannot use PreRecord in Vec !!!
-                // /*
+            for single_metric_result in metric_result_list.iter_mut() { // mutable references
                 single_metric_result.machine=single_influx.machine_id.to_string();
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
-                // */
-                // DEBUG println!("<UPDATED> {:?}", single_metric_result);
-
-                // display PreRecord <- Record populated with Influx properties
+                // DISPLAY PreRecord populated with Influx properties
                 if config.flag.debug_metric_record {
-                    //println!("\n{:?}", new_single_metric_result); //pr
                     println!("\n{:?}", single_metric_result);
                 }
                 
                 // LP via Record
                 let generic_lp = prepare_generic_lp_format(&config,
-                                                           //&new_single_metric_result,
-                                                           &single_metric_result, //pr
+                                                           &single_metric_result,
                                                            &config.metrics[&single_metric_result.key.to_string()],
                 );
 
@@ -894,18 +826,11 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &config,
                         &config.metrics[&single_metric_result.key.to_string()],
                         &single_influx,
-                        //&new_single_metric_result, //pr
                         &single_metric_result,
                         &dt.utc_influx_format,
                         &influx_properties,
                     );
                 }
-
-                /*
-                if !result_list.contains(&new_single_metric_result) { 
-                    result_list.push(new_single_metric_result)
-                }
-                */
             } /* for single_metric */
         } /* single_influx.status*/
     } /* all_influx.values */
@@ -1050,12 +975,11 @@ fn parse_json_via_pointer(config: &TomlConfig,
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
 
-    //let mut result_list: Vec<Record> = Vec::new(); 
     let mut metric_result_list: Vec<PreRecord> = Vec::new();
 
-    // loop via METRICS
     println!("\n#METRIC:");
-    
+
+    // loop METRICS
     for key in config.metrics.keys() {
         if config.metrics[key].flag_status {
             println!("{metric} -> MEASUREMENT: {measurement}",
@@ -1090,11 +1014,13 @@ pub fn parse_sensors_data(config: &TomlConfig,
         }
     }
 
+    /*
     if config.flag.debug_metric_record {
         for single_metric_result in &metric_result_list {
             println!("\n {:?}", single_metric_result);
         }
     }
+    */
 
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
@@ -1102,13 +1028,10 @@ pub fn parse_sensors_data(config: &TomlConfig,
                              & mut metric_result_list,
                              &dt);
 
-    // BACKUP
-    // /*
+    // BACKUP: loop metrics again -> now with influx LP populated
     for key in config.metrics.keys() {
-        //if config.metrics[key].flag_status && result_list.len() != 0 { //pr
         if config.metrics[key].flag_status && metric_result_list.len() != 0 {
             backup_data(&config,
-                        //&result_list, //pr
                         &metric_result_list,
                         &dt.today_file_name,
                         &config.metrics[key]);
@@ -1116,5 +1039,4 @@ pub fn parse_sensors_data(config: &TomlConfig,
             println!("NO records to BACKUP");
         }
     }
-    // */
 }

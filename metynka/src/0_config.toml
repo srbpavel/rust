@@ -23,7 +23,7 @@ debug_pointer_output = false
 debug_metric_record = false
 
 # view influx Struct parsed config data
-debug_influx_instances = false
+debug_influx_instances = true # false
 # line_protocol import format
 debug_influx_lp = false
 debug_influx_uri = true # false
@@ -37,6 +37,8 @@ run_flux_verify_record = false
 add_flux_query_verify_record_suffix = true # false
 
 debug_flux_query = false
+# future use: for now just verify is result count is 1 -> "add_flux_query_verify_record_suffix" need to be: true
+# rarely i have seen no results ! network ?
 debug_flux_result = true # false
 
 # search for QUERY in this CONFIG_FILE
@@ -45,6 +47,9 @@ debug_egrep = true # false
 
 # display CSV ANNOTATED data to backup
 debug_backup = true # false
+
+# skip import when offline
+influx_skip_import = false
 
 
 #hash map

@@ -57,16 +57,8 @@ fn main() {
     // DEBUG: ALL_INFLUX
     if config.flag.debug_influx_instances {
         for single_influx in &config.all_influx.values {
-            /*
-            let status = match single_influx.status {
-            true => "true",
-            false => "false",
-            };
-             */
-            
-            println!("INFLUX [{:5?}]: {}",
-                     //status,
-                     single_influx.status,
+            println!("INFLUX [{:13}]: {}",
+                     format!("status: {}", single_influx.status), // just playin: instead concat strings
                      single_influx.name);
         }
     }
