@@ -258,7 +258,7 @@ fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
 }
 
 
-fn csv_display_header(datatype: &String,
+fn _csv_display_header(datatype: &String,
                       tags_and_fields: &String) {
     println!("{}\n{}",
              &datatype,
@@ -268,8 +268,9 @@ fn csv_display_header(datatype: &String,
 
 
 fn backup_data(config: &TomlConfig,
-               //result_list: &Vec<Record>, pr
-               result_list: &Vec<PreRecord>,
+               //result_list: &Vec<Record>, //pr
+               result_list: &Vec<PreRecord>, //backup 
+               //single_record: &PreRecord, 
                today_file_name: &String,
                metric: &TemplateSensors) {
     
@@ -295,18 +296,22 @@ fn backup_data(config: &TomlConfig,
         ));
 
         // FILE CREATE or APPEND
+        // /* BACKUP_H
         if config.flag.debug_backup {
             println!("\n#CSV_ANNOTATED: {}\n#", &today_file_name.display());
         }
+        // */
 
         // format CSV HEADER
         let csv_header = prepare_csv_header_format(&config,
                                                    &metric);
 
+        // /* BACKUP_H
         if config.flag.debug_backup {
-            csv_display_header(&metric.annotated_datatype,
-                               &csv_header);
+            _csv_display_header(&metric.annotated_datatype,
+                                &csv_header);
         }
+        // */
         
         if !today_file_name.exists() {
             let file = create_new_file(&today_file_name); //mut
@@ -328,7 +333,28 @@ fn backup_data(config: &TomlConfig,
 
         match file {
             Ok(mut file) => {
+                // SINGLE_RESULT
+                /*
+                if &metric.measurement == &single_record.measurement {
+                    let csv_record = prepare_csv_record_format(&config,
+                                                               // &single_record, //pr
+                                                               &single_record,
+                                                               &metric,
+                    );
+                    
+                    if config.flag.debug_backup {
+                        println!("{}", &csv_record);
+                    }
+                    
+                    // APPEND SINGLE RECORD to backup_file
+                    writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
+                        eprintln!("\nERROR: APPEND DATA to file failed\nREASON: >>> {}", err);
+                    });
+                }
+                */
+
                 // RESULT_LIST
+                // /*
                 for single_record in result_list {
                     if &metric.measurement == &single_record.measurement {
                         let csv_record = prepare_csv_record_format(&config,
@@ -347,15 +373,18 @@ fn backup_data(config: &TomlConfig,
                         });
                     }
                 }
+                // */
             },
 
             _ => {
                 println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
+                //println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", single_record);
             }
         }
     } /* if full_path.exists */
     else {
         println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
+        //println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", single_record);
     }
 }
 
@@ -794,10 +823,12 @@ fn run_all_influx_instances(config: &TomlConfig,
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
             
             //for single_metric_result in metric_result_list.into_iter() { // owned values
-
+            
+            let _metric_result_list_len = metric_result_list.len();
+           
             for single_metric_result in metric_result_list.iter_mut() { // mutable references
 
-            //for single_metric_result in metric_result_list.iter() { // imutable references
+            // for single_metric_result in metric_result_list.iter() { // imutable references
 
                 /* 
                 let new_single_metric_result = Record {
@@ -840,6 +871,16 @@ fn run_all_influx_instances(config: &TomlConfig,
                     println!("{}", generic_lp);
                 }
 
+                //BACKUP before IMPORT
+                /*
+                if _metric_result_list_len != 0 {
+                    backup_data(&config,
+                                &single_metric_result,
+                                &dt.today_file_name,
+                                &config.metrics[&single_metric_result.key]);
+                }
+                */
+                
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
                     os_call_curl(&config,
@@ -975,7 +1016,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
                         &single_sensor.name,
                     );
                     
-                    // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
+                    // METRIC RECORD_LIST -> Vec<PreRecord> / trait PartialEq
                     if !metric_result_list.contains(&single_record) { 
                         metric_result_list.push(single_record)
                     }
