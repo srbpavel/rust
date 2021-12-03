@@ -131,6 +131,8 @@ pub struct Flag {
     pub debug_egrep: bool,
 
     pub debug_backup: bool,
+
+    pub influx_skip_import: bool,
 }
 
 
