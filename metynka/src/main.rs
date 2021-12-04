@@ -17,10 +17,6 @@ mod various;
 fn main() {
     // QUICK SAMPLE TEST
     // /*
-    
-    // */
-
-    // /*
     //various::update_vector();
     // */
 
@@ -78,4 +74,13 @@ fn main() {
     measurement::parse_sensors_data(&config,
                                     &dt,
     );
+
+    // QUICK SAMPLE TEST
+    /*
+    various::easy_email(&config,
+                        "rust::metik",
+                        "wonka",
+                        false, //true,
+    );
+    */
 }

@@ -1,5 +1,126 @@
 use std::collections::HashMap;
 
+use metynka::{TomlConfig};
+
+use lettre::{Message, SmtpTransport, Transport};
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::transport::smtp::client::{Tls, TlsParameters};
+
+/*
+use lettre::{
+    transport::smtp::{
+        authentication::Credentials,
+        client::{Tls, TlsParameters},
+    },
+    Message, SmtpTransport, Transport,
+};
+*/
+
+
+// lettre = "0.10.0-rc.4"
+// https://github.com/lettre/lettre/tree/master/examples
+#[allow(dead_code)]
+pub fn easy_email(config: &TomlConfig,
+                  subject: &str,
+                  body: &str,
+                  sms: bool) {
+
+    /*
+    .from("influx_db <influxdb@srbpavel.cz>".parse().unwrap())
+    .from("<influxdb@srbpavel.cz>".parse().unwrap())
+        
+    .to("srbp <prace@srbpavel.cz>".parse().unwrap())
+
+    .reply_to("influx_db <influxdb@srbpavel.cz>".parse().unwrap())
+    .reply_to(config.email.source_email.parse().unwrap())
+    */
+
+    // EMAIL
+    let email = Message::builder()
+    //let mut email = Message::builder()
+        .from(config.email.source_email.parse().unwrap())
+        .to(config.email.target_email.parse().unwrap());
+    
+    let email = match sms {
+    //email = match sms {
+        true => email.to(config.email.sms_email.parse().unwrap()),
+        false => email,
+    };
+
+    let email = email
+    //email = email
+        .subject(String::from(subject))
+        .body(String::from(body))
+        .unwrap();
+    
+    let creds = Credentials::new(config.email.source_email.parse().unwrap(),
+                                 config.email.v_pass.parse().unwrap());
+
+    // https://github.com/lettre/lettre/blob/master/src/transport/smtp/transport.rs
+    let tls_parameters = TlsParameters::new(config.email.smtp_server.to_string());
+    
+    // DEFAULT port 587
+    /*
+    let mailer = SmtpTransport::starttls_relay(&config.email.smtp_server)
+        .unwrap()
+        .credentials(creds)
+        .build();
+    */
+    
+    // CONFIG port
+    let mailer = SmtpTransport::builder_dangerous(&config.email.smtp_server)
+        .port(config.email.port)
+        .tls(Tls::Required(tls_parameters.unwrap()))
+        .credentials(creds)
+        .build();
+
+        /* WRONG port -> long long time_out
+
+         5  REASON >>>lettre::transport::smtp::Error {
+         6      kind: Connection,
+         7      source: Error {
+         8          kind: TimedOut,
+         9          message: "connection timed out",
+        10      },
+        11  }
+        */
+
+    match mailer.send(&email) {
+        Ok(_) => {
+            //println!("Email sent successfully!")
+        },
+        
+        Err(e) => {
+            eprintln!("ERROR: email not send\nREASON >>>{:#?}", e)
+        },
+        /* wrong UESR_EMAIL or PASSSWORD
+
+        14  ERROR: email not send
+        15  REASON >>>lettre::transport::smtp::Error {
+        16      kind: Permanent(
+        17          Code {
+        18              severity: PermanentNegativeCompletion,
+        19              category: Unspecified3,
+        20              detail: Five,
+        21          },
+        22      ),
+        23  }
+         */
+
+        /* wrong SMTP server
+        
+        11  ERROR: email not send
+        12  REASON >>>lettre::transport::smtp::Error {
+        13      kind: Connection,
+        14      source: Custom {
+        15          kind: Uncategorized,
+        16          error: "failed to lookup address information: Name or service not known",
+        17      },
+        18  }
+        */
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Horse {

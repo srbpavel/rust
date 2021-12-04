@@ -18,6 +18,8 @@ use crate::util::ts::{Dt};
 use crate::util::template_formater::tuple_formater;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
+use crate::various;
+
 
 #[derive(Debug)]
 struct InfluxCall {
@@ -65,7 +67,8 @@ impl PreRecord {
         }
     }
 
-    
+
+    // maybe set default empty "" for generic verify ?
     fn default() -> PreRecord {
         PreRecord {
             key: "KEY".to_string(),
@@ -342,6 +345,30 @@ fn backup_data(config: &TomlConfig,
                     }
                 }
                 // */
+
+                // EMAIL
+                if config.email.status {
+                    various::easy_email(&config,
+                                        // SUBJECT
+                                        format!("{h} -> {r} {m}",
+                                                h=config.email.sender_machine,
+                                                m=metric.measurement,
+                                                r="metynka::",
+                                        ).as_str(),
+
+                                        // BODY
+                                        format!("{:#?}",
+                                                result_list
+                                                .into_iter()
+                                                .filter(|r| r.measurement==metric.measurement)
+                                                .collect::<Vec<&PreRecord>>()
+                                        ).as_str(),
+
+                                        // SMS
+                                        false, //true,
+                    );
+                }
+                
             },
 
             _ => {
@@ -435,7 +462,7 @@ fn parse_flux_result(config: &TomlConfig,
     eprintln!("STDERR: {:#?}", error_data);
     */
 
-    let data = String::from_utf8(stdout).expect("Found invalid UTF-8");
+    let data = String::from_utf8(stdout).expect("invalid UTF-8"); // change to not !panic
 
     let data_len = data.len();
     
@@ -500,7 +527,7 @@ fn os_call_curl_flux(config: &TomlConfig,
         ])
         .output().expect("failed to execute command");
 
-    // parse FLUX stdout responde -> only when "flux |> count()" true
+    // parse FLUX stdout responde -> only when "flux_query .. |> count()" true
     if config.flag.debug_flux_result {
         parse_flux_result(&config,
                           curl_output.stdout,
@@ -783,11 +810,12 @@ fn run_all_influx_instances(config: &TomlConfig,
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
 
             //for single_metric_result in metric_result_list.into_iter() { // owned values
-            // for single_metric_result in metric_result_list.iter() { // imutable references
+            //for single_metric_result in metric_result_list.iter() { // imutable references
             for single_metric_result in metric_result_list.iter_mut() { // mutable references
                 single_metric_result.machine=single_influx.machine_id.to_string();
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
+
                 // DISPLAY PreRecord populated with Influx properties
                 if config.flag.debug_metric_record {
                     println!("\n{:?}", single_metric_result);
@@ -1001,7 +1029,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
                                                    &single_sensor,
                                                    &json,
                                                    &key,
-                                                   &dt);
+                                                   &dt,
+                            );
                             
                         }
                     }
@@ -1026,7 +1055,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
     run_all_influx_instances(&config,
                              //& mut result_list,
                              & mut metric_result_list,
-                             &dt);
+                             &dt,
+    );
 
     // BACKUP: loop metrics again -> now with influx LP populated
     for key in config.metrics.keys() {
@@ -1034,7 +1064,8 @@ pub fn parse_sensors_data(config: &TomlConfig,
             backup_data(&config,
                         &metric_result_list,
                         &dt.today_file_name,
-                        &config.metrics[key]);
+                        &config.metrics[key],
+            );
         } else {
             println!("NO records to BACKUP");
         }

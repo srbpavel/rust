@@ -14,8 +14,11 @@ toml = "0.5.8" # https://crates.io/crates/toml # CONFIG
 strfmt = "0.1.6" # FORMAT template
 #derivative = "2.2.0"
 
-[profile.dev]
-opt-level = 0
+#lettre = "0.9.6" # EMAIL
+lettre = "0.10.0-rc.4" # EMAIL / works
 
-[profile.release]
-opt-level = 3
+#[profile.dev]
+#opt-level = 0
+
+#[profile.release]
+#opt-level = 3

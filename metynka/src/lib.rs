@@ -99,9 +99,26 @@ pub struct TomlConfig {
     pub backup: Backup,
     pub template: Template,
     pub delay: Delay,
+    pub email: Email,
     
     // VEC
     pub all_influx: AllInflux,
+}
+
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Email {
+    pub status: bool,
+    pub smtp_server: String,
+    pub port: u16,
+
+    pub source_email: String,
+    pub v_pass: String,
+
+    pub target_email: String,
+    pub sms_email: String,
+
+    pub sender_machine: String,
 }
 
 
