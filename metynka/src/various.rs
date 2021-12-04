@@ -43,22 +43,19 @@ pub fn easy_email(config: &TomlConfig,
     
     let email = match sms {
     //email = match sms {
-        true => email.to(config.email.sms_email.parse().unwrap()),
+        true => email.cc(config.email.sms_email.parse().unwrap()),
         false => email,
     };
 
     let email = email
     //email = email
-        .subject(String::from(subject))
+        .subject(subject)
         .body(String::from(body))
         .unwrap();
     
     let creds = Credentials::new(config.email.source_email.parse().unwrap(),
                                  config.email.v_pass.parse().unwrap());
 
-    // https://github.com/lettre/lettre/blob/master/src/transport/smtp/transport.rs
-    let tls_parameters = TlsParameters::new(config.email.smtp_server.to_string());
-    
     // DEFAULT port 587
     /*
     let mailer = SmtpTransport::starttls_relay(&config.email.smtp_server)
@@ -66,8 +63,11 @@ pub fn easy_email(config: &TomlConfig,
         .credentials(creds)
         .build();
     */
-    
+
     // CONFIG port
+    // https://github.com/lettre/lettre/blob/master/src/transport/smtp/transport.rs
+    let tls_parameters = TlsParameters::new(config.email.smtp_server.to_string());
+   
     let mailer = SmtpTransport::builder_dangerous(&config.email.smtp_server)
         .port(config.email.port)
         .tls(Tls::Required(tls_parameters.unwrap()))

@@ -365,7 +365,8 @@ fn backup_data(config: &TomlConfig,
                                         ).as_str(),
 
                                         // SMS
-                                        false, //true,
+                                        false,
+                                        //true,
                     );
                 }
                 
