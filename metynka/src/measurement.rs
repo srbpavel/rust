@@ -346,7 +346,7 @@ fn backup_data(config: &TomlConfig,
                 }
                 // */
 
-                // EMAIL
+                // WARNING via EMAIL
                 if config.email.status {
                     various::easy_email(&config,
                                         // SUBJECT
