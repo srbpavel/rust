@@ -13,20 +13,34 @@ use lettre::{
     },
 };
 
-/*
-use std::fmt;
-impl fmt::Debug for Message {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        //fmt.debug_struct("Message")
-        self.fmt.debug_struct("Message")
-            .field("headers", &self.headers)
-            //.field("body", &self.body)
-            .field("body", "NOT DISPLAYED")
-            .field("envelope", &self.envelope)
-            .finish()
+
+trait Display {
+    fn display(&self) -> String;
+
+    fn display_body(&self) -> String;
+}
+
+
+impl Display for Message {
+    fn display(&self) -> String {
+        format!("\n#MESSAGE:\n\n##HEADERS\n{h:?}\n\n##ENVELOPE\n{e:?}", 
+                h=&self.headers(),
+                e=&self.envelope(),
+        )
+    }
+
+    fn display_body(&self) -> String {
+        let body = self.formatted().into_iter()
+            .map(|u| u as char)
+            .map(|ch| String::from(ch))
+            .collect::<Vec<String>>()
+            .join("");
+
+        format!("\n##BODY\n{b}", 
+                b=body,
+        )
     }
 }
-*/
 
 
 #[allow(dead_code)]
@@ -60,72 +74,16 @@ pub fn easy_email(config: &TomlConfig,
         .unwrap();
 
     if config.flag.debug_email {
-        println!("\n#EMAIL\n{:#?}", email);
+        println!("{}",
+                 email.display(),
+        );
+
+        if config.flag.debug_email_body {
+            println!("{}",
+                     email.display_body(),
+            );
+        }
     }
-
-
-
-    
-    
-    /* DEBUG MSG <- no CC
-    #EMAIL
-    Message {
-        headers: Headers {
-            headers: [
-                (
-                    HeaderName(
-                        "From",
-                    ),
-                    "influxdb@srbpavel.cz",
-                ),
-                (
-                    HeaderName(
-                        "To",
-                    ),
-                    "prace@srbpavel.cz",
-                ),
-                (
-                    HeaderName(
-                        "Subject",
-                    ),
-                    "spongebob -> metynka:: temperature",
-                ),
-                (
-                    HeaderName(
-                        "Content-Transfer-Encoding",
-                    ),
-                    "7bit",
-                ),
-                (
-                    HeaderName(
-                        "Date",
-                    ),
-                    "Sun, 05 Dec 2021 07:46:44 -0000",
-                ),
-            ],
-        },
-        body: Raw(
-        [
-            91,
-            ..
-        ],
-        ),
-        envelope: Envelope {
-            forward_path: [
-                Address {
-                    serialized: "prace@srbpavel.cz",
-                    at_start: 5,
-                },
-            ],
-            reverse_path: Some(
-                Address {
-                    serialized: "influxdb@srbpavel.cz",
-                    at_start: 8,
-                },
-            ),
-        },
-    }
-    */
 
     // USER + PASS
     let creds = Credentials::new(config.email.source_email.parse().unwrap(),
@@ -160,9 +118,10 @@ pub fn easy_email(config: &TomlConfig,
         11  }
         */
 
+    // /*
     match mailer.send(&email) {
         Ok(_) => {
-            //println!("email sent")
+            println!("\n#EMAIL: ok")
         },
         
         Err(e) => {
@@ -195,6 +154,7 @@ pub fn easy_email(config: &TomlConfig,
         18  }
         */
     }
+    // */
 }
 
 

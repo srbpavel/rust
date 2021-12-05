@@ -127,6 +127,7 @@ pub struct Flag {
     pub debug_ts: bool,
 
     pub debug_email: bool,
+    pub debug_email_body: bool,
     
     pub debug_template_formater: bool,
     
