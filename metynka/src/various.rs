@@ -322,6 +322,7 @@ pub fn parse_sentence(s: &str) -> usize {
 }
 
 
+#[allow(dead_code)]
 pub fn bin_ruler() {
     //                   5432109876543210
     
@@ -351,15 +352,11 @@ pub fn bin_ruler() {
     
     let ruler = "9876543210";
     let ruler = ruler.repeat(width); // NASOBEK PRAVITKA
-
     let ruler = &ruler[ruler.len() - len ..]; // OREZ PRAVITKA
     
     let bin_int = format!("{:0width$b}", int, width=len);
-    
     let shift_str = format!("{} {} {} is {} / ", int, shift_str, shift_steps, shift);
-
     let bin_shift = format!("{:0width$b}", shift, width=len);
-    
     let space_str = " -> ";
                         
     println!("{}",

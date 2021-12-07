@@ -5,10 +5,31 @@ host = 'spongebob'
 # backup parent dir
 work_dir = '/home/conan/soft/rust/metynka'
 
+# warning email msg
+[email]
+#status = true # false
+status = false
+
+smtp_server = "SMPT_SERVER"
+port = 587
+
+source_email = "SOURCE_EMAIL"
+v_pass = "V_PASS"
+
+target_email = "TARGET_EMAIL"
+sms_email = "SMS_EMAIL"
+
+sender_machine="spongebob"
+
 
 [flag]
-# display date_time struct
+# display date_time Struct
 debug_ts = false
+
+# display email Message Struct -> headers + envelope
+debug_email = true # false
+# display email Message Struct -> body
+debug_email_body = true # false
 
 # display template string formating pairs
 debug_template_formater = false
@@ -23,8 +44,8 @@ debug_pointer_output = false
 debug_metric_record = false
 
 # view influx Struct parsed config data
-debug_influx_instances = true # false
-# line_protocol import format
+debug_influx_instances = false
+# LINE_PROTOCOL import format
 debug_influx_lp = false
 debug_influx_uri = true # false
 debug_influx_auth = false
@@ -37,7 +58,7 @@ run_flux_verify_record = false
 add_flux_query_verify_record_suffix = true # false
 
 debug_flux_query = false
-# future use: for now just verify is result count is 1 -> "add_flux_query_verify_record_suffix" need to be: true
+# future use: for now just verify if result count is 1 <- "add_flux_query_verify_record_suffix" need to be: true
 # rarely i have seen no results ! network ?
 debug_flux_result = true # false
 
