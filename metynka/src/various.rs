@@ -323,52 +323,70 @@ pub fn parse_sentence(s: &str) -> usize {
 
 
 #[allow(dead_code)]
-pub fn bin_ruler() {
-    //                   5432109876543210
-    
-    //let int = 1024; // 0000010000000000
-    let int = 66;     // 0000000001000010
-    //let int = 1;    // 0000000000000001
+pub fn bin_ruler(width: usize,
+                 len: usize) -> String {
 
-    let bin_int_len = format!("{:0b}", int).len();
-    
-    let shift_steps = 8 - 1;
+    let ruler_template = "9876543210";
 
-    let shift_direction = "left";
-    //let shift_direction = "right";
+    let ruler = ruler_template.repeat(width); // ruler series
 
+    ruler[ruler.len() - len ..].to_string() // ruler slice -> maybe multiple by 8 ???
+}
+
+
+#[allow(dead_code)]
+pub fn bin_shift(int: u64,
+                 shift_direction: &str,
+                 shift_steps: u8,
+                 display_ruler: bool) {
+
+    // shift direction + sign
     let (shift, shift_str) = match shift_direction {
         "left" => (int << shift_steps, "<<"),
         "right" => (int >> shift_steps, ">>"),
         _ => panic!("wrong shift direction")
     };
-    
-    let shift_len = format!("{:0b}", shift).len();
 
-    let (width, len) = match bin_int_len >= shift_len {
+    let bin_int_len = format!("{:0b}", int).len();
+    let bin_shift_len = format!("{:0b}", shift).len();
+
+    // initial :b width + ruler len
+    let (width, len) = match bin_int_len >= bin_shift_len {
         true => ((bin_int_len / 8) + 1, bin_int_len),
-        false => ((shift_len / 8) + 1, shift_len),
+        false => ((bin_shift_len / 8) + 1, bin_shift_len),
     };
-    
-    let ruler = "9876543210";
-    let ruler = ruler.repeat(width); // NASOBEK PRAVITKA
-    let ruler = &ruler[ruler.len() - len ..]; // OREZ PRAVITKA
-    
+
+    // render ruler
+    let ruler = &bin_ruler(width,
+                           len);
+
+    // final :b len
     let bin_int = format!("{:0width$b}", int, width=len);
-    let shift_str = format!("{} {} {} is {} / ", int, shift_str, shift_steps, shift);
     let bin_shift = format!("{:0width$b}", shift, width=len);
+    
+    let shift_sentence = format!("{}{} {} {} is {} / ",
+                                 format!("{} shift: ", shift_direction),
+                                 int,
+                                 shift_str,
+                                 shift_steps,
+                                 shift);
+
     let space_str = " -> ";
-                        
-    println!("{}",
-             format!("{front}{r}{space}{r}",
-                     front = " ".repeat(shift_str.len()),
-                     r=ruler,
-                     space = " ".repeat(space_str.len()),
-             )
-    );
+
+    println!("\n#BIN:\n");
+    
+    if display_ruler {
+        println!("{}",
+                 format!("{front}{r}{space}{r}",
+                         front = " ".repeat(shift_sentence.len()),
+                         r=ruler,
+                         space = " ".repeat(space_str.len()),
+                 )
+        );
+    }
     
     println!("{shift_str}{bin_int}{space_str}{bin_shift}",
-             shift_str=shift_str,
+             shift_str=shift_sentence,
              space_str=space_str,
              bin_int=bin_int,
              bin_shift=bin_shift);

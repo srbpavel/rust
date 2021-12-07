@@ -16,9 +16,22 @@ mod various;
 #[allow(unused)]
 fn main() {
     // QUICK SAMPLE TEST
-    // /*
-    //various::bin_ruler();
-    // */
+
+    /*
+    various::bin_shift(1024,
+                       //"left",
+                       "right",
+                       7,
+                       true,
+    );
+
+    various::bin_shift(8,
+                       "left",
+                       //"right",
+                       8,
+                       false,
+    );
+    */
 
     // /*
     //various::update_vector();
