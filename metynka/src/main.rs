@@ -17,6 +17,10 @@ mod various;
 fn main() {
     // QUICK SAMPLE TEST
     // /*
+    various::bin_ruler();
+    // */
+
+    // /*
     //various::update_vector();
     // */
 

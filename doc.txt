@@ -1,18 +1,12 @@
-#START
-# 
-##PDF
-/home/conan/doc/linux/rust/the_rust_programming_language.pdf
-##HTTP
-https://doc.rust-lang.org/book/title-page.html
+- iterator
+https://doc.rust-lang.org/std/iter/trait.Iterator.html#method.flat_map
+
+- vec
+https://doc.rust-lang.org/std/vec/struct.Vec.html
 
 
 #RUST BY EXAMPLE
 https://doc.rust-lang.org/rust-by-example/index.html
-
-
-#BOOKS
-https://medium.com/javarevisited/7-best-rust-programming-courses-and-books-for-beginners-in-2021-2ed2311af46c
-
 
 #EDITIONS
 https://doc.rust-lang.org/edition-guide/editions/index.html
@@ -24,14 +18,7 @@ https://rust-lang-nursery.github.io/rust-cookbook/datetime/parse.html
 #SEARCH keyword in crates
 https://doc.rust-lang.org/std/?search=file
 
-
-#RENAME CARGO PROJECT
-https://stackoverflow.com/questions/44912189/is-there-any-way-to-rename-a-cargo-project
-
-#TURBOFISH
-https://doc.rust-lang.org/stable/std/string/struct.String.html#method.parse
-https://techblog.tonsser.com/posts/what-is-rusts-turbofish
-https://matematikaadit.github.io/posts/rust-turbofish.html
-
 #VIDEO rust in motion
 https://livevideo.manning.com/module/42_1_4/rust-in-motion/introduction-to-the-course-and-rust-syntax/data-types
+
+

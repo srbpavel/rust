@@ -34,8 +34,12 @@ impl Display for Message {
             .map(|u| u as char)
             .map(|ch| String::from(ch))
             .collect::<Vec<String>>()
-            .join("");
+            .concat();
 
+            /*
+            .join("");
+            */
+        
         format!("\n##BODY\n{b}", 
                 b=body,
         )
@@ -57,7 +61,6 @@ pub fn easy_email(config: &TomlConfig,
     .reply_to(config.email.source_email.parse().unwrap())
     */
 
-    // MSG
     let mut email = Message::builder() // -> MessageBuilder
         .from(config.email.source_email.parse().unwrap())
         .to(config.email.target_email.parse().unwrap())
@@ -318,6 +321,66 @@ pub fn parse_sentence(s: &str) -> usize {
     s.len()
 }
 
+
+pub fn bin_ruler() {
+    //                   5432109876543210
+    
+    //let int = 1024; // 0000010000000000
+    let int = 66;     // 0000000001000010
+    //let int = 1;    // 0000000000000001
+
+    let bin_int_len = format!("{:0b}", int).len();
+    
+    let shift_steps = 8 - 1;
+
+    let shift_direction = "left";
+    //let shift_direction = "right";
+
+    let (shift, shift_str) = match shift_direction {
+        "left" => (int << shift_steps, "<<"),
+        "right" => (int >> shift_steps, ">>"),
+        _ => panic!("wrong shift direction")
+    };
+    
+    let shift_len = format!("{:0b}", shift).len();
+
+    let (width, len) = match bin_int_len >= shift_len {
+        true => ((bin_int_len / 8) + 1, bin_int_len),
+        false => ((shift_len / 8) + 1, shift_len),
+    };
+    
+    let ruler = "9876543210";
+    let ruler = ruler.repeat(width); // NASOBEK PRAVITKA
+
+    let ruler = &ruler[ruler.len() - len ..]; // OREZ PRAVITKA
+    
+    let bin_int = format!("{:0width$b}", int, width=len);
+    
+    let shift_str = format!("{} {} {} is {} / ", int, shift_str, shift_steps, shift);
+
+    let bin_shift = format!("{:0width$b}", shift, width=len);
+    
+    let space_str = " -> ";
+                        
+    println!("{}",
+             format!("{front}{r}{space}{r}",
+                     front = " ".repeat(shift_str.len()),
+                     r=ruler,
+                     space = " ".repeat(space_str.len()),
+             )
+    );
+    
+    println!("{shift_str}{bin_int}{space_str}{bin_shift}",
+             shift_str=shift_str,
+             space_str=space_str,
+             bin_int=bin_int,
+             bin_shift=bin_shift);
+}
+
+
+
+
+
     // QUICK SAMPLE CODE TEST
     /*
     use toml::Value;
@@ -387,4 +450,28 @@ let s = format!("{:#?}", (1, 2));
         _ => 1
     }
 
+*/
+
+/*
+fn main() {
+    println!("{}",
+    create_phone_number(&[0,1,2,3,4,5,6,7,8,9]),
+    );
+}
+
+fn slice_to_string(s: &[String]) -> String {
+    s.concat().to_string()
+}                                                  
+            
+fn create_phone_number(numbers: &[u8]) -> String { 
+    let v = numbers.into_iter()                    
+    .map(|u| u.to_string())               
+    .collect::<Vec<String>>();                     
+                                                   
+    format!("({}) {}-{}",                          
+    slice_to_string(&v[0..3]),                     
+    slice_to_string(&v[3..6]),                     
+    slice_to_string(&v[6..]),                      
+    )                                              
+}
 */
