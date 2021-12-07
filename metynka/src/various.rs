@@ -330,7 +330,7 @@ pub fn bin_ruler(width: usize,
 
     let ruler = ruler_template.repeat(width); // ruler series
 
-    ruler[ruler.len() - len ..].to_string() // ruler slice -> maybe multiple by 8 ???
+    ruler[ruler.len() - len ..].to_string() // ruler slice -> maybe by 8 bit steps ???
 }
 
 
@@ -378,9 +378,9 @@ pub fn bin_shift(int: u64,
     if display_ruler {
         println!("{}",
                  format!("{front}{r}{space}{r}",
-                         front = " ".repeat(shift_sentence.len()),
+                         front=" ".repeat(shift_sentence.len()),
                          r=ruler,
-                         space = " ".repeat(space_str.len()),
+                         space=" ".repeat(space_str.len()),
                  )
         );
     }

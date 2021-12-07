@@ -15,6 +15,10 @@ mod various;
 
 #[allow(unused)]
 fn main() {
+    // DateTime Struct
+    let dt = timestamp::ts_now();
+    println!("{}", dt.local_formated);
+
     // QUICK SAMPLE TEST
 
     /*
@@ -22,14 +26,14 @@ fn main() {
                        //"left",
                        "right",
                        7,
-                       true,
+                       true, //false
     );
 
     various::bin_shift(8,
                        "left",
                        //"right",
                        8,
-                       false,
+                       true, //false,
     );
     */
 
@@ -55,6 +59,11 @@ fn main() {
         }
     };
 
+    // DEBUG DateTime Struct
+    if config.flag.debug_ts {
+        println!("\n#DATE_TIME:\n{:#?}", dt);
+    }
+    
     // EGREP
     if config.flag.run_egrep && config.flag.debug_egrep {
         if let Err(e) = metynka::read_config(cmd_args) {
@@ -63,10 +72,7 @@ fn main() {
             process::exit(1);
         }
     }
-    
-    // DateTime Struct
-    let dt = timestamp::ts_now(config.flag.debug_ts);
-    
+
     // DEBUG: ALL_INFLUX
     if config.flag.debug_influx_instances {
         for single_influx in &config.all_influx.values {

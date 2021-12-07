@@ -12,7 +12,8 @@ pub struct Dt {
 
 
 #[allow(dead_code)]
-pub fn ts_now(debug: bool) -> Dt {
+//pub fn ts_now(debug: bool) -> Dt {
+pub fn ts_now() -> Dt {
     let local = Local::now();
     let utc = Utc::now();
     let ts: u64 = local.timestamp_millis() as u64;
@@ -64,9 +65,11 @@ pub fn ts_now(debug: bool) -> Dt {
                  today_file_name,
                  local_formated};
 
+    /*
     if debug {
         println!("\n#DATE_TIME:\n{:#?}", dt);
     }
+    */
     
     return dt;
 }
