@@ -454,23 +454,136 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 }
 
 
-fn parse_flux_result(config: &TomlConfig,
+fn parse_flux_result(_config: &TomlConfig,
                      stdout: Vec<u8>,
-                     _stderr: Vec<u8>) {
+                     _stderr: Vec<u8>,
+                     config_metric: &TemplateSensors) {
 
     /* FUTURE USE 
     let error_data = String::from_utf8(stderr).expect("Found invalid UTF-8");
     eprintln!("STDERR: {:#?}", error_data);
     */
 
-    let data = String::from_utf8(stdout).expect("invalid UTF-8"); // change to not !panic
+    /* CSV ANNOTATED
+    ,result,table,_start,_stop,_time,_value,Machine,SensorCarrier,SensorId,SensorValid,_field,_measurement,host
+    ,_result,0,2021-12-08T13:05:27.303553082Z,2021-12-08T14:05:27.303553082Z,2021-12-08T14:05:26.655Z,68,spongebob,cargo,3,true,TemperatureDecimal,temperature,spongebob
 
-    let data_len = data.len();
-    
-    if data_len < 1 {
-        eprintln!("WARNING: flux result len: {}", data_len);
+    Vec<HASH_MAP>
+
+    records: [
+    {
+        "SensorCarrier": "cargo",
+        "result": "_result",
+        "_measurement": "temperature",
+        "_start": "2021-12-08T18:40:54.59123827Z",
+        "_time": "2021-12-08T19:40:54.396Z",
+        "_stop": "2021-12-08T19:40:54.59123827Z",
+        "_value": "71",
+        "Machine": "spongebob",
+        "SensorValid": "true",
+        "_field": "TemperatureDecimal",
+        "SensorId": "0",
+        "": "",
+        "host": "spongebob",
+        "table": "0",
+    },
+    ]
+    */
+
+    let data = String::from_utf8(stdout).expect("invalid UTF-8"); // change not to !panic
+    let data_len = data.len(); // len of string data flux query result
+    let lines_count = &data.lines().count();
+
+    // if true \r\n repeat flux query 
+    if data_len <= 1 || data == "\r\n" {
+        eprintln!("\nWARNING: flux result data_len: {}\ndata: {:#?}",
+                  data_len,
+                  data,
+        );
     }
 
+    let mut keys: Vec<_> = Vec::new();
+    let mut values: Vec<_> = Vec::new();
+    let mut records = Vec::new();
+    let mut lines = data.lines();
+    
+    /* // CONFIG
+    println!("\ndata_len: {:#?} / lines_count: {:#?} >>> {:?}",
+             &data_len,
+             lines_count,
+             &data,
+    );
+    */
+    
+    for i in 1..*lines_count {
+        match i {
+            // WHOLE NEW vec<keys>
+            1 => {
+                keys = lines
+                    .next()
+                    .unwrap()
+                    .split(',')
+                    .collect::<Vec<_>>();
+            },
+            // SINGLE RECORD vec<values> 
+            _ => {
+                values.push(lines
+                            .next()
+                            .unwrap()
+                            .split(',')
+                            .collect::<Vec<_>>()
+                            );
+                }
+        }
+    }
+
+    /* // CONFIG
+    println!("keys: {:?}", keys);
+    println!("values: {:?}", values);
+    */
+
+    for v in values.iter() {
+        let mut record = HashMap::new();
+
+        // PAIR key:value
+        for pair in keys.iter().zip(v.iter()) {
+            let (k, v) = pair;
+            if *k != "" {
+                record.insert(k, v);
+            }
+        }
+        records.push(record)
+    }
+
+    //println!("records: {:#?}", records); // CONFIG
+
+    let s_tag = &config_metric.tag_id;
+    //let s_tag_str = format!("ERROR: no {:#?}", s_tag);
+    // let s_tag_str = format!("ERROR: no {}", s_tag).as_str();
+    
+    for r in records.iter() {
+        //println!("\nr: {:?}", r); // CONFIG
+
+        println!("\n{s_tag}: {s_val} / {f}: {v}",
+                 s_tag=s_tag,
+
+                 //s_val=r.get(&s_tag)
+                 s_val=r.get(&s_tag.as_str())
+                 .unwrap_or_else(|| {
+                     &&"ERROR[no ...Id _value]"
+                     //&&s_tag_str
+                 }),
+                 
+                 f=r.get(&"_field")
+                 .unwrap_or_else(|| {
+                     &&"ERROR[no _field]"
+                 }),
+                                
+                 v=r.get(&"_value").unwrap(),
+        );
+    }
+    
+    /*
     match config.flag.add_flux_query_verify_record_suffix {
         true => {
             for line in data.lines() {
@@ -504,12 +617,14 @@ fn parse_flux_result(config: &TomlConfig,
                      );
         }
     }
+    */
 }
 
 
 fn os_call_curl_flux(config: &TomlConfig,
                      influx: &InfluxCall,
-                     influx_query: &String) {
+                     influx_query: &String,
+                     config_metric: &TemplateSensors) {
 
     let curl_output = Command::new(&config.template.curl.program)
         .args([
@@ -532,7 +647,8 @@ fn os_call_curl_flux(config: &TomlConfig,
     if config.flag.debug_flux_result {
         parse_flux_result(&config,
                           curl_output.stdout,
-                          curl_output.stderr)
+                          curl_output.stderr,
+                          config_metric)
     } 
 }
 
@@ -777,7 +893,8 @@ fn run_flux_query(config: &TomlConfig,
 
     os_call_curl_flux(&config,
                       &influx,
-                      &generic_influx_query);
+                      &generic_influx_query,
+                      &config_metric);
 }
 
 
