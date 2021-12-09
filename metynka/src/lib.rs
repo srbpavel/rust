@@ -146,8 +146,13 @@ pub struct Flag {
     // OBSOLETE -> TO_DEL
     //pub add_flux_query_verify_record_suffix: bool,   
     pub debug_flux_query: bool,
-    pub debug_flux_result: bool, 
-        
+    pub debug_flux_result: bool,
+    pub parse_flux_result: bool,
+    
+    pub debug_flux_records: bool,
+    pub debug_flux_pairs: bool,
+    pub yield_flux_records: bool,
+    
     pub run_egrep: bool,
     pub debug_egrep: bool,
 

@@ -5,21 +5,22 @@ host = 'spongebob'
 # backup parent dir
 work_dir = '/home/conan/soft/rust/metynka'
 
+
 # warning email msg
 [email]
 #status = true # false
 status = false
 
-smtp_server = "SMPT_SERVER"
+smtp_server = 
 port = 587
 
-source_email = "SOURCE_EMAIL"
-v_pass = "V_PASS"
+source_email = 
+v_pass = 
 
-target_email = "TARGET_EMAIL"
-sms_email = "SMS_EMAIL"
+target_email = 
+sms_email = 
 
-sender_machine="spongebob"
+sender_machine="spongebob" # OBSOLETE -> can use HOST
 
 
 [flag]
@@ -54,13 +55,18 @@ debug_influx_output = false
 
 # query influx to verify write was successfull
 run_flux_verify_record = false
-# add |> count() to [template.flux].query_verify_record
-add_flux_query_verify_record_suffix = true # false
+
+# OBSOLETE -> TO_DEL / add |> count() to [template.flux].query_verify_record
+#add_flux_query_verify_record_suffix = false
 
 debug_flux_query = false
-# future use: for now just verify if result count is 1 <- "add_flux_query_verify_record_suffix" need to be: true
-# rarely i have seen no results ! network ?
-debug_flux_result = true # false
+debug_flux_result = false
+parse_flux_result = true # false
+
+debug_flux_records = true # false
+debug_flux_pairs = false
+yield_flux_records = false
+
 
 # search for QUERY in this CONFIG_FILE
 run_egrep = false
@@ -113,7 +119,9 @@ annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:
 annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
 csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
 generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
-generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> limit(n:1) |> group()"
 
 
 [metrics.memory]
@@ -155,13 +163,19 @@ annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:
 annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
 csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
 generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
-generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> limit(n:1) |> group()"
 
 
-# future_use
 [delay]
+# future_use
 second = 60
+# future_use
 minute = 1
+
+flux_query_sleep_duration_ms = 1000
+flux_repeat_query_count = 3
 
 
 # backup always, no flag to turn off
