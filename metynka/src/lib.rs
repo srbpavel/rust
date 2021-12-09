@@ -143,7 +143,8 @@ pub struct Flag {
     pub debug_influx_output: bool,
 
     pub run_flux_verify_record: bool,
-    pub add_flux_query_verify_record_suffix: bool,   
+    // OBSOLETE -> TO_DEL
+    //pub add_flux_query_verify_record_suffix: bool,   
     pub debug_flux_query: bool,
     pub debug_flux_result: bool, 
         
@@ -167,6 +168,9 @@ pub struct Backup {
 pub struct Delay {
     pub second: u8,
     pub minute: u8,
+
+    pub flux_query_sleep_duration_ms: u64,
+    pub flux_repeat_query_count: u64,
 }
 
 

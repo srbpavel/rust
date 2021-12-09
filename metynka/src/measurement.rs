@@ -14,6 +14,8 @@ use strfmt::strfmt;
 
 use std::collections::HashMap;
 
+use std::{thread, time};
+
 use crate::util::ts::{Dt};
 use crate::util::template_formater::tuple_formater;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
@@ -427,13 +429,18 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      metric: &TemplateSensors,
                                      utc_influx_format: &String) -> String {
 
+    let flux_template = metric.generic_query_verify_record.to_string();
+    
+    /* OBSOLETE -> TO_DEL
+
     let flux_template = match config.flag.add_flux_query_verify_record_suffix {
         true => format!("{}{}",
                 metric.generic_query_verify_record.to_string(),
                 config.template.flux.query_verify_record_suffix.to_string(),
         ),
         false => metric.generic_query_verify_record.to_string()
-    };    
+    };
+    */
 
     tuple_formater(&flux_template,
                    &vec![
@@ -445,13 +452,87 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
                        ("start", &config.template.flux.query_verify_record_range_start),
                        ("measurement", &metric.measurement),
                        
-                       // COMPARE only id + time // if needed can add _VALUE
+                       // COMPARE only id + time // if needed can add _VALUE or implement INCREMENT_id
                        ("id", &generic_pre_record.id.to_string()),
                        ("dtif", utc_influx_format), // rfc3339 Date_Time Influx Format -> 2021-11-16T13:20:10.233Z
                    ],
                    config.flag.debug_template_formater
     )
 }
+
+
+fn verify_flux_result(stdout: &Vec<u8>) -> bool {
+    let data = String::from_utf8(stdout.to_vec()).expect("invalid UTF-8"); // change not to !panic
+
+    match data.trim() == "\r\n" {
+        true => {
+            eprintln!("\nWARNING: flux result\ndata: {:#?}",
+                      data,
+            );
+
+            true
+        },
+
+        false => false
+            
+    }
+}
+
+
+/* NOT THERE YET
+//fn flux_csv_to_hash<'a>(data: &'a String) -> Vec<HashMap<&'static &'static str, &'static &'static str>> {
+//fn flux_csv_to_hash<'a>(data: &'a String) -> Vec<HashMap<&'a str, &'a str>> {
+fn flux_csv_to_hash(data: &String) -> Vec<_> {
+    
+    let mut keys: Vec<_> = Vec::new();
+    let mut values: Vec<_> = Vec::new();
+
+    let lines_count = &data.lines().count();
+    let mut lines = data.lines();
+
+    let mut records = Vec::new();
+    
+    for i in 1..*lines_count {
+        match i {
+            // WHOLE NEW vec<keys>
+            1 => {
+                keys = lines
+                    .next()
+                    .unwrap()
+                    .split(',')
+                    .collect::<Vec<_>>();
+            },
+            // to append SINGLE RECORD vec<values> 
+            _ => {
+                values.push(lines
+                            .next()
+                            .unwrap()
+                            .split(',')
+                            .collect::<Vec<_>>()
+                );
+            }
+        }
+    }
+    
+    for v in values.into_iter() {
+        let mut record = HashMap::new();
+        
+        // PAIR key:value
+        for pair in keys.iter().zip(v.iter()) {
+            let (k, v) = pair;
+            //if *k != "" {
+            if *k != "" {
+                //record.insert(*&k, *&v);
+                record.insert(k, v);
+            }
+        }
+        //records.push(*&record)
+        records.push(record)
+    }
+    
+    records
+}
+ */
 
 
 fn parse_flux_result(_config: &TomlConfig,
@@ -492,16 +573,20 @@ fn parse_flux_result(_config: &TomlConfig,
 
     let data = String::from_utf8(stdout).expect("invalid UTF-8"); // change not to !panic
     let data_len = data.len(); // len of string data flux query result
+
     let lines_count = &data.lines().count();
 
-    // if true \r\n repeat flux query 
-    if data_len <= 1 || data == "\r\n" {
+    //if data_len <= 1 || data == "\r\n" { // <= 1 only when |> count() true
+    if data == "\r\n" {
         eprintln!("\nWARNING: flux result data_len: {}\ndata: {:#?}",
                   data_len,
                   data,
         );
     }
 
+    // NOT YET
+    //let records = flux_csv_to_hash(&data);
+    
     let mut keys: Vec<_> = Vec::new();
     let mut values: Vec<_> = Vec::new();
     let mut records = Vec::new();
@@ -514,7 +599,8 @@ fn parse_flux_result(_config: &TomlConfig,
              &data,
     );
     */
-    
+
+    // /*
     for i in 1..*lines_count {
         match i {
             // WHOLE NEW vec<keys>
@@ -525,7 +611,7 @@ fn parse_flux_result(_config: &TomlConfig,
                     .split(',')
                     .collect::<Vec<_>>();
             },
-            // SINGLE RECORD vec<values> 
+            // to append SINGLE RECORD vec<values> 
             _ => {
                 values.push(lines
                             .next()
@@ -536,12 +622,14 @@ fn parse_flux_result(_config: &TomlConfig,
                 }
         }
     }
+    // */
 
     /* // CONFIG
     println!("keys: {:?}", keys);
     println!("values: {:?}", values);
     */
 
+    // /*
     for v in values.iter() {
         let mut record = HashMap::new();
 
@@ -554,6 +642,7 @@ fn parse_flux_result(_config: &TomlConfig,
         }
         records.push(record)
     }
+    // */
 
     //println!("records: {:#?}", records); // CONFIG
 
@@ -567,7 +656,6 @@ fn parse_flux_result(_config: &TomlConfig,
         println!("\n{s_tag}: {s_val} / {f}: {v}",
                  s_tag=s_tag,
 
-                 //s_val=r.get(&s_tag)
                  s_val=r.get(&s_tag.as_str())
                  .unwrap_or_else(|| {
                      &&"ERROR[no ...Id _value]"
@@ -624,7 +712,7 @@ fn parse_flux_result(_config: &TomlConfig,
 fn os_call_curl_flux(config: &TomlConfig,
                      influx: &InfluxCall,
                      influx_query: &String,
-                     config_metric: &TemplateSensors) {
+                     config_metric: &TemplateSensors) -> bool {
 
     let curl_output = Command::new(&config.template.curl.program)
         .args([
@@ -643,13 +731,24 @@ fn os_call_curl_flux(config: &TomlConfig,
         ])
         .output().expect("failed to execute command");
 
-    // parse FLUX stdout responde -> only when "flux_query .. |> count()" true
-    if config.flag.debug_flux_result {
-        parse_flux_result(&config,
-                          curl_output.stdout,
-                          curl_output.stderr,
-                          config_metric)
-    } 
+
+    // VERIFY
+    let flux_result_status = verify_flux_result(&curl_output.stdout);
+
+    if !flux_result_status {
+        if config.flag.debug_flux_result {
+            parse_flux_result(&config,
+                              curl_output.stdout,
+                              curl_output.stderr,
+                              config_metric)
+        }
+
+        false
+            
+    } else {
+        println!("\n#: FLUX niet goed");
+        true
+    }
 }
 
 
@@ -884,17 +983,38 @@ fn run_flux_query(config: &TomlConfig,
         &metric_pre_result,
         &config_metric,
         &utc_influx_format);
-    
+
     if config.flag.debug_flux_query {
         println!("\n#QUERY:\n{}",
                  generic_influx_query,
         );
     }
 
-    os_call_curl_flux(&config,
-                      &influx,
-                      &generic_influx_query,
-                      &config_metric);
+    let delay = time::Duration::from_millis(config.delay.flux_query_sleep_duration_ms);
+
+    for i in 1..config.delay.flux_repeat_query_count + 1 {
+        if i != 1 {
+            println!("\n#[{}]: sleeping before next try", i);
+
+            thread::sleep(delay);
+        }
+
+        let flux_result_status = os_call_curl_flux(&config,
+                                                   &influx,
+                                                   &generic_influx_query,
+                                                   &config_metric);
+
+        if flux_result_status {
+            println!("\n#QUERY:\n{}", generic_influx_query);
+
+            println!("\n#[{}]: FLUX_RESULT_STATUS: {} >>> REPEAT",
+                     i,
+                     flux_result_status,
+            );
+        } else {
+            break;
+        }
+    }
 }
 
 
