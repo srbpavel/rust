@@ -119,7 +119,6 @@ fn flux_csv_to_hash(config: &TomlConfig,
     );
     */
 
-    
     for i in 1..lines_count {
         match i {
             // FIRST line to Vec<keys>
@@ -247,10 +246,6 @@ fn verify_flux_result(_config: &TomlConfig,
 }
 
 
-//fn os_call_curl(config: &TomlConfig,
-//pub fn import_lp_via_curl(config: &TomlConfig,
-
-//fn os_call_curl_flux(config: &TomlConfig,
 fn flux_query_via_curl(config: &TomlConfig,
                        influx: &InfluxCall,
                        influx_query: &String,
@@ -459,7 +454,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
-//fn os_call_curl(config: &TomlConfig,
 pub fn import_lp_via_curl(config: &TomlConfig,
                           influx: &InfluxCall,
                           single_sensor_lp: &String) {
