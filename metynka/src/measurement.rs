@@ -14,7 +14,7 @@ use strfmt::strfmt;
 
 use std::collections::HashMap;
 
-use std::{thread, time};
+//use std::{thread, time};
 
 use crate::util::ts::{Dt};
 use crate::util::template_formater::tuple_formater;
@@ -22,31 +22,36 @@ use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 use crate::various;
 
+//use crate::influxdb::{self, InfluxCall};
+use crate::influxdb::{self};
 
+
+/*
 #[derive(Debug)]
-struct InfluxCall {
-    uri_write: String,
-    uri_query: String,
-    auth: String,
-    accept: String,
-    content: String,
+pub struct InfluxCall {
+    pub uri_write: String,
+    pub uri_query: String,
+    pub auth: String,
+    pub accept: String,
+    pub content: String,
 }
+*/
 
 
 #[derive(Debug)]
-struct PreRecord {
-    key: String,
-    measurement: String,
+pub struct PreRecord {
+    pub key: String,
+    pub measurement: String,
 
-    value: String,
-    id: String,
+    pub value: String,
+    pub id: String,
 
-    machine: String,
-    carrier: String,
-    valid: String,
+    pub machine: String,
+    pub carrier: String,
+    pub valid: String,
     
-    host: String,
-    ts: u64,
+    pub host: String,
+    pub ts: u64,
 }
 
 
@@ -238,8 +243,9 @@ fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
 }
 
 
-fn _csv_display_header(datatype: &String,
+fn csv_display_header(datatype: &String,
                       tags_and_fields: &String) {
+
     println!("{}\n{}",
              &datatype,
              tags_and_fields,
@@ -279,12 +285,12 @@ fn backup_data(config: &TomlConfig,
         }
 
         // format CSV HEADER
-        let csv_header = prepare_csv_header_format(&config,
-                                                   &metric);
+        let csv_header = influxdb::prepare_csv_header_format(&config,
+                                                             &metric);
 
         if config.flag.debug_backup {
-            _csv_display_header(&metric.annotated_datatype,
-                                &csv_header);
+            csv_display_header(&metric.annotated_datatype,
+                               &csv_header);
         }
         
         if !today_file_name.exists() {
@@ -331,9 +337,10 @@ fn backup_data(config: &TomlConfig,
                 // /*
                 for single_record in result_list {
                     if &metric.measurement == &single_record.measurement {
-                        let csv_record = prepare_csv_record_format(&config,
-                                                                   &single_record,
-                                                                   &metric,
+                        let csv_record = influxdb::prepare_csv_record_format(
+                            &config,
+                            &single_record,
+                            &metric,
                         );
                         
                         if config.flag.debug_backup {
@@ -353,7 +360,9 @@ fn backup_data(config: &TomlConfig,
                     various::easy_email(&config,
                                         // SUBJECT
                                         format!("{h} -> {r} {m}",
-                                                h=config.email.sender_machine,
+                                                // TO DEL
+                                                //h=config.email.sender_machine,
+                                                h=config.host,
                                                 m=metric.measurement,
                                                 r="metynka::",
                                         ).as_str(),
@@ -386,7 +395,7 @@ fn backup_data(config: &TomlConfig,
     }
 }
 
-
+/* INFLUX 2x
 fn prepare_csv_header_format(config: &TomlConfig,
                              metric: &TemplateSensors) -> String {
 
@@ -421,8 +430,10 @@ fn prepare_csv_record_format(config: &TomlConfig,
                    config.flag.debug_template_formater
     )
 }
+*/
 
 
+/* INFLUX 
 fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      single_influx: &Influx,
                                      generic_pre_record: &PreRecord,
@@ -459,8 +470,10 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
                    config.flag.debug_template_formater
     )
 }
+*/
 
 
+/* INFLUX
 fn verify_flux_result(_config: &TomlConfig,
                       data: &String) -> bool {
 
@@ -478,8 +491,10 @@ fn verify_flux_result(_config: &TomlConfig,
             
     }
 }
+*/
 
 
+/* INFLUX
 fn flux_csv_to_hash(config: &TomlConfig,
                     data: String) -> Vec<HashMap<String, String>> {
 
@@ -496,10 +511,11 @@ fn flux_csv_to_hash(config: &TomlConfig,
              &data,
     );
     */
+
     
     for i in 1..lines_count {
         match i {
-            // NEW vec<keys>
+            // FIRST line to Vec<keys>
             1 => {
                 keys = lines
                     .next()
@@ -508,7 +524,7 @@ fn flux_csv_to_hash(config: &TomlConfig,
                     .map(|k| k.to_string())
                     .collect::<Vec<String>>();
             },
-            // APPEND single record vec<values> 
+            // OTHER lines APPEND to Vec<values> 
             _ => {
                 values.push(lines
                             .next()
@@ -525,7 +541,8 @@ fn flux_csv_to_hash(config: &TomlConfig,
         println!("keys: {:?}", keys);
         println!("values: {:?}", values);
     }
-    
+
+    // HASH_MAP pair: key + value
     for v in values.iter() {
         let mut record: HashMap<String, String> = HashMap::new();
         
@@ -545,8 +562,9 @@ fn flux_csv_to_hash(config: &TomlConfig,
     
     records
 }
+*/
 
-
+/* INFLUX
 fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
                              config_metric: &TemplateSensors) {
 
@@ -554,9 +572,11 @@ fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
     let tag = &config_metric.tag_id;
     
     for r in records.into_iter() {
-        /*
+        /* 
+        // DEBUG record hash_map
         println!("\nr: {:#?}", r);
 
+        // DEBUG key,value pair
         for key in r.keys() {
             println!("{k}: {v}",
                      k=key,
@@ -588,8 +608,10 @@ fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
         );
     }
 }
+*/
 
 
+/* INFLUX
 fn parse_flux_result(config: &TomlConfig,
                      data: String,
                      config_metric: &TemplateSensors) {
@@ -609,7 +631,7 @@ fn parse_flux_result(config: &TomlConfig,
                                   &config_metric);
     }
     
-    /* |> count / OBSOLETE -> TO_DEL 
+    /* flux query .. |> count / OBSOLETE -> TO_DEL 
     match config.flag.add_flux_query_verify_record_suffix {
         true => {
             for line in data.lines() {
@@ -645,8 +667,10 @@ fn parse_flux_result(config: &TomlConfig,
     }
     */
 }
+*/
 
 
+/* INFLUX
 fn os_call_curl_flux(config: &TomlConfig,
                      influx: &InfluxCall,
                      influx_query: &String,
@@ -701,8 +725,7 @@ fn os_call_curl_flux(config: &TomlConfig,
             parse_flux_result(&config,
                               out_data,
                               config_metric);
-            //}
-            
+
             false
                 
         } else {
@@ -714,6 +737,7 @@ fn os_call_curl_flux(config: &TomlConfig,
         false
     }
 }
+*/
 
 
 fn os_call_metric(config: &TomlConfig,
@@ -826,6 +850,8 @@ stderr: {}",
 }
 
 
+/* INFLUXDB::IMPORT_LP_VIA_CURL
+
 fn os_call_curl(config: &TomlConfig,
                 influx: &InfluxCall,
                 single_sensor_lp: &String) {
@@ -849,8 +875,11 @@ fn os_call_curl(config: &TomlConfig,
     
     }
 }
+*/
 
 
+//INFLUX_DB
+/*
 fn prepare_generic_lp_format(config: &TomlConfig,
                              generic_pre_record: &PreRecord,
                              metric: &TemplateSensors)  -> String {
@@ -878,8 +907,10 @@ fn prepare_generic_lp_format(config: &TomlConfig,
                    config.flag.debug_template_formater
     )
 }
+*/
 
 
+/* INFLUX
 fn prepare_influx_format(config: &TomlConfig,
                          influx_inst: &Influx) -> InfluxCall {
     
@@ -932,8 +963,10 @@ fn prepare_influx_format(config: &TomlConfig,
                 content: content_template,
     }
 }
+*/
 
 
+/* iii INFLUX
 fn run_flux_query(config: &TomlConfig,
                   config_metric: &TemplateSensors,
                   single_influx: &Influx,
@@ -980,8 +1013,9 @@ fn run_flux_query(config: &TomlConfig,
         }
     }
 }
+*/
 
-
+    
 fn run_all_influx_instances(config: &TomlConfig,
                             metric_result_list: & mut Vec<PreRecord>,
                             dt: &Dt) {
@@ -992,7 +1026,12 @@ fn run_all_influx_instances(config: &TomlConfig,
         
         if single_influx.status {
             // ARGS for CURL
+            let influx_properties = influxdb::prepare_influx_format(&config,
+                                                                    &single_influx,
+            );
+            /* INFLUX
             let influx_properties = prepare_influx_format(&config, &single_influx);
+            */
             
             if config.flag.debug_influx_uri {
                 println!("\n#URI<{n}>:\n{w}\n{q}",
@@ -1024,10 +1063,18 @@ fn run_all_influx_instances(config: &TomlConfig,
                 }
                 
                 // LP via Record
+
+                let generic_lp = influxdb::prepare_generic_lp_format(&config,
+                                                                     &single_metric_result,
+                                                                     &config.metrics[&single_metric_result.key.to_string()],
+                );
+
+                /* INFLUX
                 let generic_lp = prepare_generic_lp_format(&config,
                                                            &single_metric_result,
                                                            &config.metrics[&single_metric_result.key.to_string()],
                 );
+                */
 
                 if config.flag.debug_influx_lp {
                     println!("{}", generic_lp);
@@ -1045,13 +1092,31 @@ fn run_all_influx_instances(config: &TomlConfig,
                 
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
+
+                    influxdb::import_lp_via_curl(&config,
+                                                 &influx_properties,
+                                                 &generic_lp);
+                    
+                    /*
                     os_call_curl(&config,
                                  &influx_properties,
                                  &generic_lp);
+                    */
                 }
                 
                 // OS_CMD <- GENERIC FLUX_QUERY
                 if config.flag.run_flux_verify_record {
+                    //iii
+                    influxdb::run_flux_query(
+                        &config,
+                        &config.metrics[&single_metric_result.key.to_string()],
+                        &single_influx,
+                        &single_metric_result,
+                        &dt.utc_influx_format,
+                        &influx_properties,
+                    );
+                    
+                    /* INFLUX
                     run_flux_query(
                         &config,
                         &config.metrics[&single_metric_result.key.to_string()],
@@ -1060,6 +1125,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &dt.utc_influx_format,
                         &influx_properties,
                     );
+                    */
                 }
             } /* for single_metric */
         } /* single_influx.status*/

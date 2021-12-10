@@ -10,7 +10,8 @@ use std::process;
 use std::collections::HashMap;
 
 mod util;
-pub use util::template_formater::tuple_formater;
+//pub
+use util::template_formater::tuple_formater;
 
 
 pub struct CmdArgs {
@@ -118,7 +119,8 @@ pub struct Email {
     pub target_email: String,
     pub sms_email: String,
 
-    pub sender_machine: String,
+    // TO DEL
+    // pub sender_machine: String,
 }
 
 

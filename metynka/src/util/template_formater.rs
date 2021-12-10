@@ -16,7 +16,9 @@ pub fn tuple_formater<'sf>(template: &String,
             println!(" {} <- {}", t.0, t.1); 
         }
         
-        hash_map.insert(t.0.to_string(), String::from(t.1));
+        hash_map.insert(t.0.to_string(),
+                        t.1.to_string(),
+        );
     }
     
     strfmt(&template, &hash_map).unwrap()

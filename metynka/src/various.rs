@@ -36,7 +36,7 @@ impl Display for Message {
             .collect::<Vec<String>>()
             .concat();
 
-            /*
+            /* instead concat if some other char needed
             .join("");
             */
         
@@ -74,7 +74,7 @@ pub fn easy_email(config: &TomlConfig,
 
     let email = email
         .body(String::from(body)) // -> Message
-        .unwrap();
+        .unwrap(); // safe ? 
 
     if config.flag.debug_email {
         println!("{}",

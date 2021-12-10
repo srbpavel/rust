@@ -6,6 +6,9 @@ use std::process;
 mod util;
 use util::ts as timestamp;
 
+// /INFLUX_DB
+mod influxdb;
+
 // SENSORS
 mod measurement;
 
