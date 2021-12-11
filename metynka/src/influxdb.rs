@@ -114,13 +114,16 @@ fn flux_csv_to_hash(config: &TomlConfig,
                     data: String) -> Vec<HashMap<String, String>> {
 
     let mut keys: Vec<String> = Vec::new();
+    let mut keys_len: usize = 0;
+
     let mut values: Vec<Vec<String>> = Vec::new();
     let mut records: Vec<HashMap<String, String>> = Vec::new();
     
     let lines_count = data.lines().count();
     let mut lines = data.lines();
 
-    for i in 1..lines_count {
+    // last line not skiped and rather verified for valid data
+    for i in 1..=lines_count {
         match i {
             // FIRST line to Vec<keys>
             1 => {
@@ -130,16 +133,30 @@ fn flux_csv_to_hash(config: &TomlConfig,
                     .split(',')
                     .map(|k| k.to_string())
                     .collect::<Vec<String>>();
+
+                keys_len = keys.len();
             },
-            // OTHER lines APPEND to Vec<values> 
+            // OTHER lines APPEND to Vec<values> if valid
             _ => {
-                values.push(lines
-                            .next()
-                            .unwrap()
-                            .split(',')
-                            .map(|v| v.to_string())
-                            .collect::<Vec<String>>()
-                );
+                let items = lines
+                    .next()
+                    .unwrap()
+                    .split(',')
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>();
+
+                if items.len() == keys_len {
+                    values.push(items)
+                }
+                else { 
+                    if config.flag.debug_flux_result_invalid_line {
+                        eprintln!("\nWARNING: in FLUX RESPONDE DATA line >>> values does not fit keys: values_len: {vl} / keys_len: {kl}\nVALUES: {:?}",
+                                  i=items,
+                                  vl=items.len(),
+                                  kl=keys_len,
+                        );
+                    }
+                }
             }
         }
     }

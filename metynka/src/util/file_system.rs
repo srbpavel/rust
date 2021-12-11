@@ -4,7 +4,7 @@ use std::io;
 
 use crate::util::template_formater::tuple_formater;
 
-use crate::{TomlConfig};
+use crate::TomlConfig;
 
 
 #[allow(dead_code)]

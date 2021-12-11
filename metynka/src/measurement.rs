@@ -130,18 +130,13 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
         Some(as_string) => {             
 
             // JSON VALUE
-            //match as_string.parse::<f64>() {
             match PointerFloat::try_from(as_string.to_string()) {
                 // not f64 -> TRIM " 
                 Err(_why) => {
-                    println!("err we do not have number: {:#?}", as_string);
-                    trim_quotes(as_string.to_string())
+                    pointer_trim_quotes(as_string.to_string())
                 },
                 // is f64 
-                //Ok(number) => {
                 Ok(PointerFloat(number)) => {
-                    println!("ok we have number: {:#?}", number);
-                    
                     Some(number)
                 },
             }
@@ -158,8 +153,7 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
 }
 
 
-//fn trim_quotes(string: &str) -> Option<f64> {
-fn trim_quotes(string: String) -> Option<f64> {
+fn pointer_trim_quotes(string: String) -> Option<f64> {
     /*
     match str::replace(string, "\"", "") // "string"
         .trim()
@@ -168,31 +162,24 @@ fn trim_quotes(string: String) -> Option<f64> {
 
     let trim_chars = ['"', '\''];
 
-    //match string
     match PointerFloat::try_from(string
                                  .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
-                                 //.parse::<f64>() {
                                  .to_string()) {
 
-        //Ok(number) => Some(number),
-        // /*
         Ok(PointerFloat(number)) => {
-            println!(" ok we are at string and have number: {:#?}", number);
-            
             Some(number)
         },
-        // */
-
-            Err(why) => {
-                eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
-                          string,
-                          trim_chars,
-                          why,
-                );
-                
-                None
-            }
-        } 
+        
+        Err(why) => {
+            eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
+                      string,
+                      trim_chars,
+                      why,
+            );
+            
+            None
+        }
+    } 
 }
 
 

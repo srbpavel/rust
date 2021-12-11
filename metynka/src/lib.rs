@@ -8,7 +8,8 @@ use std::collections::HashMap;
 
 mod util;
 
-use util::template_formater::tuple_formater;
+//use util::template_formater::tuple_formater;
+use crate::util::template_formater::tuple_formater;
 
 
 pub struct CmdArgs {
@@ -144,6 +145,7 @@ pub struct Flag {
     pub parse_flux_result: bool,
     
     pub debug_flux_records: bool,
+    pub debug_flux_result_invalid_line: bool,
     pub debug_flux_pairs: bool,
     pub yield_flux_records: bool,
     
