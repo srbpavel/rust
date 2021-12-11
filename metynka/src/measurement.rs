@@ -2,9 +2,10 @@ use std::process::{Command, Stdio};
 
 use std::path::Path;
 
-use std::fs::{self, OpenOptions, File};
+//use std::fs::{OpenOptions, File};
 
-use std::io::{self, Write};
+//use std::io::{self, Write};
+use std::io::{Write};
 
 use std::any::{Any};
 
@@ -21,6 +22,8 @@ use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 use crate::various;
 
 use crate::influxdb::{self};
+
+use crate::util::file_system;
 
 
 #[derive(Debug)]
@@ -171,6 +174,7 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
 }
 
 
+/* file_system
 fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
     match OpenOptions::new()
         .write(true)
@@ -189,8 +193,11 @@ fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
         },
     }
 }
+*/
 
 
+//fs
+/*
 fn create_new_dir(config: &TomlConfig,
                   full_path: &Path,
                   measurement: &String) {
@@ -226,16 +233,20 @@ fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
         Ok(file) => Ok(file),
     }
 }
+*/
 
 
 fn csv_display_header(datatype: &String,
                       tags_and_fields: &String) {
 
+    //println!("display: header");
+             
     println!("{}\n{}",
              &datatype,
              tags_and_fields,
     );
 }
+
 
 
 fn backup_data(config: &TomlConfig,
@@ -250,9 +261,9 @@ fn backup_data(config: &TomlConfig,
     
     // DIR CREATE if not EXISTS
     if !full_path.exists() {
-        create_new_dir(&config,
-                       &full_path,
-                       &metric.measurement);
+        file_system::create_new_dir(&config,
+                                    &full_path,
+                                    &metric.measurement);
     }
 
     // WE HAVE DIR and VERIFIED but still PERMISION's CAN CHANGE for FILE to WRITE
@@ -279,7 +290,7 @@ fn backup_data(config: &TomlConfig,
         }
         
         if !today_file_name.exists() {
-            let file = create_new_file(&today_file_name); //mut
+            let file = file_system::create_new_file(&today_file_name); //mut
 
             match file {
                 // TEST if DIR+FILE OK but what about FULL_DISC ?
@@ -294,7 +305,7 @@ fn backup_data(config: &TomlConfig,
         }
 
         // GET OLD FILE for append OR NEW 
-        let file = open_file_to_append(&today_file_name); // mut
+        let file = file_system::open_file_to_append(&today_file_name); // mut
 
         match file {
             Ok(mut file) => {
@@ -331,6 +342,8 @@ fn backup_data(config: &TomlConfig,
                         if config.flag.debug_backup {
                             println!("{}", &csv_record);
                         }
+
+                        //println!("writing..csv_record");
                         
                         // APPEND SINGLE RECORD to backup_file
                         writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
