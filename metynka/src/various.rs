@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-
-use metynka::{TomlConfig};
-
 // lettre = "0.10.0-rc.4"
 // https://github.com/lettre/lettre/tree/master/examples
 use lettre::{
@@ -12,6 +8,10 @@ use lettre::{
             Tls, TlsParameters},
     },
 };
+
+use std::collections::HashMap;
+
+use metynka::{TomlConfig};
 
 
 trait Display {

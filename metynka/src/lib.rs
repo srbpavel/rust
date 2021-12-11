@@ -1,16 +1,13 @@
 use std::fs;
 use std::error::Error;
 use std::env;
-
 use toml;
 use serde::{Serialize, Deserialize};
-
 use std::process;
-
 use std::collections::HashMap;
 
 mod util;
-//pub
+
 use util::template_formater::tuple_formater;
 
 
@@ -118,9 +115,6 @@ pub struct Email {
 
     pub target_email: String,
     pub sms_email: String,
-
-    // TO DEL
-    // pub sender_machine: String,
 }
 
 
@@ -145,8 +139,6 @@ pub struct Flag {
     pub debug_influx_output: bool,
 
     pub run_flux_verify_record: bool,
-    // OBSOLETE -> TO_DEL
-    //pub add_flux_query_verify_record_suffix: bool,   
     pub debug_flux_query: bool,
     pub debug_flux_result: bool,
     pub parse_flux_result: bool,
@@ -327,7 +319,7 @@ fn verify_influx_contains_field(allowed_values: &Vec<&str>,
     if !allowed_values.contains(&&value.to_lowercase()[..]) { // ONLY ALLOWED VALUES
         eprintln!("{}", tuple_formater(&err_msg.to_string(),
                                        &msg_tuple_list,
-                                       false // HARDCODED -> no need to debug
+                                       false, // HARDCODED -> no need to debug
         ));
         
         false
@@ -383,7 +375,7 @@ fn verify_influx_empty_field(value: &str,
     if matches!(value, "") { // search for EMPTY field values
         eprintln!("{}", tuple_formater(&err_msg.to_string(),
                                        &msg_tuple_list,
-                                       false // HARDCODED -> no need to debug
+                                       false, // HARDCODED -> no need to debug
         ));
         
         false
@@ -553,7 +545,7 @@ pub fn read_config(args: CmdArgs) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-/// parse toml config file as program argument
+/// parse toml config file as cmd program argument
 ///
 pub fn parse_toml_config(cmd_args: &CmdArgs) -> Result<TomlConfig, Box<dyn Error>> {
     println!("\n#PARSE file_config -> TOML:\n{:}\n", &cmd_args.filename);

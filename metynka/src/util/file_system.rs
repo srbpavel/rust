@@ -1,36 +1,10 @@
 use std::path::Path;
-
 use std::fs::{self, OpenOptions, File};
-//use std::fs::{self, File};
-
 use std::io;
 
 use crate::util::template_formater::tuple_formater;
 
 use crate::{TomlConfig};
-
-
-// FN used so why warning never used ? 
-#[allow(dead_code)]
-pub fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
-    //println!("open_file..append..data");
-    match OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(&today_file_name)
-    {
-        Ok(file) => Ok(file),
-
-        // FAIL TO OPEN FOR WRITE
-        Err(why) => {
-            eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
-                      &today_file_name.display(),
-                      why);
-
-            Err(why)
-        },
-    }
-}
 
 
 #[allow(dead_code)]
@@ -71,3 +45,25 @@ pub fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
     }
 }
 
+
+// FN used so why warning never used ? 
+#[allow(dead_code)]
+pub fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
+    //println!("open_file..append..data");
+    match OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(&today_file_name)
+    {
+        Ok(file) => Ok(file),
+
+        // FAIL TO OPEN FOR WRITE
+        Err(why) => {
+            eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
+                      &today_file_name.display(),
+                      why);
+
+            Err(why)
+        },
+    }
+}

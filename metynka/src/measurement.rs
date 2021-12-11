@@ -1,29 +1,20 @@
 use std::process::{Command, Stdio};
-
 use std::path::Path;
-
-//use std::fs::{OpenOptions, File};
-
-//use std::io::{self, Write};
 use std::io::{Write};
-
 use std::any::{Any};
-
 use std::fmt::Debug;
-
+use std::collections::HashMap;
 use strfmt::strfmt;
 
-use std::collections::HashMap;
-
-use crate::util::ts::{Dt};
-use crate::util::template_formater::tuple_formater;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
+
+use crate::util::{file_system,
+                  ts::{Dt},
+                  {template_formater::tuple_formater}};
 
 use crate::various;
 
 use crate::influxdb::{self};
-
-use crate::util::file_system;
 
 
 #[derive(Debug)]
@@ -174,68 +165,6 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
 }
 
 
-/* file_system
-fn open_file_to_append(today_file_name: &Path) -> Result<File, io::Error> {
-    match OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(&today_file_name)
-    {
-        Ok(file) => Ok(file),
-
-        // FAIL TO OPEN FOR WRITE
-        Err(why) => {
-            eprintln!("\nERROR >> FILE WRITE permission: {}\nREASON: >>> {}",
-                      &today_file_name.display(),
-                      why);
-
-            Err(why)
-        },
-    }
-}
-*/
-
-
-//fs
-/*
-fn create_new_dir(config: &TomlConfig,
-                  full_path: &Path,
-                  measurement: &String) {
-
-    fs::create_dir_all(&full_path).unwrap_or_else(|err| {
-        let print_formated = tuple_formater(&"\nERROR >> METRIC <{m}> failed to create BACKUP DIR: {d}\nREASON: >>> {e}".to_string(),
-                                            &vec![
-                                                ("m", &measurement),
-                                                ("d", &config.work_dir),
-                                                ("e", &err.to_string())
-                                            ],
-                                            config.flag.debug_template_formater
-        );
-        
-        println!("{}", print_formated);
-        eprintln!("{}", print_formated);
-        
-    });
-}
-
-
-fn create_new_file(today_file_name: &Path) -> Result<File, io::Error> {
-    match File::create(&today_file_name) { // LEARN TO write TEST for this
-        Err(why) => {
-            eprintln!("\nEXIT: COULD NOT CREATE {}\nREASON: >>> {}",
-                      &today_file_name.display(),
-                      why);
-
-            Err(why)
-
-        },
-        
-        Ok(file) => Ok(file),
-    }
-}
-*/
-
-
 fn csv_display_header(datatype: &String,
                       tags_and_fields: &String) {
 
@@ -290,7 +219,7 @@ fn backup_data(config: &TomlConfig,
         }
         
         if !today_file_name.exists() {
-            let file = file_system::create_new_file(&today_file_name); //mut
+            let file = file_system::create_new_file(&today_file_name);
 
             match file {
                 // TEST if DIR+FILE OK but what about FULL_DISC ?
@@ -305,7 +234,7 @@ fn backup_data(config: &TomlConfig,
         }
 
         // GET OLD FILE for append OR NEW 
-        let file = file_system::open_file_to_append(&today_file_name); // mut
+        let file = file_system::open_file_to_append(&today_file_name);
 
         match file {
             Ok(mut file) => {
@@ -358,8 +287,6 @@ fn backup_data(config: &TomlConfig,
                     various::easy_email(&config,
                                         // SUBJECT
                                         format!("{h} -> {r} {m}",
-                                                // TO DEL
-                                                //h=config.email.sender_machine,
                                                 h=config.host,
                                                 m=metric.measurement,
                                                 r="metynka::",
@@ -374,8 +301,7 @@ fn backup_data(config: &TomlConfig,
                                         ).as_str(),
 
                                         // SMS
-                                        false,
-                                        //true,
+                                        false, //true,
                     );
                 }
                 
@@ -517,9 +443,6 @@ fn run_all_influx_instances(config: &TomlConfig,
             let influx_properties = influxdb::prepare_influx_format(&config,
                                                                     &single_influx,
             );
-            /* INFLUX
-            let influx_properties = prepare_influx_format(&config, &single_influx);
-            */
             
             if config.flag.debug_influx_uri {
                 println!("\n#URI<{n}>:\n{w}\n{q}",
@@ -551,18 +474,10 @@ fn run_all_influx_instances(config: &TomlConfig,
                 }
                 
                 // LP via Record
-
                 let generic_lp = influxdb::prepare_generic_lp_format(&config,
                                                                      &single_metric_result,
                                                                      &config.metrics[&single_metric_result.key.to_string()],
                 );
-
-                /* INFLUX
-                let generic_lp = prepare_generic_lp_format(&config,
-                                                           &single_metric_result,
-                                                           &config.metrics[&single_metric_result.key.to_string()],
-                );
-                */
 
                 if config.flag.debug_influx_lp {
                     println!("{}", generic_lp);
@@ -585,16 +500,10 @@ fn run_all_influx_instances(config: &TomlConfig,
                                                  &influx_properties,
                                                  &generic_lp);
                     
-                    /*
-                    os_call_curl(&config,
-                                 &influx_properties,
-                                 &generic_lp);
-                    */
                 }
                 
                 // OS_CMD <- GENERIC FLUX_QUERY
                 if config.flag.run_flux_verify_record {
-                    //iii
                     influxdb::run_flux_query(
                         &config,
                         &config.metrics[&single_metric_result.key.to_string()],
@@ -604,16 +513,6 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &influx_properties,
                     );
                     
-                    /* INFLUX
-                    run_flux_query(
-                        &config,
-                        &config.metrics[&single_metric_result.key.to_string()],
-                        &single_influx,
-                        &single_metric_result,
-                        &dt.utc_influx_format,
-                        &influx_properties,
-                    );
-                    */
                 }
             } /* for single_metric */
         } /* single_influx.status*/
@@ -809,7 +708,6 @@ pub fn parse_sensors_data(config: &TomlConfig,
 
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
-                             //& mut result_list,
                              & mut metric_result_list,
                              &dt,
     );
