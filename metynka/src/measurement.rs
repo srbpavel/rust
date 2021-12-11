@@ -1,7 +1,7 @@
 use std::process::{Command, Stdio};
 use std::path::Path;
-use std::io::{Write};
-use std::any::{Any};
+use std::io::Write;
+use std::any::Any;
 use std::fmt::Debug;
 use std::collections::HashMap;
 use strfmt::strfmt;
@@ -9,12 +9,12 @@ use strfmt::strfmt;
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 use crate::util::{file_system,
-                  ts::{Dt},
+                  ts::Dt,
                   {template_formater::tuple_formater}};
 
 use crate::various;
 
-use crate::influxdb::{self};
+use crate::influxdb;
 
 
 #[derive(Debug)]
@@ -165,19 +165,6 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
 }
 
 
-fn csv_display_header(datatype: &String,
-                      tags_and_fields: &String) {
-
-    //println!("display: header");
-             
-    println!("{}\n{}",
-             &datatype,
-             tags_and_fields,
-    );
-}
-
-
-
 fn backup_data(config: &TomlConfig,
                result_list: &Vec<PreRecord>, //backup 
                today_file_name: &String,
@@ -214,8 +201,8 @@ fn backup_data(config: &TomlConfig,
                                                              &metric);
 
         if config.flag.debug_backup {
-            csv_display_header(&metric.annotated_datatype,
-                               &csv_header);
+            influxdb::csv_display_header(&metric.annotated_datatype,
+                                         &csv_header);
         }
         
         if !today_file_name.exists() {
@@ -272,8 +259,6 @@ fn backup_data(config: &TomlConfig,
                             println!("{}", &csv_record);
                         }
 
-                        //println!("writing..csv_record");
-                        
                         // APPEND SINGLE RECORD to backup_file
                         writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
                             eprintln!("\nERROR: APPEND DATA to file failed\nREASON: >>> {}", err);

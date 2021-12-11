@@ -35,6 +35,16 @@ pub fn prepare_csv_header_format(config: &TomlConfig,
 }
 
 
+pub fn csv_display_header(datatype: &String,
+                          tags_and_fields: &String) {
+
+    println!("{}\n{}",
+             &datatype,
+             tags_and_fields,
+    );
+}
+
+
 pub fn prepare_csv_record_format(config: &TomlConfig,
                                  record: &PreRecord,
                                  metric: &TemplateSensors) -> String {
@@ -110,13 +120,6 @@ fn flux_csv_to_hash(config: &TomlConfig,
     let lines_count = data.lines().count();
     let mut lines = data.lines();
 
-    /* // CONFIG
-    println!("\nresponde lines_count: {:#?}\n{:?}",
-             lines_count,
-             &data,
-    );
-    */
-
     for i in 1..lines_count {
         match i {
             // FIRST line to Vec<keys>
@@ -186,42 +189,6 @@ fn parse_flux_result(config: &TomlConfig,
         yield_flux_result_records(records,
                                   &config_metric);
     }
-    
-    /* flux query .. |> count / OBSOLETE -> TO_DEL 
-    match config.flag.add_flux_query_verify_record_suffix {
-        true => {
-            for line in data.lines() {
-                if !line.contains("value") && line.trim().len() != 0 {
-                    match line.split(",").last() {
-                        Some(value) => match value.parse::<u64>() {
-                            // FUTURE USE
-                            Ok(1) => {
-                                println!("flux result count: {}", //\n{:#?}",
-                                         1,
-                                );
-                            },
-                            _ => {
-                                println!("WARNING: flux result count: not 1\nDATA >>> {}\n",
-                                         data,
-                                );
-                            },
-                        },
-                        _ => {
-                            println!("flux RESULT count: EMPTY\nDATA >>> {}\n",
-                                     data,
-                            );
-                        }
-                    }
-                }
-            }
-        },
-        false => {
-            println!("flux RESULT: {}",
-                     data,
-                     );
-        }
-    }
-    */
 }
 
 
@@ -271,7 +238,7 @@ fn flux_query_via_curl(config: &TomlConfig,
     eprintln!("STDERR: {:#?}", error_data);
     */
     
-    let out_data = match String::from_utf8(curl_output.stdout.to_vec()) {
+    let stdout_data = match String::from_utf8(curl_output.stdout.to_vec()) {
         Ok(data) => data,
         Err(why) => {
             eprintln!("\nERROR: flux result read data problem\nREASON >>> {}", why);
@@ -281,22 +248,21 @@ fn flux_query_via_curl(config: &TomlConfig,
     };
 
     if config.flag.debug_flux_result {
-        let data_len = out_data.len();
-
-        println!("\ndata_len: {:#?}\ndata: {:#?}",
-                 &data_len,
-                 out_data,
+        println!("\ndata_len: {:#?} / lines_count: {:#?}\ndata: {:#?}",
+                 stdout_data.len(),
+                 stdout_data.lines().count(),
+                 stdout_data,
         );
     }
 
     if config.flag.parse_flux_result {
         // VERIFY
         let flux_result_status = verify_flux_result(&config,
-                                                    &out_data);
+                                                    &stdout_data);
         
         if !flux_result_status {
             parse_flux_result(&config,
-                              out_data,
+                              stdout_data,
                               config_metric);
 
             false
@@ -320,17 +286,6 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 
     let flux_template = metric.generic_query_verify_record.to_string();
     
-    /* OBSOLETE -> TO_DEL
-
-    let flux_template = match config.flag.add_flux_query_verify_record_suffix {
-        true => format!("{}{}",
-                metric.generic_query_verify_record.to_string(),
-                config.template.flux.query_verify_record_suffix.to_string(),
-        ),
-        false => metric.generic_query_verify_record.to_string()
-    };
-    */
-
     tuple_formater(&flux_template,
                    &vec![
                        ("tag_carrier", &metric.tag_carrier),
