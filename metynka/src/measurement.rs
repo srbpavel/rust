@@ -5,6 +5,7 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::collections::HashMap;
 use strfmt::strfmt;
+use std::convert::TryFrom;
 
 use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 
@@ -82,6 +83,21 @@ impl PartialEq for PreRecord
 }
 
 
+#[derive(Debug, PartialEq)]
+struct PointerFloat(f64);
+
+impl TryFrom<String> for PointerFloat {
+    type Error = ();
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.parse::<f64>() {
+            Ok(value) => Ok(PointerFloat(value)),
+            Err(_) => Err(()),
+        }
+    }
+}
+
+
 /*
 debug_vector(result_list,
              "\n#RECORDS: not SAVED into BACKUP !!! \n{r}",
@@ -104,34 +120,6 @@ fn _debug_vector<T: Any + Debug>(vec: &Vec<T>,
 }
 
 
-fn trim_quotes(string: &str) -> Option<f64> {
-    /*
-    match str::replace(string, "\"", "") // "string"
-        .trim()
-        .parse::<f64>() {
-    */
-
-    let trim_chars = ['"', '\''];
-    
-    match string
-        //.trim_matches(|p| p == '"' || p == '\'' )
-        .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
-        .parse::<f64>() {
-            Ok(number) => Some(number),
-
-            Err(why) => {
-                eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
-                          string,
-                          trim_chars,
-                          why,
-                );
-                
-                None
-            }
-        } 
-}
-
-
 // https://doc.rust-lang.org/std/any/index.html
 // https://doc.rust-lang.org/std/any/trait.Any.html
 // DOUCIT + POCHOPIT zpusob volani
@@ -142,13 +130,18 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
         Some(as_string) => {             
 
             // JSON VALUE
-            match as_string.parse::<f64>() {
+            //match as_string.parse::<f64>() {
+            match PointerFloat::try_from(as_string.to_string()) {
                 // not f64 -> TRIM " 
                 Err(_why) => {
-                    trim_quotes(as_string)
+                    println!("err we do not have number: {:#?}", as_string);
+                    trim_quotes(as_string.to_string())
                 },
                 // is f64 
-                Ok(number) => {
+                //Ok(number) => {
+                Ok(PointerFloat(number)) => {
+                    println!("ok we have number: {:#?}", number);
+                    
                     Some(number)
                 },
             }
@@ -162,6 +155,44 @@ fn verify_pointer_type<T: Any + Debug>(value: &T) -> Option<f64> {
     };
 
     value
+}
+
+
+//fn trim_quotes(string: &str) -> Option<f64> {
+fn trim_quotes(string: String) -> Option<f64> {
+    /*
+    match str::replace(string, "\"", "") // "string"
+        .trim()
+        .parse::<f64>() {
+    */
+
+    let trim_chars = ['"', '\''];
+
+    //match string
+    match PointerFloat::try_from(string
+                                 .trim_matches(|p| p == trim_chars[0] || p == trim_chars[1] ) // 'char'
+                                 //.parse::<f64>() {
+                                 .to_string()) {
+
+        //Ok(number) => Some(number),
+        // /*
+        Ok(PointerFloat(number)) => {
+            println!(" ok we are at string and have number: {:#?}", number);
+            
+            Some(number)
+        },
+        // */
+
+            Err(why) => {
+                eprintln!("\nPOINTER_value_TRIM: <{:?}> not succeded\nTRIM_CHARS: {:?}\nREASON>>> {:?}",
+                          string,
+                          trim_chars,
+                          why,
+                );
+                
+                None
+            }
+        } 
 }
 
 
