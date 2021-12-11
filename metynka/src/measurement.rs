@@ -463,7 +463,8 @@ fn run_all_influx_instances(config: &TomlConfig,
 
             //METRIC_RESULT_LIST <- measured sensors values data
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
-
+            // https://doc.rust-lang.org/rust-by-example/flow_control/for.html
+            
             //for single_metric_result in metric_result_list.into_iter() { // owned values
             //for single_metric_result in metric_result_list.iter() { // imutable references
             for single_metric_result in metric_result_list.iter_mut() { // mutable references

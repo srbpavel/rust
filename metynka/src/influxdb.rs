@@ -115,46 +115,87 @@ fn flux_csv_to_hash(config: &TomlConfig,
 
     let mut keys: Vec<String> = Vec::new();
     let mut keys_len: usize = 0;
-
     let mut values: Vec<Vec<String>> = Vec::new();
     let mut records: Vec<HashMap<String, String>> = Vec::new();
-    
-    let lines_count = data.lines().count();
-    let mut lines = data.lines();
 
-    // last line not skiped and rather verified for valid data
-    for i in 1..=lines_count {
+    //let lines_count = data.lines().count();
+    
+    //let mut lines = data.lines();
+    let mut lines = data
+        .lines()
+        .filter(|line| {
+            /*
+            let l = line.trim();
+            let status = !l.is_empty();
+            
+            println!("l[{}]: {:#?}", status, l);
+            
+            //l != ""
+            status
+            */
+            // !line.is_empty()
+            !line.trim().is_empty()
+        })
+        .collect::<Vec<_>>()
+        .into_iter();
+
+    // last empty line not skiped and rather verified for valid data
+    //for i in 1..=lines_count {
+    for i in 1..=lines.len()+2 {
         match i {
             // FIRST line to Vec<keys>
             1 => {
                 keys = lines
                     .next()
-                    .unwrap()
+                    //.unwrap()
+                    .unwrap_or_else(|| {
+                        eprintln!("\nERROR: in FLUX RESPONDE DATA line");
+                        "ERROR"
+                    })
                     .split(',')
                     .map(|k| k.to_string())
                     .collect::<Vec<String>>();
 
+                //println!("keys: {:?}", keys);
+                
                 keys_len = keys.len();
             },
             // OTHER lines APPEND to Vec<values> if valid
             _ => {
                 let items = lines
                     .next()
-                    .unwrap()
+                    //.unwrap()
+                    // /*
+                    .unwrap_or_else(|| {
+                        eprintln!("\nERROR: in FLUX RESPONDE DATA line");
+                        "ERROR"
+                    })
+                    // */
                     .split(',')
                     .map(|v| v.to_string())
                     .collect::<Vec<String>>();
+
+                //println!("values: {:?}", items);
 
                 if items.len() == keys_len {
                     values.push(items)
                 }
                 else { 
                     if config.flag.debug_flux_result_invalid_line {
+                        let f = format!("\nWARNING: in FLUX RESPONDE DATA line >>> values does not fit keys: values_len: {vl} / keys_len: {kl}\nVALUES: {:?}",
+                                        i=items,
+                                        vl=items.len(),
+                                        kl=keys_len,
+                        );
+
+                        eprintln!("{}", f);
+                        /*
                         eprintln!("\nWARNING: in FLUX RESPONDE DATA line >>> values does not fit keys: values_len: {vl} / keys_len: {kl}\nVALUES: {:?}",
                                   i=items,
                                   vl=items.len(),
                                   kl=keys_len,
                         );
+                        */
                     }
                 }
             }
