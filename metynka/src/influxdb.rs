@@ -113,14 +113,19 @@ fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
 
 
 fn flux_responde_data_line_to_vec(lines: Option<String>) -> Vec<String> {
-    lines
+    let data = lines
         .unwrap_or_else(|| {
             eprintln!("\nERROR: in FLUX RESPONDE DATA line");
             "error".to_string()
         })
         .split(',')
         .map(|k| k.to_string())
-        .collect::<Vec<String>>()
+        .collect::<Vec<String>>();
+
+    // DEBUG 
+    //println!("DATA: {:?}", data);
+
+    data
 }
 
 
@@ -132,12 +137,10 @@ fn flux_csv_to_hash(config: &TomlConfig,
     let mut values: Vec<Vec<String>> = Vec::new();
     let mut records: Vec<HashMap<String, String>> = Vec::new();
 
-    // filter empty lines
-    //let mut lines = data
     let mut lines = data
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .map(|line| line.to_string()) // fn
+        .map(|line| line.to_string())
         .collect::<Vec<_>>()
         .into_iter();
 
@@ -146,34 +149,12 @@ fn flux_csv_to_hash(config: &TomlConfig,
             // FIRST line to Vec<keys>
             1 => {
                 keys = flux_responde_data_line_to_vec(lines.next());
-                /*
-                keys = lines
-                    .next()
-                    .unwrap_or_else(|| {
-                        eprintln!("\nERROR: in FLUX RESPONDE DATA line");
-                        "ERROR"
-                    })
-                    .split(',')
-                    .map(|k| k.to_string())
-                    .collect::<Vec<String>>();
-                */
 
                 keys_len = keys.len();
             },
             // OTHER lines APPEND to Vec<values> if valid
             _ => {
                 let items = flux_responde_data_line_to_vec(lines.next());
-                /*
-                let items = lines
-                    .next()
-                    .unwrap_or_else(|| {
-                        eprintln!("\nERROR: in FLUX RESPONDE DATA line");
-                        "ERROR"
-                    })
-                    .split(',')
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>();
-                */
 
                 if items.len() == keys_len {
                     values.push(items)
