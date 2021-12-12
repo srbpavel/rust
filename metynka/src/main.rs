@@ -1,22 +1,13 @@
-// CMD_ARGUMENTS
 use std::env;
 use std::process;
 
-// /CONFIG
 mod settings;
-
-// /UTIL/TS
+mod egrep;
+mod influxdb;
+mod measurement;
+mod various;
 mod util;
 use util::ts as timestamp;
-
-// /INFLUX_DB
-mod influxdb;
-
-// SENSORS
-mod measurement;
-
-// /VARIOUS
-mod various;
 
 
 #[allow(unused)]
@@ -72,8 +63,7 @@ fn main() {
     
     // EGREP
     if config.flag.run_egrep && config.flag.debug_egrep {
-        //if let Err(e) = metynka::read_config(cmd_args) {
-        if let Err(e) = settings::read_config(cmd_args) {
+        if let Err(e) = egrep::read_config(cmd_args) {
             eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
 
             process::exit(1);
