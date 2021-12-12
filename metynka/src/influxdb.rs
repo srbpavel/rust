@@ -1,12 +1,10 @@
-//use core::option::IterMut;
-
-use std::process::{Command};
+use std::process::Command;
 use std::{thread, time};
 use std::collections::HashMap;
 
 use metynka::{TomlConfig, Influx, TemplateSensors};
 
-use crate::measurement::{PreRecord};
+use crate::measurement::PreRecord;
 
 use crate::util::template_formater::tuple_formater;
 
@@ -129,13 +127,40 @@ fn flux_responde_data_line_to_vec(lines: Option<String>) -> Vec<String> {
 }
 
 
+fn pair_to_hash_map(config: &TomlConfig,
+                    keys: Vec<String>,
+                    values: Vec<Vec<String>>) -> Vec<HashMap<String, String>> {
+
+    let mut records: Vec<HashMap<String, String>> = Vec::new();
+
+    for v in values.iter() {
+        let mut record: HashMap<String, String> = HashMap::new();
+        
+        for (k,v) in keys.iter().zip(v.into_iter()) {
+            if k != "" {
+                record.insert(k.to_string(),
+                              v.to_string(),
+                );
+            }
+        }
+        records.push(record)
+    }
+    
+    if config.flag.debug_flux_records {
+        println!("\nrecords: {:#?}", records);
+    }
+
+    records 
+}
+
+
 fn flux_csv_to_hash(config: &TomlConfig,
                     data: String) -> Vec<HashMap<String, String>> {
 
     let mut keys: Vec<String> = Vec::new();
     let mut keys_len: usize = 0;
     let mut values: Vec<Vec<String>> = Vec::new();
-    let mut records: Vec<HashMap<String, String>> = Vec::new();
+    //let mut records: Vec<HashMap<String, String>> = Vec::new();
 
     let mut lines = data
         .lines()
@@ -178,6 +203,8 @@ fn flux_csv_to_hash(config: &TomlConfig,
     }
 
     // HASH_MAP pair: key + value
+
+    /*
     for v in values.iter() {
         let mut record: HashMap<String, String> = HashMap::new();
         
@@ -194,8 +221,12 @@ fn flux_csv_to_hash(config: &TomlConfig,
     if config.flag.debug_flux_records {
         println!("\nrecords: {:#?}", records);
     }
+    */
     
-    records
+    //records
+    pair_to_hash_map(config,
+                     keys,
+                     values)
 }
 
 
