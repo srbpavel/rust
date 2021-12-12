@@ -2,6 +2,10 @@
 use std::env;
 use std::process;
 
+// /CONFIG
+mod settings;
+//use lib_config::TomlConfig;
+
 // /UTIL/TS
 mod util;
 use util::ts as timestamp;
@@ -16,8 +20,8 @@ mod measurement;
 mod various;
 
 // /UTIL/FILE_SYSTEM
-//use metynka::{self, TomlConfig};
-use metynka::TomlConfig;
+// use metynka::{self, TomlConfig};
+//use metynka::TomlConfig;
 
 
 #[allow(unused)]
@@ -49,14 +53,15 @@ fn main() {
     // */
 
     // COMMAND ARGS
-    let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
+    //let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
+    let cmd_args = settings::CmdArgs::new(env::args()).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
         
         process::exit(1);
     });
 
     // TOML_CONFIG
-    let config = match metynka::parse_toml_config(&cmd_args) {
+    let config = match settings::parse_toml_config(&cmd_args) {
         Ok(config) => config,
 
         Err(why) => {
@@ -66,6 +71,19 @@ fn main() {
         }
     };
 
+    // TOML_CONFIG
+    /*
+    let config = match metynka::parse_toml_config(&cmd_args) {
+        Ok(config) => config,
+
+        Err(why) => {
+            eprintln!("\nERROR: parsing config\nREASON >>> {}", why);
+
+            process::exit(1);
+        }
+    };
+    */
+
     // DEBUG DateTime Struct
     if config.flag.debug_ts {
         println!("\n#DATE_TIME:\n{:#?}", dt);
@@ -73,7 +91,8 @@ fn main() {
     
     // EGREP
     if config.flag.run_egrep && config.flag.debug_egrep {
-        if let Err(e) = metynka::read_config(cmd_args) {
+        //if let Err(e) = metynka::read_config(cmd_args) {
+        if let Err(e) = settings::read_config(cmd_args) {
             eprintln!("\nEXIT: reading file\nREASON >>> {}", e);
 
             process::exit(1);

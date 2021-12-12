@@ -7,7 +7,8 @@ use std::collections::HashMap;
 use strfmt::strfmt;
 use std::convert::TryFrom;
 
-use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
+//use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
+use crate::settings::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 use crate::util::{file_system,
                   ts::Dt,

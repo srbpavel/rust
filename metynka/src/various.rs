@@ -11,7 +11,8 @@ use lettre::{
 
 use std::collections::HashMap;
 
-use metynka::{TomlConfig};
+//use metynka::{TomlConfig};
+use crate::settings::{TomlConfig};
 
 
 trait Display {
