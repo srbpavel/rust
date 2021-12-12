@@ -11,7 +11,6 @@ use lettre::{
 
 use std::collections::HashMap;
 
-//use metynka::{TomlConfig};
 use crate::settings::{TomlConfig};
 
 
@@ -37,7 +36,7 @@ impl Display for Message {
             .collect::<Vec<String>>()
             .concat();
 
-            /* instead concat if some other char needed
+            /* instead concat if some other char/string needed
             .join("");
             */
         
@@ -122,7 +121,6 @@ pub fn easy_email(config: &TomlConfig,
         11  }
         */
 
-    // /*
     match mailer.send(&email) {
         Ok(_) => {
             println!("\n#EMAIL: ok")
@@ -158,7 +156,6 @@ pub fn easy_email(config: &TomlConfig,
         18  }
         */
     }
-    // */
 }
 
 

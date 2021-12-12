@@ -2,7 +2,6 @@ use std::process::Command;
 use std::{thread, time};
 use std::collections::HashMap;
 
-//use metynka::{TomlConfig, Influx, TemplateSensors};
 use crate::settings::{TomlConfig, Influx, TemplateSensors};
 
 use crate::measurement::PreRecord;

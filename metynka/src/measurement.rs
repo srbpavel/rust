@@ -7,16 +7,15 @@ use std::collections::HashMap;
 use strfmt::strfmt;
 use std::convert::TryFrom;
 
-//use metynka::{TomlConfig, Influx, TemplateSensors, Sensor};
 use crate::settings::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 use crate::util::{file_system,
                   ts::Dt,
                   {template_formater::tuple_formater}};
 
-use crate::various;
-
 use crate::influxdb;
+
+use crate::various;
 
 
 #[derive(Debug)]

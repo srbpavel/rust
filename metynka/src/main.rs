@@ -4,7 +4,6 @@ use std::process;
 
 // /CONFIG
 mod settings;
-//use lib_config::TomlConfig;
 
 // /UTIL/TS
 mod util;
@@ -18,10 +17,6 @@ mod measurement;
 
 // /VARIOUS
 mod various;
-
-// /UTIL/FILE_SYSTEM
-// use metynka::{self, TomlConfig};
-//use metynka::TomlConfig;
 
 
 #[allow(unused)]
@@ -53,7 +48,6 @@ fn main() {
     // */
 
     // COMMAND ARGS
-    //let cmd_args = metynka::CmdArgs::new(env::args()).unwrap_or_else(|err| {
     let cmd_args = settings::CmdArgs::new(env::args()).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
         
@@ -70,19 +64,6 @@ fn main() {
             process::exit(1);
         }
     };
-
-    // TOML_CONFIG
-    /*
-    let config = match metynka::parse_toml_config(&cmd_args) {
-        Ok(config) => config,
-
-        Err(why) => {
-            eprintln!("\nERROR: parsing config\nREASON >>> {}", why);
-
-            process::exit(1);
-        }
-    };
-    */
 
     // DEBUG DateTime Struct
     if config.flag.debug_ts {
