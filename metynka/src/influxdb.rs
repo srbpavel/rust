@@ -203,27 +203,6 @@ fn flux_csv_to_hash(config: &TomlConfig,
     }
 
     // HASH_MAP pair: key + value
-
-    /*
-    for v in values.iter() {
-        let mut record: HashMap<String, String> = HashMap::new();
-        
-        for (k,v) in keys.iter().zip(v.into_iter()) {
-            if k != "" {
-                record.insert(k.to_string(),
-                              v.to_string(),
-                );
-            }
-        }
-        records.push(record)
-    }
-
-    if config.flag.debug_flux_records {
-        println!("\nrecords: {:#?}", records);
-    }
-    */
-    
-    //records
     pair_to_hash_map(config,
                      keys,
                      values)
