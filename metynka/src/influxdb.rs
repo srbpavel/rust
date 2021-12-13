@@ -68,15 +68,58 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
 fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
                              config_metric: &TemplateSensors) {
 
+    // flux result -> filter via measurement -> for _value change type from int to float.000
+    let new_records = records
+        .into_iter()
+        .map(|r| {
+             /*
+             println!("_measurement: {}\nconfig.measurement: {} ",
+                      r.get("_measurement").unwrap(),
+                      config_metric.measurement,
+             );
+             */
+
+            match r.get("_measurement").unwrap() == "temperature" { 
+                true => 
+                    r
+                    .into_iter()
+                    .map(|(key,value)| if key.trim() == "_value" {
+                        (key,
+                         match value.parse::<f64>() {
+                             Ok(v) => format!("{:.3}", v),
+                             Err(why) => {
+                                 eprintln!("ERROR: \"_value\" cannot be converted to float: <{}>\nREASON >>> {}",
+                                           value,
+                                           why,
+                                 );
+
+                                 value
+                             },
+                         }
+                        )
+                    } else {
+                        (key, value)
+                    }
+                    )
+                    .collect::<HashMap<String, String>>(),
+                false => r
+            }
+        }
+        )
+        .collect::<Vec<_>>();
+    
+    // DEBUG record hash_map
+    //println!("\nnew_records: {:?}", new_records);
+
     // sample -> tag_id
     let tag = &config_metric.tag_id;
-    
-    for r in records.into_iter() {
-        /* 
+
+    for r in new_records.into_iter() {
         // DEBUG record hash_map
-        println!("\nr: {:#?}", r);
+        //println!("\nr: {:#?}", r);
 
         // DEBUG key,value pair
+        /*
         for key in r.keys() {
             println!("{k}: {v}",
                      k=key,
@@ -84,7 +127,7 @@ fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
             );
         }
         */
-        
+
         let tag_value = match r.get(&tag.to_string()) {
             Some(value) => value.to_string(),
             None => format!("ERROR >>> no KEY: {:#?}", &tag),
