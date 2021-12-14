@@ -65,56 +65,13 @@ pub fn prepare_csv_record_format(config: &TomlConfig,
 }
 
 
-fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
-                             config_metric: &TemplateSensors) {
+// JUST FOR TEST -> future use
+fn display_yield_data(records: Vec<HashMap<String, String>>,
+                      config_metric: &TemplateSensors) {
 
-    // flux result -> filter via measurement -> for _value change type from int to float.000
-    let new_records = records
-        .into_iter()
-        .map(|r| {
-             /*
-             println!("_measurement: {}\nconfig.measurement: {} ",
-                      r.get("_measurement").unwrap(),
-                      config_metric.measurement,
-             );
-             */
-
-            match r.get("_measurement").unwrap() == "temperature" { 
-                true => 
-                    r
-                    .into_iter()
-                    .map(|(key,value)| if key.trim() == "_value" {
-                        (key,
-                         match value.parse::<f64>() {
-                             Ok(v) => format!("{:.3}", v),
-                             Err(why) => {
-                                 eprintln!("ERROR: \"_value\" cannot be converted to float: <{}>\nREASON >>> {}",
-                                           value,
-                                           why,
-                                 );
-
-                                 value
-                             },
-                         }
-                        )
-                    } else {
-                        (key, value)
-                    }
-                    )
-                    .collect::<HashMap<String, String>>(),
-                false => r
-            }
-        }
-        )
-        .collect::<Vec<_>>();
-    
-    // DEBUG record hash_map
-    //println!("\nnew_records: {:?}", new_records);
-
-    // sample -> tag_id
     let tag = &config_metric.tag_id;
 
-    for r in new_records.into_iter() {
+    for r in records.into_iter() {
         // DEBUG record hash_map
         //println!("\nr: {:#?}", r);
 
@@ -143,13 +100,60 @@ fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
             None => format!("ERROR >>> no KEY: {:#?}", "_value"),
         };
         
-        println!("\n{tag}: {tag_value} / {f}: {v}",
+        println!("{tag}: {tag_value} / {f}: {v}",
                  tag=tag,
                  tag_value=tag_value,
                  f=field,
                  v=value,
         );
     }
+}
+
+
+fn yield_flux_result_records(records: Vec<HashMap<String, String>>,
+                             config_metric: &TemplateSensors) {
+
+    // flux result -> filter via measurement -> for _value change type from int to float
+    let new_records = records
+        .into_iter() // VEC
+        .map(|r| {
+            match r.get("_measurement").unwrap() == "temperature" { 
+                true => 
+                    r
+                    .into_iter() // HASH_MAP
+                    .map(|(key,value)| if key.trim() == "_value" {
+                        (key,
+                         match value.parse::<f64>() {
+                             Ok(v) => format!("{:.3}", v),
+
+                             Err(why) => {
+                                 eprintln!("ERROR: \"_value\" cannot be converted to float: <{}>\nREASON >>> {}",
+                                           value,
+                                           why,
+                                 );
+
+                                 value
+                             },
+                         }
+                        )
+                    } else {
+                        (key, value)
+                    }
+                    )
+                    .collect::<HashMap<String, String>>(),
+
+                false => r
+            }
+        }
+        )
+        .collect::<Vec<_>>();
+    
+    // DEBUG record hash_map
+    //println!("\nnew_records: {:?}", new_records);
+
+    // -> display
+    display_yield_data(new_records,
+                       config_metric);
 }
 
 
@@ -203,7 +207,6 @@ fn flux_csv_to_hash(config: &TomlConfig,
     let mut keys: Vec<String> = Vec::new();
     let mut keys_len: usize = 0;
     let mut values: Vec<Vec<String>> = Vec::new();
-    //let mut records: Vec<HashMap<String, String>> = Vec::new();
 
     let mut lines = data
         .lines()

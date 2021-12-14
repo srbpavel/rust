@@ -13,9 +13,19 @@ use crate::util::{file_system,
                   ts::Dt,
                   {template_formater::tuple_formater}};
 
-use crate::influxdb;
+use crate::influxdb::{self, InfluxCall};
 
 use crate::various;
+
+
+/*
+#[derive(Debug)]
+pub struct Measurement {
+    pub record: PreRecord,
+    pub influx_properties: InfluxCall,
+    pub influx_lp: String,
+}
+*/
 
 
 #[derive(Debug)]
@@ -448,7 +458,7 @@ fn run_all_influx_instances(config: &TomlConfig,
             );
             
             if config.flag.debug_influx_uri {
-                println!("\n#URI<{n}>:\n{w}\n{q}",
+                println!("\n#URI<{n}>:\n{w}\n{q}\n",
                          n=single_influx.name,
                          w=influx_properties.uri_write,
                          q=influx_properties.uri_query,
