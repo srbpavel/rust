@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::settings::{TomlConfig, Influx, TemplateSensors};
 
-use crate::measurement::PreRecord;
+use crate::measurement::{Record};
 
 use crate::util::template_formater::tuple_formater;
 
@@ -16,6 +16,47 @@ pub struct InfluxCall {
     pub auth: String,
     pub accept: String,
     pub content: String,
+}
+
+
+#[derive(Debug)]
+pub struct InfluxData<'a> {
+    pub properties: &'a InfluxCall,
+    pub lp: String,
+}
+
+impl InfluxData<'_> {
+    pub fn new(properties: &InfluxCall,
+               lp: String) -> InfluxData {
+        
+        InfluxData {
+            properties: properties,
+            lp: lp,
+        }
+    }
+    
+    /* // NOT THERE YET & problem -> not found solution :o[
+    fn default<'a>() -> InfluxData<'a> {
+        InfluxData {
+            properties: & InfluxCall {
+                uri_write: "".to_string(),
+                uri_query: "".to_string(),
+                auth: "".to_string(),
+                accept: "".to_string(),
+                content: "".to_string(),
+            },
+            lp: "".to_string(),
+        }
+    }
+    */
+
+    pub fn import_lp<'a>(&self,
+                         config: &TomlConfig) {
+        
+        import_lp_via_curl(config,
+                           self)
+    }
+
 }
 
 
@@ -46,7 +87,7 @@ pub fn csv_display_header(datatype: &String,
 
 
 pub fn prepare_csv_record_format(config: &TomlConfig,
-                                 record: &PreRecord,
+                                 record: &Record,
                                  metric: &TemplateSensors) -> String {
 
     tuple_formater(&metric.csv_annotated, 
@@ -364,7 +405,7 @@ fn flux_query_via_curl(config: &TomlConfig,
 
 fn prepare_generic_flux_query_format(config: &TomlConfig,
                                      single_influx: &Influx,
-                                     generic_pre_record: &PreRecord,
+                                     generic_pre_record: &Record,
                                      metric: &TemplateSensors,
                                      utc_influx_format: &String) -> String {
 
@@ -392,7 +433,7 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 pub fn run_flux_query(config: &TomlConfig,
                       config_metric: &TemplateSensors,
                       single_influx: &Influx,
-                      metric_pre_result: &PreRecord,
+                      metric_pre_result: &Record,
                       utc_influx_format: &String,
                       influx: &InfluxCall) {
 
@@ -491,6 +532,7 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
+/*
 pub fn import_lp_via_curl(config: &TomlConfig,
                           influx: &InfluxCall,
                           single_sensor_lp: &String) {
@@ -514,10 +556,35 @@ pub fn import_lp_via_curl(config: &TomlConfig,
     
     }
 }
+*/
+// /*
+pub fn import_lp_via_curl<'a>(config: &TomlConfig,
+                              data: &InfluxData) {
+    
+    let curl_output = Command::new(&config.template.curl.program)
+        .args([
+            &config.template.curl.param_insecure,
+            &config.template.curl.param_request,
+            &config.template.curl.param_post,
+            &data.properties.uri_write, // #URI
+            &config.template.curl.param_header,
+            &data.properties.auth, // #AUTH
+            &config.template.curl.param_data,
+            &data.lp, // #LINE_PROTOCOL
+        ])
+        .output().expect("failed to execute command");
+
+    if config.flag.debug_influx_output {
+        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
+        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
+    
+    }
+}
+// */
 
 
 pub fn prepare_generic_lp_format(config: &TomlConfig,
-                                 generic_pre_record: &PreRecord,
+                                 generic_pre_record: &Record,
                                  metric: &TemplateSensors)  -> String {
 
     tuple_formater(&metric.generic_lp,

@@ -13,23 +13,13 @@ use crate::util::{file_system,
                   ts::Dt,
                   {template_formater::tuple_formater}};
 
-use crate::influxdb::{self, InfluxCall};
-
 use crate::various;
 
-
-/*
-#[derive(Debug)]
-pub struct Measurement {
-    pub record: PreRecord,
-    pub influx_properties: InfluxCall,
-    pub influx_lp: String,
-}
-*/
+use crate::influxdb::{self, InfluxData};
 
 
 #[derive(Debug)]
-pub struct PreRecord {
+pub struct Record {
     pub key: String,
     pub measurement: String,
 
@@ -45,29 +35,29 @@ pub struct PreRecord {
 }
 
 
-impl PreRecord {
+impl Record {
     fn new(config: &TomlConfig,
            key: &str,
            ts: u64,
            value: f64,
-           id: &str) -> PreRecord {
+           id: &str) -> Record {
         
         // HERE I CAN put some TEST's to handle ERROR / raise WARNING
-        PreRecord {
+        Record {
             key: key.to_string(),
             ts: ts,
             value: value.to_string(),
             id: id.to_string(),
             measurement: config.metrics[key].measurement.to_string(),
             host: config.host.to_string(),
-            ..PreRecord::default()
+            ..Record::default()
         }
     }
 
 
     // maybe set default empty "" for generic verify ?
-    fn default() -> PreRecord {
-        PreRecord {
+    fn default() -> Record {
+        Record {
             key: "KEY".to_string(),
             ts: 0,
             value: "0".to_string(),
@@ -85,7 +75,7 @@ impl PreRecord {
 
 
 // compare STRUCT's via contains
-impl PartialEq for PreRecord
+impl PartialEq for Record
 {
     fn eq(&self, other: &Self) -> bool {
         self.id.eq(&other.id)
@@ -194,7 +184,7 @@ fn pointer_trim_quotes(string: String) -> Option<f64> {
 
 
 fn backup_data(config: &TomlConfig,
-               result_list: &Vec<PreRecord>, //backup 
+               result_list: &Vec<Record>, //backup 
                today_file_name: &String,
                metric: &TemplateSensors) {
     
@@ -310,7 +300,7 @@ fn backup_data(config: &TomlConfig,
                                                 result_list
                                                 .into_iter()
                                                 .filter(|r| r.measurement==metric.measurement)
-                                                .collect::<Vec<&PreRecord>>()
+                                                .collect::<Vec<&Record>>()
                                         ).as_str(),
 
                                         // SMS
@@ -444,7 +434,7 @@ stderr: {}",
 
     
 fn run_all_influx_instances(config: &TomlConfig,
-                            metric_result_list: & mut Vec<PreRecord>,
+                            metric_result_list: & mut Vec<Record>,
                             dt: &Dt) {
 
     for single_influx in &config.all_influx.values {
@@ -469,7 +459,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 println!("\n#AUTH:\n{}", influx_properties.auth);
             }
             
-            let _metric_result_list_len = metric_result_list.len();
+            //let _metric_result_list_len = metric_result_list.len();
 
             //METRIC_RESULT_LIST <- measured sensors values data
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
@@ -482,7 +472,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
 
-                // DISPLAY PreRecord populated with Influx properties
+                // DISPLAY Record populated with Influx properties
                 if config.flag.debug_metric_record {
                     println!("\n{:?}", single_metric_result);
                 }
@@ -497,7 +487,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                     println!("{}", generic_lp);
                 }
 
-                //BACKUP before IMPORT
+                //BACKUP before IMPORT -> obsolete or future-use ?
                 /*
                 if _metric_result_list_len != 0 {
                     backup_data(&config,
@@ -506,13 +496,34 @@ fn run_all_influx_instances(config: &TomlConfig,
                                 &config.metrics[&single_metric_result.key]);
                 }
                 */
+
+                /* STRUCT InfluxData
+                let influx_data = InfluxData {
+                    properties: &influx_properties,
+                    lp: generic_lp,
+                };
+                */
+
+                // IMPL::NEW InfluxData
+                let influx_data = InfluxData::new(&influx_properties,
+                                                  generic_lp,
+                );
                 
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
 
+                    /*
+                    // ORIGINAL
                     influxdb::import_lp_via_curl(&config,
                                                  &influx_properties,
                                                  &generic_lp);
+                    // VIA Struct
+                    influxdb::import_lp_via_curl(&config,
+                                                 &influx_data);
+                    */
+
+                    // IMPL import_lp
+                    influx_data.import_lp(&config);
                     
                 }
                 
@@ -524,7 +535,8 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &single_influx,
                         &single_metric_result,
                         &dt.utc_influx_format,
-                        &influx_properties,
+                        //&influx_properties,
+                        &influx_data.properties,
                     );
                     
                 }
@@ -606,7 +618,7 @@ fn verify_metric_output(metric_stdout: &String) -> Option<serde_json::Value> {
 
 
 fn parse_json_via_pointer(config: &TomlConfig,
-                          metric_result_list: & mut Vec<PreRecord>,
+                          metric_result_list: & mut Vec<Record>,
                           single_sensor: &Sensor,
                           metric_json: &serde_json::Value,
                           key: &String,
@@ -630,7 +642,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
                     
             match verify_pointer_type(&value.to_string()) {
                 Some(value) => {
-                    let single_record = PreRecord::new(
+                    let single_record = Record::new(
                         &config,
                         key,
                         dt.ts,
@@ -638,7 +650,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
                         &single_sensor.name,
                     );
                     
-                    // METRIC RECORD_LIST -> Vec<PreRecord> / trait PartialEq
+                    // METRIC RECORD_LIST -> Vec<Record> / trait PartialEq
                     if !metric_result_list.contains(&single_record) { 
                         metric_result_list.push(single_record)
                     }
@@ -672,7 +684,7 @@ fn parse_json_via_pointer(config: &TomlConfig,
 pub fn parse_sensors_data(config: &TomlConfig,
                           dt: &Dt) {
 
-    let mut metric_result_list: Vec<PreRecord> = Vec::new();
+    let mut metric_result_list: Vec<Record> = Vec::new();
 
     println!("\n#METRIC:");
 
