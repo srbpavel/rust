@@ -9,7 +9,8 @@ use crate::measurement::{Record};
 use crate::util::template_formater::tuple_formater;
 
 
-#[derive(Debug)]
+//#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct InfluxCall {
     pub uri_write: String,
     pub uri_query: String,
@@ -18,7 +19,20 @@ pub struct InfluxCall {
     pub content: String,
 }
 
+/*
+impl Copy for InfluxCall { }
 
+impl Clone for InfluxCall {
+    fn clone(&self) -> InfluxCall {
+        *self
+    }
+}
+*/
+
+/*
+*/
+
+/*
 #[derive(Debug)]
 pub struct InfluxData<'a> {
     pub properties: &'a InfluxCall,
@@ -27,18 +41,30 @@ pub struct InfluxData<'a> {
 
 impl InfluxData<'_> {
     pub fn new(properties: &InfluxCall,
+*/
+#[derive(Debug)]
+pub struct InfluxData {
+    pub properties: InfluxCall,
+    pub lp: String,
+}
+
+impl InfluxData {
+    pub fn new(properties: InfluxCall,
                lp: String) -> InfluxData {
-        
+
         InfluxData {
-            properties: properties,
-            lp: lp,
+            properties,
+            lp,
         }
     }
     
-    /* // NOT THERE YET & problem -> not found solution :o[
-    fn default<'a>() -> InfluxData<'a> {
+    // /* // NOT THERE YET & problem -> not found solution :o[
+    // removin & from InfluxCall could do that?
+    //
+    //fn default() -> InfluxData<'static> {
+    fn _default() -> InfluxData {
         InfluxData {
-            properties: & InfluxCall {
+            properties: InfluxCall {
                 uri_write: "".to_string(),
                 uri_query: "".to_string(),
                 auth: "".to_string(),
@@ -48,13 +74,13 @@ impl InfluxData<'_> {
             lp: "".to_string(),
         }
     }
-    */
+    // */
 
     pub fn import_lp<'a>(&self,
                          config: &TomlConfig) {
         
         import_lp_via_curl(config,
-                           self)
+                           &self) // &
     }
 
 }
@@ -558,8 +584,8 @@ pub fn import_lp_via_curl(config: &TomlConfig,
 }
 */
 // /*
-pub fn import_lp_via_curl<'a>(config: &TomlConfig,
-                              data: &InfluxData) {
+fn import_lp_via_curl<'a>(config: &TomlConfig,
+                          data: &InfluxData) {
     
     let curl_output = Command::new(&config.template.curl.program)
         .args([

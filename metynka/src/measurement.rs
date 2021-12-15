@@ -505,10 +505,10 @@ fn run_all_influx_instances(config: &TomlConfig,
                 */
 
                 // IMPL::NEW InfluxData
-                let influx_data = InfluxData::new(&influx_properties,
+                let influx_data = InfluxData::new(influx_properties.clone(),// &
                                                   generic_lp,
                 );
-                
+
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
 
@@ -526,7 +526,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                     influx_data.import_lp(&config);
                     
                 }
-                
+
                 // OS_CMD <- GENERIC FLUX_QUERY
                 if config.flag.run_flux_verify_record {
                     influxdb::run_flux_query(
@@ -536,7 +536,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &single_metric_result,
                         &dt.utc_influx_format,
                         //&influx_properties,
-                        &influx_data.properties,
+                        &influx_data.properties, //&
                     );
                     
                 }
