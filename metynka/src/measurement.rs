@@ -443,20 +443,32 @@ fn run_all_influx_instances(config: &TomlConfig,
         
         if single_influx.status {
             // ARGS for CURL
+            let mut influx_data = InfluxData {
+                properties: influxdb::prepare_influx_format(&config,
+                                                            &single_influx,
+                ),
+                ..InfluxData::default()
+            };
+
+            /*
             let influx_properties = influxdb::prepare_influx_format(&config,
                                                                     &single_influx,
             );
+            */
             
-            if config.flag.debug_influx_uri {
+            if config.flag.debug_influx_uri && !config.flag.influx_skip_import {
                 println!("\n#URI<{n}>:\n{w}\n{q}\n",
                          n=single_influx.name,
-                         w=influx_properties.uri_write,
-                         q=influx_properties.uri_query,
+                         //w=influx_properties.uri_write,
+                         //q=influx_properties.uri_query,
+                         w=influx_data.properties.uri_write,
+                         q=influx_data.properties.uri_query,
                 );
             }
             
             if config.flag.debug_influx_auth {
-                println!("\n#AUTH:\n{}", influx_properties.auth);
+                //println!("\n#AUTH:\n{}", influx_properties.auth);
+                println!("\n#AUTH:\n{}", influx_data.properties.auth);
             }
             
             //let _metric_result_list_len = metric_result_list.len();
@@ -478,14 +490,31 @@ fn run_all_influx_instances(config: &TomlConfig,
                 }
                 
                 // LP via Record
+                influx_data = InfluxData {
+                    lp: influxdb::prepare_generic_lp_format(&config,
+                                                       &single_metric_result,
+                                                       &config.metrics[&single_metric_result.key.to_string()],
+                                                            
+                    ),
+                    ..InfluxData::default()
+                };
+                
+                /*
                 let generic_lp = influxdb::prepare_generic_lp_format(&config,
                                                                      &single_metric_result,
                                                                      &config.metrics[&single_metric_result.key.to_string()],
                 );
+                */
 
+                if config.flag.debug_influx_lp {
+                    println!("{}", influx_data.lp);
+                }
+
+                /*
                 if config.flag.debug_influx_lp {
                     println!("{}", generic_lp);
                 }
+                */
 
                 //BACKUP before IMPORT -> obsolete or future-use ?
                 /*
@@ -505,9 +534,11 @@ fn run_all_influx_instances(config: &TomlConfig,
                 */
 
                 // IMPL::NEW InfluxData
+                /*
                 let influx_data = InfluxData::new(influx_properties.clone(),// &
                                                   generic_lp,
                 );
+                */
 
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {

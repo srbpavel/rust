@@ -9,7 +9,6 @@ use crate::measurement::{Record};
 use crate::util::template_formater::tuple_formater;
 
 
-//#[derive(Debug)]
 #[derive(Debug, Clone)]
 pub struct InfluxCall {
     pub uri_write: String,
@@ -19,17 +18,14 @@ pub struct InfluxCall {
     pub content: String,
 }
 
-/*
-impl Copy for InfluxCall { }
+//impl Copy for InfluxCall { }
 
+/*
 impl Clone for InfluxCall {
     fn clone(&self) -> InfluxCall {
         *self
     }
 }
-*/
-
-/*
 */
 
 /*
@@ -49,7 +45,7 @@ pub struct InfluxData {
 }
 
 impl InfluxData {
-    pub fn new(properties: InfluxCall,
+    pub fn _new(properties: InfluxCall,
                lp: String) -> InfluxData {
 
         InfluxData {
@@ -58,11 +54,7 @@ impl InfluxData {
         }
     }
     
-    // /* // NOT THERE YET & problem -> not found solution :o[
-    // removin & from InfluxCall could do that?
-    //
-    //fn default() -> InfluxData<'static> {
-    fn _default() -> InfluxData {
+    pub fn default() -> InfluxData {
         InfluxData {
             properties: InfluxCall {
                 uri_write: "".to_string(),
@@ -74,7 +66,6 @@ impl InfluxData {
             lp: "".to_string(),
         }
     }
-    // */
 
     pub fn import_lp<'a>(&self,
                          config: &TomlConfig) {
