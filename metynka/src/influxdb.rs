@@ -9,7 +9,8 @@ use crate::measurement::{Record};
 use crate::util::template_formater::tuple_formater;
 
 
-#[derive(Debug, Clone)]
+//#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct InfluxCall {
     pub uri_write: String,
     pub uri_query: String,
@@ -34,9 +35,6 @@ pub struct InfluxData<'a> {
     pub properties: &'a InfluxCall,
     pub lp: String,
 }
-
-impl InfluxData<'_> {
-    pub fn new(properties: &InfluxCall,
 */
 #[derive(Debug)]
 pub struct InfluxData {
@@ -44,6 +42,10 @@ pub struct InfluxData {
     pub lp: String,
 }
 
+/*
+impl InfluxData<'_> {
+    pub fn new(properties: &InfluxCall,
+*/
 impl InfluxData {
     pub fn _new(properties: InfluxCall,
                lp: String) -> InfluxData {

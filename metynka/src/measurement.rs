@@ -243,28 +243,6 @@ fn backup_data(config: &TomlConfig,
 
         match file {
             Ok(mut file) => {
-                // SINGLE_RESULT
-                /*
-                if &metric.measurement == &single_record.measurement {
-                    let csv_record = prepare_csv_record_format(&config,
-                                                               // &single_record, //pr
-                                                               &single_record,
-                                                               &metric,
-                    );
-                    
-                    if config.flag.debug_backup {
-                        println!("{}", &csv_record);
-                    }
-                    
-                    // APPEND SINGLE RECORD to backup_file
-                    writeln!(file, "{}", &csv_record).unwrap_or_else(|err| {
-                        eprintln!("\nERROR: APPEND DATA to file failed\nREASON: >>> {}", err);
-                    });
-                }
-                */
-
-                // RESULT_LIST
-                // /*
                 for single_record in result_list {
                     if &metric.measurement == &single_record.measurement {
                         let csv_record = influxdb::prepare_csv_record_format(
@@ -283,7 +261,6 @@ fn backup_data(config: &TomlConfig,
                         });
                     }
                 }
-                // */
 
                 // WARNING via EMAIL
                 if config.email.status {
@@ -312,13 +289,11 @@ fn backup_data(config: &TomlConfig,
 
             _ => {
                 println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
-                //println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", single_record);
             }
         }
     } /* if full_path.exists */
     else {
         println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", result_list);
-        //println!("\n#RECORDS: not SAVED into BACKUP !!! \n{:#?}", single_record);
     }
 }
 
@@ -450,29 +425,18 @@ fn run_all_influx_instances(config: &TomlConfig,
                 ..InfluxData::default()
             };
 
-            /*
-            let influx_properties = influxdb::prepare_influx_format(&config,
-                                                                    &single_influx,
-            );
-            */
-            
             if config.flag.debug_influx_uri && !config.flag.influx_skip_import {
                 println!("\n#URI<{n}>:\n{w}\n{q}\n",
                          n=single_influx.name,
-                         //w=influx_properties.uri_write,
-                         //q=influx_properties.uri_query,
                          w=influx_data.properties.uri_write,
                          q=influx_data.properties.uri_query,
                 );
             }
             
             if config.flag.debug_influx_auth {
-                //println!("\n#AUTH:\n{}", influx_properties.auth);
                 println!("\n#AUTH:\n{}", influx_data.properties.auth);
             }
             
-            //let _metric_result_list_len = metric_result_list.len();
-
             //METRIC_RESULT_LIST <- measured sensors values data
             // https://doc.rust-lang.org/book/ch13-02-iterators.html
             // https://doc.rust-lang.org/rust-by-example/flow_control/for.html
@@ -488,71 +452,23 @@ fn run_all_influx_instances(config: &TomlConfig,
                 if config.flag.debug_metric_record {
                     println!("\n{:?}", single_metric_result);
                 }
-                
+
                 // LP via Record
                 influx_data = InfluxData {
                     lp: influxdb::prepare_generic_lp_format(&config,
-                                                       &single_metric_result,
-                                                       &config.metrics[&single_metric_result.key.to_string()],
+                                                            &single_metric_result,
+                                                            &config.metrics[&single_metric_result.key.to_string()],
                                                             
                     ),
-                    ..InfluxData::default()
+                    ..influx_data
                 };
-                
-                /*
-                let generic_lp = influxdb::prepare_generic_lp_format(&config,
-                                                                     &single_metric_result,
-                                                                     &config.metrics[&single_metric_result.key.to_string()],
-                );
-                */
 
                 if config.flag.debug_influx_lp {
                     println!("{}", influx_data.lp);
                 }
 
-                /*
-                if config.flag.debug_influx_lp {
-                    println!("{}", generic_lp);
-                }
-                */
-
-                //BACKUP before IMPORT -> obsolete or future-use ?
-                /*
-                if _metric_result_list_len != 0 {
-                    backup_data(&config,
-                                &single_metric_result,
-                                &dt.today_file_name,
-                                &config.metrics[&single_metric_result.key]);
-                }
-                */
-
-                /* STRUCT InfluxData
-                let influx_data = InfluxData {
-                    properties: &influx_properties,
-                    lp: generic_lp,
-                };
-                */
-
-                // IMPL::NEW InfluxData
-                /*
-                let influx_data = InfluxData::new(influx_properties.clone(),// &
-                                                  generic_lp,
-                );
-                */
-
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
-
-                    /*
-                    // ORIGINAL
-                    influxdb::import_lp_via_curl(&config,
-                                                 &influx_properties,
-                                                 &generic_lp);
-                    // VIA Struct
-                    influxdb::import_lp_via_curl(&config,
-                                                 &influx_data);
-                    */
-
                     // IMPL import_lp
                     influx_data.import_lp(&config);
                     
@@ -566,8 +482,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                         &single_influx,
                         &single_metric_result,
                         &dt.utc_influx_format,
-                        //&influx_properties,
-                        &influx_data.properties, //&
+                        &influx_data.properties,
                     );
                     
                 }
@@ -754,14 +669,6 @@ pub fn parse_sensors_data(config: &TomlConfig,
             }
         }
     }
-
-    /*
-    if config.flag.debug_metric_record {
-        for single_metric_result in &metric_result_list {
-            println!("\n {:?}", single_metric_result);
-        }
-    }
-    */
 
     // INFLUX INSTANCES
     run_all_influx_instances(&config,
