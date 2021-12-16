@@ -38,6 +38,8 @@ pub struct InfluxData<'a> {
 */
 #[derive(Debug)]
 pub struct InfluxData {
+    //pub settings: Influx,
+    pub config: Influx,
     pub properties: InfluxCall,
     pub lp: String,
 }
@@ -47,10 +49,14 @@ impl InfluxData<'_> {
     pub fn new(properties: &InfluxCall,
 */
 impl InfluxData {
-    pub fn _new(properties: InfluxCall,
-               lp: String) -> InfluxData {
-
+    pub fn _new(//settings: Influx,
+                config: Influx,
+                properties: InfluxCall,
+                lp: String) -> InfluxData {
+        
         InfluxData {
+            //settings,
+            config,
             properties,
             lp,
         }
@@ -58,6 +64,10 @@ impl InfluxData {
     
     pub fn default() -> InfluxData {
         InfluxData {
+            config: Influx { ..Influx::default()
+
+            },
+
             properties: InfluxCall {
                 uri_write: "".to_string(),
                 uri_query: "".to_string(),
@@ -451,14 +461,20 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 
 pub fn run_flux_query(config: &TomlConfig,
                       config_metric: &TemplateSensors,
-                      single_influx: &Influx,
+
+                      //single_influx: &Influx,
+                      influx_data: &InfluxData,
+                      
                       metric_pre_result: &Record,
                       utc_influx_format: &String,
-                      influx: &InfluxCall) {
+                      //influx: &InfluxCall)
+) {
 
     let generic_influx_query = prepare_generic_flux_query_format(
         &config,
-        &single_influx,
+        //&single_influx,
+        &influx_data.config, //settings,
+
         &metric_pre_result,
         &config_metric,
         &utc_influx_format);
@@ -479,7 +495,9 @@ pub fn run_flux_query(config: &TomlConfig,
         }
 
         let flux_result_status = flux_query_via_curl(&config, //os_call_curl_flux
-                                                     &influx,
+                                                     //&influx,
+                                                     &influx_data.properties,
+                                                     
                                                      &generic_influx_query,
                                                      &config_metric);
 

@@ -74,7 +74,7 @@ impl Record {
 }
 
 
-// compare STRUCT's via contains
+// compare Struct via contains
 impl PartialEq for Record
 {
     fn eq(&self, other: &Self) -> bool {
@@ -224,6 +224,7 @@ fn backup_data(config: &TomlConfig,
         }
         
         if !today_file_name.exists() {
+            // NEW FILE
             let file = file_system::create_new_file(&today_file_name);
 
             match file {
@@ -245,6 +246,7 @@ fn backup_data(config: &TomlConfig,
             Ok(mut file) => {
                 for single_record in result_list {
                     if &metric.measurement == &single_record.measurement {
+                        // RECORD
                         let csv_record = influxdb::prepare_csv_record_format(
                             &config,
                             &single_record,
@@ -412,7 +414,8 @@ fn run_all_influx_instances(config: &TomlConfig,
                             metric_result_list: & mut Vec<Record>,
                             dt: &Dt) {
 
-    for single_influx in &config.all_influx.values {
+    //for single_influx in &config.all_influx.values {
+    for single_influx in config.all_influx.values.iter() {
         // MATCH HTTP/HTTPS -> future use
         /* arm_secure(&single_influx); */
         
@@ -422,12 +425,17 @@ fn run_all_influx_instances(config: &TomlConfig,
                 properties: influxdb::prepare_influx_format(&config,
                                                             &single_influx,
                 ),
+
+                //settings: single_influx.clone(),
+                config: single_influx.clone(),
+
                 ..InfluxData::default()
             };
 
             if config.flag.debug_influx_uri && !config.flag.influx_skip_import {
                 println!("\n#URI<{n}>:\n{w}\n{q}\n",
-                         n=single_influx.name,
+                         //n=single_influx.name,
+                         n=influx_data.config.name,
                          w=influx_data.properties.uri_write,
                          q=influx_data.properties.uri_query,
                 );
@@ -444,9 +452,25 @@ fn run_all_influx_instances(config: &TomlConfig,
             //for single_metric_result in metric_result_list.into_iter() { // owned values
             //for single_metric_result in metric_result_list.iter() { // imutable references
             for single_metric_result in metric_result_list.iter_mut() { // mutable references
+                /*
                 single_metric_result.machine=single_influx.machine_id.to_string();
                 single_metric_result.carrier=single_influx.carrier.to_string();
                 single_metric_result.valid=single_influx.flag_valid_default.to_string();
+                 */
+                // /*
+                single_metric_result.machine=influx_data.config.machine_id.to_string();
+                single_metric_result.carrier=influx_data.config.carrier.to_string();
+                single_metric_result.valid=influx_data.config.flag_valid_default.to_string();
+                // */
+
+                /*
+                *single_metric_result = Record {
+                    machine: influx_data.config.machine_id.to_string(),
+                    carrier: influx_data.config.carrier.to_string(),
+                    valid: influx_data.config.flag_valid_default.to_string(),
+                    ..single_metric_result
+                };
+                */
 
                 // DISPLAY Record populated with Influx properties
                 if config.flag.debug_metric_record {
@@ -454,30 +478,17 @@ fn run_all_influx_instances(config: &TomlConfig,
                 }
 
                 // LP via Record
-                // SHORT
                 influx_data.lp = influxdb::prepare_generic_lp_format(&config,
                                                                      &single_metric_result,
                                                                      &config.metrics[&single_metric_result.key.to_string()],
                 );
                 
-                /* LONG
-                influx_data = InfluxData {
-                    lp: influxdb::prepare_generic_lp_format(&config,
-                                                            &single_metric_result,
-                                                            &config.metrics[&single_metric_result.key.to_string()],
-                                                            
-                    ),
-                    ..influx_data
-                };
-                */
-
                 if config.flag.debug_influx_lp {
                     println!("{}", influx_data.lp);
                 }
 
                 // OS_CMD <- CURL
                 if !config.flag.influx_skip_import {
-                    // IMPL import_lp
                     influx_data.import_lp(&config);
                     
                 }
@@ -487,10 +498,14 @@ fn run_all_influx_instances(config: &TomlConfig,
                     influxdb::run_flux_query(
                         &config,
                         &config.metrics[&single_metric_result.key.to_string()],
-                        &single_influx,
+
+                        // &single_influx,
+                        //&influx_data.settings,
+                        &influx_data,
+                        
                         &single_metric_result,
                         &dt.utc_influx_format,
-                        &influx_data.properties,
+                        //&influx_data.properties,
                     );
                     
                 }

@@ -178,7 +178,7 @@ pub struct AllInflux {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Influx {
     pub name: String,
     pub status: bool,
@@ -196,6 +196,30 @@ pub struct Influx {
     pub machine_id: String,
     pub carrier: String,
     pub flag_valid_default: bool,
+}
+
+
+impl Influx {
+    pub fn default() -> Influx {
+        Influx {
+            name: "DEFAULT".to_string(),
+            status: false,
+
+            secure: "https".to_string(),
+            
+            server: "".to_string(),
+            port: 8086,
+            
+            bucket: "BUCKET".to_string(),
+            token: "TOKEN".to_string(),
+            org: "ORG".to_string(),
+            precision: "ms".to_string(),
+            
+            machine_id: "MACHINE_ID".to_string(),
+            carrier: "CARRIER".to_string(),
+            flag_valid_default: false,
+        }
+    }
 }
 
 
