@@ -414,27 +414,24 @@ fn run_all_influx_instances(config: &TomlConfig,
                             metric_result_list: & mut Vec<Record>,
                             dt: &Dt) {
 
-    //for single_influx in &config.all_influx.values {
-    for single_influx in config.all_influx.values.iter() {
+    for single_influx in config.all_influx.values.iter() { // imutable references
         // MATCH HTTP/HTTPS -> future use
         /* arm_secure(&single_influx); */
         
         if single_influx.status {
             // ARGS for CURL
             let mut influx_data = InfluxData {
+                config: single_influx.clone(), // is good to use clone ? 
+                
                 properties: influxdb::prepare_influx_format(&config,
-                                                            &single_influx,
+                                                            single_influx,
                 ),
-
-                //settings: single_influx.clone(),
-                config: single_influx.clone(),
 
                 ..InfluxData::default()
             };
 
             if config.flag.debug_influx_uri && !config.flag.influx_skip_import {
                 println!("\n#URI<{n}>:\n{w}\n{q}\n",
-                         //n=single_influx.name,
                          n=influx_data.config.name,
                          w=influx_data.properties.uri_write,
                          q=influx_data.properties.uri_query,
@@ -452,16 +449,9 @@ fn run_all_influx_instances(config: &TomlConfig,
             //for single_metric_result in metric_result_list.into_iter() { // owned values
             //for single_metric_result in metric_result_list.iter() { // imutable references
             for single_metric_result in metric_result_list.iter_mut() { // mutable references
-                /*
-                single_metric_result.machine=single_influx.machine_id.to_string();
-                single_metric_result.carrier=single_influx.carrier.to_string();
-                single_metric_result.valid=single_influx.flag_valid_default.to_string();
-                 */
-                // /*
                 single_metric_result.machine=influx_data.config.machine_id.to_string();
                 single_metric_result.carrier=influx_data.config.carrier.to_string();
                 single_metric_result.valid=influx_data.config.flag_valid_default.to_string();
-                // */
 
                 /*
                 *single_metric_result = Record {
@@ -498,14 +488,9 @@ fn run_all_influx_instances(config: &TomlConfig,
                     influxdb::run_flux_query(
                         &config,
                         &config.metrics[&single_metric_result.key.to_string()],
-
-                        // &single_influx,
-                        //&influx_data.settings,
                         &influx_data,
-                        
                         &single_metric_result,
                         &dt.utc_influx_format,
-                        //&influx_data.properties,
                     );
                     
                 }

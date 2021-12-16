@@ -9,7 +9,6 @@ use crate::measurement::{Record};
 use crate::util::template_formater::tuple_formater;
 
 
-//#[derive(Debug, Clone)]
 #[derive(Debug)]
 pub struct InfluxCall {
     pub uri_write: String,
@@ -38,7 +37,6 @@ pub struct InfluxData<'a> {
 */
 #[derive(Debug)]
 pub struct InfluxData {
-    //pub settings: Influx,
     pub config: Influx,
     pub properties: InfluxCall,
     pub lp: String,
@@ -49,13 +47,11 @@ impl InfluxData<'_> {
     pub fn new(properties: &InfluxCall,
 */
 impl InfluxData {
-    pub fn _new(//settings: Influx,
-                config: Influx,
+    pub fn _new(config: Influx,
                 properties: InfluxCall,
                 lp: String) -> InfluxData {
         
         InfluxData {
-            //settings,
             config,
             properties,
             lp,
@@ -83,7 +79,7 @@ impl InfluxData {
                          config: &TomlConfig) {
         
         import_lp_via_curl(config,
-                           &self) // &
+                           &self)
     }
 
 }
@@ -461,20 +457,13 @@ fn prepare_generic_flux_query_format(config: &TomlConfig,
 
 pub fn run_flux_query(config: &TomlConfig,
                       config_metric: &TemplateSensors,
-
-                      //single_influx: &Influx,
                       influx_data: &InfluxData,
-                      
                       metric_pre_result: &Record,
-                      utc_influx_format: &String,
-                      //influx: &InfluxCall)
-) {
+                      utc_influx_format: &String) {
 
     let generic_influx_query = prepare_generic_flux_query_format(
         &config,
-        //&single_influx,
-        &influx_data.config, //settings,
-
+        &influx_data.config,
         &metric_pre_result,
         &config_metric,
         &utc_influx_format);
@@ -495,9 +484,7 @@ pub fn run_flux_query(config: &TomlConfig,
         }
 
         let flux_result_status = flux_query_via_curl(&config, //os_call_curl_flux
-                                                     //&influx,
                                                      &influx_data.properties,
-                                                     
                                                      &generic_influx_query,
                                                      &config_metric);
 
@@ -569,32 +556,6 @@ pub fn prepare_influx_format(config: &TomlConfig,
 }
 
 
-/*
-pub fn import_lp_via_curl(config: &TomlConfig,
-                          influx: &InfluxCall,
-                          single_sensor_lp: &String) {
-    
-    let curl_output = Command::new(&config.template.curl.program)
-        .args([
-            &config.template.curl.param_insecure,
-            &config.template.curl.param_request,
-            &config.template.curl.param_post,
-            &influx.uri_write, // #URI
-            &config.template.curl.param_header,
-            &influx.auth, // #AUTH
-            &config.template.curl.param_data,
-            single_sensor_lp, // #LINE_PROTOCOL
-        ])
-        .output().expect("failed to execute command");
-
-    if config.flag.debug_influx_output {
-        println!("\nstdout: {}", String::from_utf8_lossy(&curl_output.stdout));
-        println!("\nstderr: {}", String::from_utf8_lossy(&curl_output.stderr));
-    
-    }
-}
-*/
-// /*
 fn import_lp_via_curl<'a>(config: &TomlConfig,
                           data: &InfluxData) {
     
@@ -617,7 +578,6 @@ fn import_lp_via_curl<'a>(config: &TomlConfig,
     
     }
 }
-// */
 
 
 pub fn prepare_generic_lp_format(config: &TomlConfig,
