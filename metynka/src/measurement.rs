@@ -454,6 +454,13 @@ fn run_all_influx_instances(config: &TomlConfig,
                 }
 
                 // LP via Record
+                // SHORT
+                influx_data.lp = influxdb::prepare_generic_lp_format(&config,
+                                                                     &single_metric_result,
+                                                                     &config.metrics[&single_metric_result.key.to_string()],
+                );
+                
+                /* LONG
                 influx_data = InfluxData {
                     lp: influxdb::prepare_generic_lp_format(&config,
                                                             &single_metric_result,
@@ -462,6 +469,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                     ),
                     ..influx_data
                 };
+                */
 
                 if config.flag.debug_influx_lp {
                     println!("{}", influx_data.lp);
