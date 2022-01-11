@@ -85,7 +85,9 @@ pub struct TomlConfig {
     // ROOT
     pub work_dir: String,
     pub name: String,
+
     pub host: String,
+    //pub host: &'static str,
 
     //iter via HASH key
     pub metrics: HashMap<String, TemplateSensors>,

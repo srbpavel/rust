@@ -9,6 +9,14 @@ use crate::measurement::{Record};
 use crate::util::template_formater::tuple_formater;
 
 
+pub trait Print {
+    //fn print(&self) -> ();
+    fn print(&self);
+
+    fn print_call(&self);
+}
+
+
 #[derive(Debug)]
 pub struct InfluxCall {
     pub uri_write: String,
@@ -17,6 +25,16 @@ pub struct InfluxCall {
     pub accept: String,
     pub content: String,
 }
+
+
+impl Print for InfluxCall {
+    fn print(&self) {
+        println!("\nTRAIT >>> {:?}", self);
+    }
+
+    fn print_call(&self) {}
+}
+
 
 //impl Copy for InfluxCall { }
 
@@ -46,6 +64,19 @@ pub struct InfluxData {
 impl InfluxData<'_> {
     pub fn new(properties: &InfluxCall,
 */
+
+
+impl Print for InfluxData {
+    fn print(&self) {
+        println!("\nTRAIT >>> {:?}", self);
+    }
+
+    fn print_call(&self) {
+        self.properties.print();
+    }
+}
+
+
 impl InfluxData {
     pub fn _new(config: Influx,
                 properties: InfluxCall,

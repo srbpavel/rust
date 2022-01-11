@@ -10,7 +10,19 @@ mod util;
 use util::ts as timestamp;
 
 
-#[allow(unused)]
+/*
+fn mut_with_no_output(input: &u8, output: &mut u8) {
+    if *input == 1 {
+        *output = 10;
+    }
+    if *input != 1 {
+        *output = 100;
+    }
+}
+*/
+
+
+//#[allow(unused)]
 fn main() {
     // DateTime Struct
     let dt = timestamp::ts_now();
@@ -18,6 +30,47 @@ fn main() {
 
     // QUICK SAMPLE TEST
 
+    /*
+    for i in 0..=8 {
+        various::test_parity(i);
+    }
+    */
+
+    
+    /* FN CHANGE MUTABLE WITHOUT RETURN
+    let input = 2;
+    let mut out: u8 = 1;
+    println!("out_before: {}", &out);
+
+    mut_with_no_output(&input,
+                       &mut out,
+    );
+    
+    println!("out_after: {}", out);
+    */
+
+    
+    /*
+    let x: usize;
+    x = 6;
+    */
+
+    /* STACK || HEAP -> COPY / MOVE 
+    let x1 = 42; // stack
+    let y1 = Box::new(84); // heap
+
+    {
+        let z = (x1, // copied
+                 y1, // moved
+        );
+    }
+
+    let x2 = x1;
+    // let y2 = y1; // err MOVED
+    */
+
+
+    
     /*
     various::bin_shift(1024,
                        //"left",
@@ -34,7 +87,7 @@ fn main() {
     );
     */
 
-    // /*
+    // /* // HORSE_example
     //various::update_vector();
     // */
 

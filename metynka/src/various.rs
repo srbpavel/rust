@@ -9,7 +9,13 @@ use lettre::{
     },
 };
 
-use std::collections::HashMap;
+use std::collections::{HashMap,
+                       HashSet,
+};
+
+use std::hash::{Hash,
+                Hasher,
+};
 
 use crate::settings::{TomlConfig};
 
@@ -168,6 +174,53 @@ pub struct Horse {
 }
 
 
+//#[allow(dead_code)]
+impl Horse {
+    fn new(name: String,
+           color: String,
+           age: u8,
+           valid: bool) -> Horse {
+
+        Horse {name: name,
+               color: color,
+               age: age,
+               valid: valid,
+        }
+    }
+
+    fn print(&self) {
+        println!("Horse called \"{n}\" is {a} old, color is <{c}> and status is: {v} ",
+                 n=self.name,
+                 a=self.age,
+                 c=self.color,
+                 v=self.valid,
+        );
+    }
+}
+
+
+impl PartialEq for Horse {
+    fn eq(&self, other: &Horse) -> bool {
+        println!("pEQ -> SELF: {:?}\nOTHER: {:?}\n", self, other);
+        self.name.to_lowercase() == other.name.to_lowercase()
+        && self.age == other.age
+    }
+}
+
+// /* impl of `FromIterator<Horse>` for `HashSet<Horse>`
+impl Eq for Horse {
+}
+// */
+
+
+impl Hash for Horse {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.age.hash(state);
+    }
+}
+
+
 impl Default for Horse {
     fn default() -> Horse {
         Horse {
@@ -178,6 +231,15 @@ impl Default for Horse {
         }
     }
 }
+
+
+/*
+impl Drop for Horse {
+    fn drop(&mut self) {
+        println!("Dropping Horse: {:}", self.name);
+    }
+}
+*/
 
 
 #[allow(dead_code)]
@@ -267,7 +329,7 @@ pub fn update_vector() {
 
     // https://doc.rust-lang.org/book/ch13-03-improving-our-io-project.html
     //let valid: Vec<_> = horses
-    let valid = horses
+    let mut valid = horses
         .into_iter()
         .filter(|horse| horse.valid)
         .map(|horse| {
@@ -282,12 +344,57 @@ pub fn update_vector() {
         .iter()
         .count();
 
-    println!("\n#HORSES >>> valid: {v} / invalid: {i} / all: {a}\n{f:#?}",
+    println!("\n#HORSES >>> valid: {v} / invalid: {i} / all: {a}\n{f:?}\n",
              a = all,
              v = valid_count,
              i = all - valid_count,
              f = valid,
     );
+
+    let wonka_again = Horse::new("wonka".to_string(),
+                                 "brown".to_string(),
+                                 6,
+                                 false,
+    );
+
+    if !valid.contains(&wonka_again) {
+        valid.push(wonka_again)
+    };
+    
+    //println!("#VALID:\n{:?}", valid);
+
+    let horse_set: HashSet<Horse> = valid
+        .into_iter()
+        .collect();
+
+    println!("#SET:\n{:#?}", horse_set);
+
+    let mut horse_uniq_vec = Vec::new();
+    
+    for horse in horse_set.iter() {
+        horse.print();
+
+        let horse_uniq = horse_set
+            .iter()
+            .filter(|&h| *h.name.to_lowercase() == horse.name.to_lowercase())
+            .count();
+
+        horse_uniq_vec.push(horse_uniq)
+    }
+
+    println!("#UNIQ [len = {}]: {:?}",
+             horse_uniq_vec.len(),
+             horse_uniq_vec,
+    );
+
+    /*
+    println!("#EQ: {:#?}",
+             horse_set
+             .into_iter()
+             .filter(|h| h.name.to_lowercase() == "wonka".to_string())
+             .collect::<Vec<Horse>>(),
+    )
+    */
 }
     
 
@@ -390,6 +497,24 @@ pub fn bin_shift(int: u64,
              bin_shift=bin_shift);
 }
 
+
+#[allow(dead_code)]
+pub fn test_parity(int: u8) {
+
+    // & 1 == 1
+    // % 2 == 0
+    let (result, parity): (u8, &str) = match int & 1 == 1 {
+        true => (1, "ODD"),
+        false => (0, "EVEN"),
+    };
+    
+    println!("{int} / {int:04b} & {one:04b} = {result} -> {parity}",
+             int=int,
+             one=1,
+             result=result,
+             parity=parity,
+    );
+}
 
 
 

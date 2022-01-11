@@ -2,9 +2,11 @@ use strfmt::strfmt;
 use std::collections::HashMap;
 
 
-pub fn tuple_formater<'sf>(template: &String,
-                           pair: &Vec<(&str, &str)>,
-                           debug: bool) -> String {
+//pub fn tuple_formater<'sf>(template: &String,
+// WHY lifetime was here?
+pub fn tuple_formater(template: &String,
+                      pair: &Vec<(&str, &str)>,
+                      debug: bool) -> String {
     
     let template = String::from(template);
     let mut hash_map = HashMap::new();

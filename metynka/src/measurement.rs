@@ -11,11 +11,15 @@ use crate::settings::{TomlConfig, Influx, TemplateSensors, Sensor};
 
 use crate::util::{file_system,
                   ts::Dt,
-                  {template_formater::tuple_formater}};
+                  {template_formater::tuple_formater},
+};
 
 use crate::various;
 
-use crate::influxdb::{self, InfluxData};
+use crate::influxdb::{self,
+                      InfluxData,
+                      //Print,
+};
 
 
 #[derive(Debug)]
@@ -77,13 +81,21 @@ impl Record {
 // compare Struct via contains
 impl PartialEq for Record
 {
+    //fn eq(&self, other: &Record) -> bool {
     fn eq(&self, other: &Self) -> bool {
+        //self.id == other.id
         self.id.eq(&other.id)
     }
 }
 
+/* // FUTURE_USE
+impl Eq for Record {
+}
+*/
 
-#[derive(Debug, PartialEq)]
+
+//#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct PointerFloat(f64);
 
 impl TryFrom<String> for PointerFloat {
@@ -430,6 +442,11 @@ fn run_all_influx_instances(config: &TomlConfig,
                 ..InfluxData::default()
             };
 
+            // TRAIT EXAMPLE
+            //influx_data.properties.print();
+            //influx_data.print();
+            //influx_data.print_call();
+            
             if config.flag.debug_influx_uri && !config.flag.influx_skip_import {
                 println!("\n#URI<{n}>:\n{w}\n{q}\n",
                          n=influx_data.config.name,
@@ -453,7 +470,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                 single_metric_result.carrier=influx_data.config.carrier.to_string();
                 single_metric_result.valid=influx_data.config.flag_valid_default.to_string();
 
-                /*
+                /* cannot change .. to not immutable as iter_mut -> try different aproach
                 *single_metric_result = Record {
                     machine: influx_data.config.machine_id.to_string(),
                     carrier: influx_data.config.carrier.to_string(),
@@ -461,6 +478,7 @@ fn run_all_influx_instances(config: &TomlConfig,
                     ..single_metric_result
                 };
                 */
+
 
                 // DISPLAY Record populated with Influx properties
                 if config.flag.debug_metric_record {
