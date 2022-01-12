@@ -1,0 +1,11 @@
+[package]
+name = "easy_config"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pavel SRB <prace@srbpavel.cz>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+toml = "0.5.8" # https://crates.io/crates/toml # CONFIG
+serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates/serde # https://serde.rs/derive.html

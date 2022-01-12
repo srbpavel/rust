@@ -52,7 +52,8 @@ where
 
 impl Delimiter for &str {
     fn find_next(&self, s: &str) -> Option<(usize, usize)> {
-        s.find(self).map(|start| (start, start + self.len()))
+        s.find(self)
+            .map(|start| (start, start + self.len()))
     }
 }
 
@@ -96,7 +97,7 @@ fn it_works() {
 }
 
 #[test]
-fn split_none() {
+fn wrong_delimiter() {
     let haystack = "a b c d e";
     let letters = StrSplit::new(haystack, "X");
     assert!(letters.eq(vec!["a b c d e"].into_iter()));
