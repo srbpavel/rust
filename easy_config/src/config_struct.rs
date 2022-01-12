@@ -41,6 +41,8 @@ pub struct Email {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Flag {
+    pub debug_config: bool,
+    
     pub debug_ts: bool,
 
     pub debug_email: bool,

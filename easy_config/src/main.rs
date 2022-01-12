@@ -8,25 +8,31 @@ use config_struct::{TomlConfig};
 
 
 fn main() {
-    println!("#MAIN:");
-
+    // FILE_NAME
     let config_filename = String::from("/home/conan/soft/rust/easy_config/sample_config.toml");
+    println!("#FILE_NAME: {}",
+             config_filename,
+    );
 
+    // PATH
     let path = Path::new(&config_filename);
-
-    if path.exists() {
-        println!("#PATH: {:#?}",
+    let path_status = path.exists();
+    
+    if path_status {
+        println!("#PATH [{}]: {:#?}",
+                 path_status,
                  path,
         );
     } else {
-        println!("\nERROR: file not found\nREASON >>> Path.metadata() -> {:#?}",
+        println!("#PATH [{}]: ERROR\nREASON >>> Path.metadata() -> {:#?}",
+                 path_status,
                  path.metadata(),
         );
         
         process::exit(1);
     }
     
-    // TOML_CONFIG
+    // TOML_VALUE
     let toml_value = easy_config::parse_toml_config(&config_filename).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
                   c=config_filename,
@@ -34,7 +40,8 @@ fn main() {
         
         process::exit(1);
     });
-    
+
+    // TOML CONFIG Struct
     let config: TomlConfig = match toml_value.try_into() {
         Ok(config) => config,
 
@@ -45,14 +52,14 @@ fn main() {
         }
     };
 
-    println!("\n#TOML_VALUE:\n{:#?}",
-             config,
-    );
-
-    // DEBUG DateTime Struct
-    /*
-    println!("\n#CONFIG:\n{:#?}",
-             config.name,
-    );
-    */
+    // DEBUG Struct
+    if config.flag.debug_config {
+        println!("\n#CONFIG:\n{:?}",
+                 config,
+        );
+    } else {
+        println!("\n#CONFIG:\n{:?}",
+                 config.name,
+        );
+    }
 }
