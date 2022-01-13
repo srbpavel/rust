@@ -1,7 +1,7 @@
 use std::process;
 
-#[allow(unused_imports)]
-use std::path::Path;
+//#[allow(unused_imports)]
+//use std::path::Path;
 
 use easy_config;
 
@@ -16,7 +16,7 @@ fn main() {
              config_filename,
     );
 
-    // /*
+    /*
     // PATH
     let path = Path::new(&config_filename);
     let path_status = path.exists();
@@ -34,12 +34,12 @@ fn main() {
         
         process::exit(1);
     }
-    // */
+    */
     
     // TOML_VALUE
 
     // String
-    //let toml_value = easy_config::parse_toml_config(&config_filename).unwrap_or_else(|err| {
+    let toml_value = easy_config::parse_toml_config(&config_filename).unwrap_or_else(|err| {
 
     // Path to str -> Some(str)
     // T 
@@ -49,7 +49,6 @@ fn main() {
 
     let toml_value = easy_config::parse_toml_config(&path_string).unwrap_or_else(|err| {
     */
-    let toml_value = easy_config::parse_toml_config(&path).unwrap_or_else(|err| {
     //let toml_value = easy_config::parse_toml_config(&path).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
                   c=config_filename,
