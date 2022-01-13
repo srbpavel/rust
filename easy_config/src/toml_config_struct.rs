@@ -1,8 +1,8 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-//type MyStr = Box<str>; 
-type MyStr = String;
+type MyStr = Box<str>; 
+//type MyStr = String;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TomlConfig {
@@ -14,12 +14,6 @@ pub struct TomlConfig {
     pub host: MyStr,
 
     //iter via HASH key
-    /*
-    [metric]
-    [metric.temperature]
-    flag_status = true # false
-    measurement = "temperature"
-    */
     pub metrics: HashMap<MyStr, TemplateSensors>,
     
     
@@ -31,10 +25,6 @@ pub struct TomlConfig {
     pub email: Email,
     
     // VEC
-    /*
-    [all_influx]
-    values = []
-    */
     pub all_influx: AllInflux,
 }
 
@@ -113,9 +103,6 @@ pub struct Delay {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AllInflux {
-    /*
-    values = [{}, {}, {}]
-    */
     pub values: Vec<Influx>,
 }
 

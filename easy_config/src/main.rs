@@ -7,7 +7,7 @@ use toml_config_struct::{TomlConfig};
 
 fn main() {
     // FILE_NAME -> here from code / later via CmdArg or ...
-    let config_filename = String::from("/home/conan/soft/rust/easy_config/sample_config.toml");
+    let config_filename = String::from("/home/conan/soft/rust/easy_config/src/sample_config.toml");
     println!("#FILE_NAME: {}",
              config_filename,
     );
@@ -44,28 +44,25 @@ fn main() {
     /*
     // by +  
     println!("\n#CONFIG:\n name + host: {:#?}\n user + workdir: {:#?}",
-             // /* str */ config.name.to_string() + " at " + &config.host.to_string(),
              /* str */ config.name.to_string() + " at " + &config.host.to_string(),
     
-    /* String */ config.user
-    + &String::from("@:")
-    + &config.work_dir
-    + &String::from("$"),
+             /* String */ config.user // this should fail for -> typeMyStr = <Box>str
+             + &String::from("@:")
+             + &config.work_dir
+             + &String::from("$"),
     );
     */
-
+    
     // /*
     // by format!
     println!("\n#CONFIG:\n name + host: {} at {}\n user + workdir: {}{}{}{}",
-             // str
              config.name,
              config.host,
              
-             // String
              config.user,
              "@:",
              config.work_dir,
-                 "$",
+             "$",
     );
     // */
 }
