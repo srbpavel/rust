@@ -24,7 +24,7 @@ fn main() {
     if path_status {
         println!("#PATH [{}]: {:#?}",
                  path_status,
-                 path,
+                 path, //path.display(),
         );
     } else {
         println!("#PATH [{}]: ERROR\nREASON >>> Path.metadata() -> {:#?}",
@@ -39,10 +39,18 @@ fn main() {
     // TOML_VALUE
 
     // String
-    let toml_value = easy_config::parse_toml_config(&config_filename).unwrap_or_else(|err| {
+    //let toml_value = easy_config::parse_toml_config(&config_filename).unwrap_or_else(|err| {
 
-    // Path
-    //let toml_value = easy_config::parse_toml_config(path.to_str().unwrap()).unwrap_or_else(|err| {
+    // Path to str -> Some(str)
+    // T 
+    //let toml_value = easy_config::parse_toml_config(&path.to_str().unwrap().to_string()).unwrap_or_else(|err| {
+    /*
+    let path_string = String::from(path.to_str().unwrap()); // not safe
+
+    let toml_value = easy_config::parse_toml_config(&path_string).unwrap_or_else(|err| {
+    */
+    let toml_value = easy_config::parse_toml_config(&path).unwrap_or_else(|err| {
+    //let toml_value = easy_config::parse_toml_config(&path).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
                   c=config_filename,
                   e=err);
