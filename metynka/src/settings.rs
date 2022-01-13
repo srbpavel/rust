@@ -82,6 +82,8 @@ impl CmdArgs {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TomlConfig {
+    pub user: Box<str>, // future use
+
     // ROOT
     pub work_dir: String,
     pub name: String,

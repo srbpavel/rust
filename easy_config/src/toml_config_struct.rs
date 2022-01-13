@@ -1,17 +1,20 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
+//type MyStr = Box<str>; 
+type MyStr = String;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TomlConfig {
     // ROOT
-    pub work_dir: String,
-    pub name: String,
+    pub user: MyStr,
 
-    pub host: String,
-    //pub host: &'static str,
+    pub work_dir: MyStr,
+    pub name: MyStr,
+    pub host: MyStr,
 
     //iter via HASH key
-    pub metrics: HashMap<String, TemplateSensors>,
+    pub metrics: HashMap<MyStr, TemplateSensors>,
     
     // STRUCT
     pub flag: Flag,
@@ -28,14 +31,14 @@ pub struct TomlConfig {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Email {
     pub status: bool,
-    pub smtp_server: String,
+    pub smtp_server: MyStr,
     pub port: u16,
 
-    pub source_email: String,
-    pub v_pass: String,
+    pub source_email: MyStr,
+    pub v_pass: MyStr,
 
-    pub target_email: String,
-    pub sms_email: String,
+    pub target_email: MyStr,
+    pub sms_email: MyStr,
 }
 
 
@@ -82,8 +85,8 @@ pub struct Flag {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Backup {
-    pub dir: String,
-    pub file_extension: String,
+    pub dir: MyStr,
+    pub file_extension: MyStr,
 }
 
 
@@ -105,21 +108,21 @@ pub struct AllInflux {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Influx {
-    pub name: String,
+    pub name: MyStr,
     pub status: bool,
 
-    pub secure: String,
+    pub secure: MyStr,
 
-    pub server: String,
+    pub server: MyStr,
     pub port: u16,
 
-    pub bucket: String,
-    pub token: String,
-    pub org: String,
-    pub precision: String,
+    pub bucket: MyStr,
+    pub token: MyStr,
+    pub org: MyStr,
+    pub precision: MyStr,
 
-    pub machine_id: String,
-    pub carrier: String,
+    pub machine_id: MyStr,
+    pub carrier: MyStr,
     pub flag_valid_default: bool,
 }
 
@@ -152,30 +155,30 @@ impl Influx {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {
     pub flag_status: bool,
-    pub measurement: String,
+    pub measurement: MyStr,
 
-    pub program: String,
-    pub args: Vec<String>,
+    pub program: MyStr,
+    pub args: Vec<MyStr>,
 
     pub flag_pipe: bool,
-    pub pipe_program: String,
-    pub pipe_args: Vec<String>,
+    pub pipe_program: MyStr,
+    pub pipe_args: Vec<MyStr>,
 
     pub values: Vec<Sensor>,
     
-    pub tag_machine: String,
-    pub tag_id: String,
-    pub tag_carrier: String,
-    pub tag_valid: String,
+    pub tag_machine: MyStr,
+    pub tag_id: MyStr,
+    pub tag_carrier: MyStr,
+    pub tag_valid: MyStr,
 
-    pub field: String,
+    pub field: MyStr,
 
-    pub annotated_datatype: String,
-    pub annotated_header: String,
-    pub csv_annotated: String,
+    pub annotated_datatype: MyStr,
+    pub annotated_header: MyStr,
+    pub csv_annotated: MyStr,
 
-    pub generic_lp: String,
-    pub generic_query_verify_record: String,
+    pub generic_lp: MyStr,
+    pub generic_query_verify_record: MyStr,
 }
 
 
@@ -188,36 +191,36 @@ pub struct Template {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateFlux {
-    pub query_verify_record_range_start: String,
-    pub query_verify_record_suffix: String,
+    pub query_verify_record_range_start: MyStr,
+    pub query_verify_record_suffix: MyStr,
 }
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateCurl {
-    pub program: String,
+    pub program: MyStr,
 
-    pub param_insecure: String,
-    pub param_request: String,
-    pub param_post: String,
-    pub param_header: String,
-    pub param_data: String,
+    pub param_insecure: MyStr,
+    pub param_request: MyStr,
+    pub param_post: MyStr,
+    pub param_header: MyStr,
+    pub param_data: MyStr,
     
-    pub influx_uri_api: String,
-    pub influx_uri_write: String,
-    pub influx_uri_query: String,
+    pub influx_uri_api: MyStr,
+    pub influx_uri_write: MyStr,
+    pub influx_uri_query: MyStr,
 
-    pub influx_auth: String,
-    pub influx_accept: String,
-    pub influx_content: String,
+    pub influx_auth: MyStr,
+    pub influx_accept: MyStr,
+    pub influx_content: MyStr,
 }
 
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Sensor {
     pub status: bool,
-    pub name: String,
-    pub pointer: String,
+    pub name: MyStr,
+    pub pointer: MyStr,
 }
 
 

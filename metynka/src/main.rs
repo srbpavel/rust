@@ -26,7 +26,7 @@ fn mut_with_no_output(input: &u8, output: &mut u8) {
 fn main() {
     // DateTime Struct
     let dt = timestamp::ts_now();
-    println!("{}", dt.local_formated);
+    println!("#datetime [local_formated]: {}", dt.local_formated);
 
     // QUICK SAMPLE TEST
 
@@ -109,6 +109,9 @@ fn main() {
         }
     };
 
+    // CONFIG Box<str> TEST
+    println!("#config.user Box<str> : {}", config.user);
+    
     // DEBUG DateTime Struct
     if config.flag.debug_ts {
         println!("\n#DATE_TIME:\n{:#?}", dt);

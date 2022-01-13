@@ -24,8 +24,15 @@ fn open_config_file(filename: &String) -> String {
 }
 
 /// receive filename and return toml::Value
-pub fn parse_toml_config(filename: &String) -> Result<toml::Value, toml::de::Error> {
-    let toml_file = open_config_file(&filename);
+//pub fn parse_toml_config(filename: &String) -> Result<toml::Value, toml::de::Error> {
+pub fn parse_toml_config<T>(filename: T) -> Result<toml::Value, toml::de::Error>
+where
+    std::string::String: From<T>
+{
+    //let toml_file = open_config_file(&filename);
+
+    // T String or Path
+    let toml_file = open_config_file(&String::from(filename));
     
     toml::from_str(&toml_file)
 }
