@@ -1,4 +1,4 @@
-user = "test_sonya"
+user = "lib_test_sonya"
 
 # used in backup_filename
 name = 'easy_laptop'

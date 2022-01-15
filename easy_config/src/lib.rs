@@ -57,7 +57,7 @@ where
     // T String or Path
     let toml_file = open_config_file(&String::from(filename));
     */
-    
+
     let toml_file_path = match string_to_path(&filename) {
         Some(path) => path,
         None => {

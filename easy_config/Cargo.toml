@@ -8,4 +8,4 @@ authors = ["Pavel SRB <prace@srbpavel.cz>"]
 
 [dependencies]
 toml = "0.5.8" # https://crates.io/crates/toml # CONFIG
-serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates/serde # https://serde.rs/derive.html
+#serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates/serde # https://serde.rs/derive.html
