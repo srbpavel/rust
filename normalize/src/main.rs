@@ -1,16 +1,66 @@
 use std::{env,
           fs::{self,
-               DirEntry}
+               DirEntry},
+          path::{Path},
 };
+
+//use std::ffi::OsStr;
+
+
+fn under_score(s: String) -> String {
+//fn under_score(s: &str) -> &str {
+    s
+        .as_bytes()
+        .iter()
+        .map(|b| match b {
+            low @ 97..=122 => (*low as char)
+                ,//.to_string(),
+            
+            high @ 65..=90 => (high.to_ascii_lowercase() as char)
+                ,//.to_string(),
+            
+            _ => '_',//.to_string() // "_"
+        }
+        )
+        // .map(|s| s.to_string()) // no need 
+        //.map(|s| s as Box<str>)
+
+        .collect::<String>()
+        //.collect::<&str>()
+}
 
 
 //fn replace_char(filename: &String) {
 fn replace_char(filename: &DirEntry) {
-    println!(" #FILENAME:\n  in: {:?}\n  out: {:?}",
+    println!(" #FILENAME:\n  in: {:?}\n  out: NAME.EXT -> {}.{}",
+             // IN
              filename.path(),
 
+             // OUT -> NAME
+             under_score(
+                 Path::new(&filename.file_name())
+                     .file_stem()
+                     .and_then(|s| s.to_str())
+                     .unwrap()
+                     .to_string()
+             ),
+             
+             // OUT -> EXTENSION
+             under_score(
+                 Path::new(&filename.file_name())
+                     .extension()
+                     .and_then(|s| s.to_str()) //.and_then(OsStr::to_str)
+                     .unwrap()
+                     .to_string()
+             ),
+
+             /*
              filename // split to "name" "." "extension" and join back
+             //.file_type()
              .file_name()
+             */
+
+             /* OK
              .into_string()
              .unwrap()
 
@@ -27,6 +77,7 @@ fn replace_char(filename: &DirEntry) {
              }
              )
              .collect::<String>()
+             */
              
              /*
              .chars()
