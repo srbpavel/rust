@@ -1,6 +1,7 @@
-use std::fs;
-use std::path::Path;
-use std::process;
+use std::{fs,
+          path::Path,
+          process};
+
 use toml;
 
 
@@ -34,7 +35,7 @@ fn string_to_path(filename: &String) -> Option<&Path> {
         Some(path)
             
     } else {
-        println!("#PATH [{}]: ERROR in filename: {}\nREASON >>> Path.metadata() -> {:#?}",
+        eprintln!("#PATH [{}]: ERROR in filename: {}\nREASON >>> Path.metadata() -> {:#?}",
                  path_status,
                  filename,
                  path.metadata(),

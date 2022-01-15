@@ -1,22 +1,37 @@
+/*
 use std::process;
 
-// local Struct for TOML config
+// Struct for TOML config
 mod toml_config_struct;
 use toml_config_struct::{TomlConfig};
 
-// unpublish local crate set in Cargo.toml
+// local crate
 use easy_config::{read_toml_config};
+*/
+
+mod example_easy_config;
+mod toml_config_struct;
 
 
 fn main() {
+    // EASY_CONFIG
+    //example_easy_config::example();
+    example_easy_config::example();
+    
+    /*
+    /* EASY_CONFIG -> START */
+    
     // FILE_NAME -> here from code / later via CmdArg or ...
-    let config_filename = String::from("/home/conan/soft/rust/lib_test/src/config.toml");
+    let config_filename = "/home/conan/soft/rust/lib_test/src/config.toml";
+
+    /* DEBUG
     println!("#FILE_NAME: {}",
              config_filename,
     );
+    */
 
     // TOML_VALUE
-    let toml_value = read_toml_config(&config_filename).unwrap_or_else(|err| {
+    let toml_value = read_toml_config(&String::from(config_filename)).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
                   c=config_filename,
                   e=err);
@@ -24,7 +39,7 @@ fn main() {
         process::exit(1);
     });
 
-    // TOML CONFIG Struct
+    // CONFIG
     let config: TomlConfig = match toml_value.try_into() {
         Ok(config) => config,
 
@@ -35,17 +50,16 @@ fn main() {
         }
     };
 
-    // DEBUG Struct
+    // DEBUG CONFIG
     if config.flag.debug_config {
         println!("\n#CONFIG:\n{:#?}",
                  config,
         );
     };
 
-    
     // just PLAYING with format! + String || str
     /*
-    // by +  
+    // string join by +  
     println!("\n#CONFIG:\n name + host: {:#?}\n user + workdir: {:#?}",
              /* str */ config.name.to_string() + " at " + &config.host.to_string(),
     
@@ -57,8 +71,8 @@ fn main() {
     */
     
     // /*
-    // by format!
-    println!("\n#CONFIG:\n name + host: {} at {}\n user + workdir: {}{}{}{}\n",
+    // string join by format!
+    println!("\n#CONFIG:\n name + host: {} at {}\n user + workdir: {}{}{}{}",
              config.name,
              config.host,
              
@@ -68,4 +82,7 @@ fn main() {
              "$",
     );
     // */
+
+    /* EASY_CONFIG -> END */
+    */
 }

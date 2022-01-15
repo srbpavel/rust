@@ -4,6 +4,7 @@ use std::collections::HashMap;
 type MyStr = Box<str>; 
 //type MyStr = String;
 
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TomlConfig {
     // ROOT
@@ -15,7 +16,6 @@ pub struct TomlConfig {
 
     //iter via HASH key
     pub metrics: HashMap<MyStr, TemplateSensors>,
-    
     
     // STRUCT
     pub flag: Flag,
