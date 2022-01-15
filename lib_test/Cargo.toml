@@ -1,0 +1,11 @@
+[package]
+name = "lib_test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates/serde # https://serde.rs/derive.html
+
+easy_config = { version = "^0", path = "/home/conan/soft/rust/easy_config/" }

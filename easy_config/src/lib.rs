@@ -1,29 +1,11 @@
-use std::fs::{self,
-              File,
-};
-
-use std::io::Write;
-
+use std::fs;
 use std::path::Path;
 use std::process;
 use toml;
 
 
 /// read data from file path into string
-//fn open_config_file(file_path: &Path) -> String {
 fn open_config_file(file_path: &Path) -> Option<String> {
-    /*
-    let toml_data = fs::read_to_string(&file_path).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: error reading config file: {}\nREASON >>> {e}",
-                  c=file_path.display(),
-                  e=err);
-        
-        process::exit(1);
-    });
-    
-    toml_data
-    */
-
     let toml_data = match fs::read_to_string(&file_path) {
         Ok(data) => Some(data),
         Err(why) => {
@@ -39,8 +21,6 @@ fn open_config_file(file_path: &Path) -> Option<String> {
 
 
 /// path if filename as string is valid
-//fn string_to_path(filename: &String) -> &Path {
-//fn string_to_path(filename: &String) -> Result<&Path, _> {
 fn string_to_path(filename: &String) -> Option<&Path> {
     let path = Path::new(filename);
     let path_status = path.exists();
@@ -51,7 +31,6 @@ fn string_to_path(filename: &String) -> Option<&Path> {
                  path.display(),
         );
         
-        //Ok(path)
         Some(path)
             
     } else {
@@ -61,8 +40,6 @@ fn string_to_path(filename: &String) -> Option<&Path> {
                  path.metadata(),
         );
         
-        //process::exit(1);
-        //Err(..)
         None
     }
 }
@@ -81,7 +58,6 @@ where
     let toml_file = open_config_file(&String::from(filename));
     */
     
-    // let toml_file_path = string_to_path(&filename);
     let toml_file_path = match string_to_path(&filename) {
         Some(path) => path,
         None => {
@@ -89,7 +65,6 @@ where
         },
     };
     
-    //let toml_data = open_config_file(toml_file_path);
     let toml_data = match open_config_file(toml_file_path) {
         Some(data) => data,
         None => {
@@ -97,7 +72,6 @@ where
         },
     };
 
-    // Value
     toml::from_str(&toml_data)
 }
 
@@ -121,10 +95,14 @@ fn path_invalid() {
     assert_eq!(Option::None, path);
 }
 
+#[allow(unused_must_use)]
 #[test]
 fn read_config_valid() {
-    let text = "TEXT TO BE READ WITH TEST\n";
-    let filename = "src/test_file.toml";
+    use std::io::Write;
+    use std::fs::{File, remove_file};
+    
+    let text = "TEXT TO BE READ FROM FILE WITH TEST\n";
+    let filename = "test_file.toml";
     
     File::create(filename)
         .unwrap()
@@ -133,6 +111,8 @@ fn read_config_valid() {
 
     let data = open_config_file(Path::new(filename));
 
+    remove_file(filename);
+    
     assert_eq!(text, data.unwrap());
 }
 

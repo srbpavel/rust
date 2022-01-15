@@ -1,13 +1,14 @@
 use std::process;
 
-use easy_config::{read_toml_config};
 mod toml_config_struct;
 use toml_config_struct::{TomlConfig};
+
+use easy_config::{read_toml_config};
 
 
 fn main() {
     // FILE_NAME -> here from code / later via CmdArg or ...
-    let config_filename = String::from("/home/conan/soft/rust/easy_config/src/sample_config.toml");
+    let config_filename = String::from("/home/conan/soft/rust/lib_test/src/sample_config.toml");
     println!("#FILE_NAME: {}",
              config_filename,
     );
