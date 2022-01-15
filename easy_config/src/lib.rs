@@ -1,4 +1,9 @@
-use std::fs;
+use std::fs::{self,
+              File,
+};
+
+use std::io::Write;
+
 use std::path::Path;
 use std::process;
 use toml;
@@ -118,23 +123,18 @@ fn path_invalid() {
 
 #[test]
 fn read_config_valid() {
-    let filename = &String::from("src/config_for_test.toml");
-    let path = Path::new(filename);
-    let toml_data = open_config_file(path);
+    let text = "TEXT TO BE READ WITH TEST\n";
+    let filename = "src/test_file.toml";
+    
+    File::create(filename)
+        .unwrap()
+        .write_all(text
+                   .as_bytes());
 
-    assert_eq!("CONFIG_FOR_TEST_DATA\n", toml_data.unwrap());
+    let data = open_config_file(Path::new(filename));
+
+    assert_eq!(text, data.unwrap());
 }
-
-/*
-#[test]
-fn read_config_fail() {
-    let filename = &String::from("src/config_for_test.toml");
-    let path = Path::new(filename);
-    let toml_data = open_config_file(path);
-
-    assert_eq!("INVALID_DATA\n", toml_data.unwrap());
-}
-*/
 
 //}
 // */
