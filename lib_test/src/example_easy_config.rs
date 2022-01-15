@@ -1,14 +1,15 @@
 use std::process;
 
 // Struct for TOML config
-//mod crate::toml_config_struct;
 use crate::toml_config_struct::{TomlConfig};
 
 // local crate
 use easy_config::{read_toml_config};
 
 
-pub fn example() {
+pub fn sample() {
+    println!("#SAMPLE <EASY_CONFIG>\n");
+
     // FILE_NAME -> here from code / later via CmdArg or ...
     let config_filename = "/home/conan/soft/rust/lib_test/src/config.toml";
     
