@@ -7,7 +7,8 @@ use std::{env,
 //use std::ffi::OsStr;
 
 
-fn under_score(s: String) -> String {
+//fn under_score(s: String) -> String {
+fn under_score(s: &String) -> String {
 //fn under_score(s: &str) -> &str {
     s
         .as_bytes()
@@ -32,20 +33,63 @@ fn under_score(s: String) -> String {
 
 //fn replace_char(filename: &String) {
 fn replace_char(filename: &DirEntry) {
-    println!(" #FILENAME:\n  in: {:?}\n  out: NAME.EXT -> {}.{}",
-             // IN
-             filename.path(),
+    let file = filename.file_name();
 
-             // OUT -> NAME
-             under_score(
-                 Path::new(&filename.file_name())
-                     .file_stem()
-                     .and_then(|s| s.to_str())
-                     .unwrap()
-                     .to_string()
-             ),
+    let path = Path::new(&file);
+
+    // NAME
+    let name = under_score( & match 
+        //Path::new(&filename.file_name())
+                            &path
+                            .file_stem()
+                            .and_then(|s| s.to_str()) {
+                                Some(n) => n.to_string(),
+                                None => "".to_string()
+                            }
+            
+                            //.unwrap()
+                            //.to_string()
+    );
+
+    // EXTENSION
+    //let extension = match Path::new(&filename.file_name())
+    let extension = match &path
+        .extension()
+        .and_then(|s| s.to_str()) {
+            Some(e) => {
+                format!(".{}", e)
+            },
+            None => "".to_string()
+        };
+
+    println!(" #FILENAME:\n  in: {:?}\n  out: NAME.EXT -> {}",
+             // IN
+             filename.path(), // FULL_PATH
+             //path, // JUST FILENAME
+
+             // OUT
+             format!("{}{}",
+                     name,
+                     extension,
+             )
+
+             /*
+             Path::new(&filename.file_name())
+             .extension()
+             .and_then(|s| s.to_str())
+             //.unwrap()
+             .unwrap_or_else(|| {
+                 println!("\nERROR: {c}",
+                           c=Path::new(&filename.file_name()).display()
+                 );
+                           
+                 ""
+             })
+             */
              
+
              // OUT -> EXTENSION
+             /*
              under_score(
                  Path::new(&filename.file_name())
                      .extension()
@@ -53,6 +97,7 @@ fn replace_char(filename: &DirEntry) {
                      .unwrap()
                      .to_string()
              ),
+             */
 
              /*
              filename // split to "name" "." "extension" and join back
