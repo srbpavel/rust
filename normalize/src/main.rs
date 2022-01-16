@@ -1,10 +1,51 @@
 use std::{env,
           fs::{self,
                DirEntry},
-          path::{Path},
+          path::{Path,
+                 PathBuf},
 };
 
-//use std::ffi::OsStr;
+
+#[allow(unused_must_use)]
+fn rename_filename(input: PathBuf,
+                   output: PathBuf) {
+    println!("  @ WILL RENAME: {:?} -> {:?}",
+             input,
+             output,
+    );
+
+    if !output.as_path().exists() {
+        // RENAME
+        //fs::rename(input, output);
+    } else {
+        println!("  WARNING: exists {:?}", output);
+    }
+    
+}
+
+
+fn remove_duplicity(s: &String) -> String {
+    let mut uniq = String::from("");
+    let mut under_score_counter = 0;
+    
+    for ch in s.as_bytes().iter() {
+        let cha = &(*ch as char).to_string();
+
+        if cha == &String::from("_") {
+            under_score_counter += 1
+        } else {
+            under_score_counter = 0
+        }
+
+        //println!("CHA: {}", under_score_counter);
+
+        if under_score_counter <= 1 {
+            uniq += cha
+        }
+    }
+    
+    uniq
+}
 
 
 //fn under_score(s: String) -> String {
@@ -14,13 +55,13 @@ fn under_score(s: &String) -> String {
         .as_bytes()
         .iter()
         .map(|b| match b {
-            low @ 97..=122 => (*low as char)
-                ,//.to_string(),
+            low @ 97..=122 => (*low as char),
             
-            high @ 65..=90 => (high.to_ascii_lowercase() as char)
-                ,//.to_string(),
+            high @ 65..=90 => (high.to_ascii_lowercase() as char),
+
+            num @ 48..=57 => (*num as char),
             
-            _ => '_',//.to_string() // "_"
+            _ => '_',
         }
         )
         // .map(|s| s.to_string()) // no need 
@@ -38,21 +79,15 @@ fn replace_char(filename: &DirEntry) {
     let path = Path::new(&file);
 
     // NAME
-    let name = under_score( & match 
-        //Path::new(&filename.file_name())
-                            &path
-                            .file_stem()
-                            .and_then(|s| s.to_str()) {
-                                Some(n) => n.to_string(),
-                                None => "".to_string()
-                            }
-            
-                            //.unwrap()
-                            //.to_string()
+    let name = under_score( & match &path
+                              .file_stem()
+                              .and_then(|s| s.to_str()) {
+                                  Some(n) => n.to_string(),
+                                  None => "".to_string()
+                              }
     );
 
     // EXTENSION
-    //let extension = match Path::new(&filename.file_name())
     let extension = match &path
         .extension()
         .and_then(|s| s.to_str()) {
@@ -62,17 +97,47 @@ fn replace_char(filename: &DirEntry) {
             None => "".to_string()
         };
 
-    println!(" #FILENAME:\n  in: {:?}\n  out: NAME.EXT -> {}",
+    let output = format!("{}{}",
+                         name,
+                         extension,
+    );
+
+    let uniq_output = remove_duplicity(&output);
+
+    let rename_status = format!("{}", path.display()) != uniq_output;
+
+    // PathBuf
+    let new_file: PathBuf = [filename.path().parent().unwrap(),
+                             Path::new(&uniq_output),
+    ].iter().collect();
+
+    /*
+    let new_file = format!("{:?}",
+                           filename
+                           .path()
+                           .parent()
+                           .unwrap()
+                           .join(&uniq_output),
+    );
+    */
+
+    println!("\n #FILENAME:\n  in: {:?} -> {}\n  out: NAME.EXT -> {}\n  uniq:{}{}\n  rename_status:{}{}\n   {:?}",
              // IN
              filename.path(), // FULL_PATH
-             //path, // JUST FILENAME
+             path.display(), // JUST FILENAME
 
              // OUT
-             format!("{}{}",
-                     name,
-                     extension,
-             )
+             &output,
 
+             format!("{:>12}", ""),
+             uniq_output,
+
+             format!("{:>3}", ""),
+             //format!("{}", path.display()) == uniq_output,
+             rename_status,
+
+             new_file,
+             
              /*
              Path::new(&filename.file_name())
              .extension()
@@ -135,9 +200,16 @@ fn replace_char(filename: &DirEntry) {
              .collect::<String>()
              */
     );
+
+    if rename_status {
+        rename_filename(filename.path(),
+                        new_file,
+        );
+    };
 }
 
 
+// FUTURE USE
 #[allow(dead_code)]
 fn dir_work(dir: &DirEntry) {
     println!("#DIR: {:?}",
@@ -150,62 +222,48 @@ fn dir_work(dir: &DirEntry) {
 fn main() {
     println!("#NORMALIZE\n");
 
-    // read cmd arg
-
-    // loop for all in dir
-     // if file -> replace
-     // if dir append to dir list
-    
-    
-    // replace_char_in_str
-
-
-    // get cwd or ARG
     let path_dir = env::current_dir().unwrap();
 
     println!("#CURRENT DIR: {}\n",
              path_dir
-             //.unwrap()
              .display()
     );
 
 
     let dir_list = fs::read_dir(path_dir);
 
-    // println!("dir list: {:#?}", // PRINT
-             dir_list // Result
-             .unwrap()
-             //.count() // 4
+    dir_list // Result
+        .unwrap()
+    //.count() // 4
 
-             /* // Ok(DirEntry)
-             .map(|e| e)
-             .collect::<Vec<_>>()
-             */
+    /* // Ok(DirEntry)
+        .map(|e| e)
+        .collect::<Vec<_>>()
+    */
+        
+        .map(|element| element
+             .as_ref().unwrap() // when i need to access ELEMENT in another map()
+             //.path() // full_path
+             //.file_name() // just file_name
+             .metadata()
+             .map(|m| match m.is_dir() {
+                 // DIR
+                 true =>
+                     
+                     "".to_string(),
+                 
+                 /*
+                 format!("DIR: {:#?}",
+                 //"true",
+                 element
+                 //.unwrap()
+                 //.path(),
+                 .map(|name| dir_work(&name))
+                 ),
+                 */
 
-             .map(|element| element
-                  .as_ref().unwrap() // when i need to access ELEMENT in another map()
-                  //.path() // full_path
-                  //.file_name() // just file_name
-                  .metadata()
-                  .map(|m| match m.is_dir() {
-                      true =>
-
-                          "".to_string(),
-                          
-                      /*
-                          format!("DIR: {:#?}",
-                                  //"true",
-                                  element
-                                  //.unwrap()
-                                  //.path(),
-                                  .map(|name| dir_work(&name))
-                          ),
-                       */
-                      
-                      false =>
-
-                      // /*
-                          format!("FILE: {:?}",
+                 // FILE
+                 false => format!("FILE: {:?}",
                                   //"false",
                                   element
                                   //.unwrap()
@@ -214,14 +272,12 @@ fn main() {
                                   //.unwrap()
                                   .map(|name| replace_char(&name))
                                   //.to_uppercase(),
-                          ),
-                      // */
-                  }
-                  )
-                  .unwrap()
-                  
+                 ),
+             }
              )
-             .collect::<Vec<_>>()
-             ;
-    // );
+             .unwrap()
+             
+        )
+        .collect::<Vec<_>>()
+        ;
 }
