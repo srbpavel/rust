@@ -77,14 +77,18 @@ fn rename_filename(input: PathBuf,
 }
 
 
-fn remove_duplicity(s: &String) -> String {
+fn remove_duplicity(text: &String,
+                    character: char) -> String {
+    
     let mut uniq = String::from("");
     let mut under_score_counter = 0;
     
-    for ch in s.as_bytes().iter() {
+    for ch in text.as_bytes().iter() {
         let cha = &(*ch as char).to_string();
 
-        if cha == &String::from("_") {
+        //if cha == &String::from("_") {
+        //if cha == &String::from('_') {
+        if cha == &String::from(character) {
             under_score_counter += 1
         } else {
             under_score_counter = 0
@@ -160,7 +164,7 @@ fn replace_char(filename: &DirEntry) {
                          extension,
     );
 
-    let uniq_output = remove_duplicity(&output);
+    let uniq_output = remove_duplicity(&output, '_');
 
     let rename_status = format!("{}", path.display()) != uniq_output;
 
@@ -282,4 +286,44 @@ fn main() {
         )
         .collect::<Vec<_>>()
         ;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_dia_with_no_extension(){
+        assert_eq!(remove_diacritics("tRPaslÍČek"),
+
+                   String::from("tRPaslICek"),
+        )
+    }
+
+    #[test]
+    fn test_dia(){
+        assert_eq!(remove_diacritics("ŽÍžaLa.jŮlie"),
+
+                   String::from("ZIzaLa.jUlie"),
+        )
+    }
+
+    #[test]
+    fn test_duplicity(){
+        assert_eq!(remove_duplicity(&String::from("a---B--c-D"),
+                                    '-'),
+
+                   String::from("a-B-c-D"),
+        )
+    }
+
+    #[test]
+    fn test_under_score_name(){
+        assert_eq!(under_score(&String::from("múčho můřká.áchjó.škýt")),
+
+                   String::from("mucho_murka_achjo_skyt"),
+        )
+    }
+
+    
 }
