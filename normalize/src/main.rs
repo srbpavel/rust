@@ -1,32 +1,33 @@
 use std::{env,
+
           fs::{self,
                DirEntry},
+
           path::{Path,
                  PathBuf},
-};
 
-use std::process;
+          process,
+};
 
 mod command_args;
 
 
-fn verify_path(path: &String) {
-    if !Path::new(&path).exists() {
-        eprintln!("\nEXIT: PATH does not exists {}", path);
+fn verify_path(path: &str) {
+    if !Path::new(path).exists() {
+        eprintln!("\nEXIT: PATH does not exists or no access {}", path);
         
         process::exit(1);
     };
 }
 
 
-// https://github.com/YesSeri/diacritics/blob/main/src/lib.rs
+// MATCH TABLE FROM https://github.com/YesSeri/diacritics/blob/main/src/lib.rs
 fn remove_diacritics(text: &str) -> String {
-    let no_diacritics: String = text
-        
+    text
         .chars()
 
         .map(|ch| String::from(ch))
-        .collect::<Vec<_>>() // <Vec<String>>
+        .collect::<Vec<_>>()
         .iter()
 
         .map(|dia| match dia.as_ref() {
@@ -66,13 +67,10 @@ fn remove_diacritics(text: &str) -> String {
 
             _ => dia,
         })
-        .collect();
-        
-    no_diacritics
+        .collect::<String>()
 }
 
 
-#[allow(unused_must_use)]
 fn rename_filename(input: PathBuf,
                    output: PathBuf,
                    simulate: bool) {
@@ -82,19 +80,24 @@ fn rename_filename(input: PathBuf,
              output,
     );
 
+    // VERIFY NOT TO OVERWRITE if any
     if !output.as_path().exists() {
         if !simulate {
             // RENAME
-            fs::rename(input, output);
+            match fs::rename(input, output) {
+                Ok(_) => {},
+                Err(err) => {
+                    eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
+                }
+            }
         }
     } else {
-        println!("  @ WARNING: exists {:?}", output);
+        println!("  @ WARNING: destination file exists {:?}", output);
     }
-    
 }
 
 
-fn remove_duplicity(text: &String,
+fn remove_duplicity(text: &str,
                     character: char) -> String {
     
     let mut uniq = String::from("");
@@ -118,21 +121,24 @@ fn remove_duplicity(text: &String,
 }
 
 
-fn under_score(text: &String,
+fn under_score(text: &str,
                character: char) -> String {
 
     // REMOVE DIACRITICS
     let no_dia = remove_diacritics(text);
 
-    // REPLACE other then 09AZaz
+    // REPLACE OTHER THEN: 09AZaz AND upper to lower_case
     no_dia
         .as_bytes()
         .iter()
         .map(|b| match b {
+            // az
             low @ 97..=122 => (*low as char),
-            
+
+            // AZ -> az
             high @ 65..=90 => (high.to_ascii_lowercase() as char),
 
+            // 09
             num @ 48..=57 => (*num as char),
             
             _ => character,
@@ -142,24 +148,25 @@ fn under_score(text: &String,
 
 
 fn replace_char(filename: &DirEntry,
-                flag_simulate: bool) {
+                flag_simulate: bool,
+                replace_character: char) {
     
     let file = filename.file_name();
 
     let path = Path::new(&file);
 
-    // FILE: NAME
-    let name = under_score( & match &path
-                              .file_stem()
-                              .and_then(|s| s.to_str()) {
-                                  Some(n) => n.to_string(),
-                                  None => String::from("")
-                              },
-
-                              '_',
+    // FILE: NAME -> diacritics + replace
+    let name = under_score(& match &path
+                           .file_stem()
+                           .and_then(|s| s.to_str()) {
+                               Some(n) => n.to_string(),
+                               None => String::from("")
+                           },
+                           
+                           replace_character,
     );
-
-    // FILE: EXTENSION
+    
+    // FILE: EXTENSION -> only diacritics
     let extension = match &path
         .extension()
         .and_then(|s| s.to_str()) {
@@ -169,47 +176,57 @@ fn replace_char(filename: &DirEntry,
             None => String::from("")
         };
 
+    // JOIN FILENAME FROM name + extension
     let output = format!("{}{}",
                          name,
                          extension,
     );
 
-    let uniq_output = remove_duplicity(&output, '_');
+    // REMOVE DUPLICITY of multiple replace_character
+    let uniq_output = remove_duplicity(&output,
+                                       replace_character,
+    );
 
+    // STATUS if rename is needed
     let rename_status = format!("{}", path.display()) != uniq_output;
 
-    // PathBuf
     let new_file: PathBuf = [
+        // PATH
         filename
             .path()
             .parent()
             .unwrap(),
-        
+
+        // FILENAME
         Path::new(&uniq_output),
     ]
         .iter()
         .collect();
 
+    // DEBUG just to see -> change to silent / verbose
     println!("\n #FILENAME:\n  {} -> file_name: {}\n  out: NAME.EXT ->  {}\n  uniq:{}{}\n  rename_status:{}{}  {}",
-             // IN
+             // FULL_PATH
              format!("full_path: {:>7}{:?}",
                      "",
-                     filename.path(), // FULL_PATH
+                     filename.path(),
                      ),
              
-             
-             path.display(), // JUST FILENAME
+             // FILENAME
+             path.display(),
 
-             // OUT
+             // NAME.EXT
              &output,
 
+             // UNIQ
              format!("{:>13}", ""),
              uniq_output,
 
              format!("{:>4}", ""),
 
+             // STATUS
              rename_status,
 
+             // INPUT -> OUTPUT
              if rename_status {
                  format!("\n  target: {:>10}{:?}",
                          "",
@@ -219,12 +236,11 @@ fn replace_char(filename: &DirEntry,
              
     );
 
+    // RENAME TASK
     if rename_status {
         rename_filename(filename.path(), // IN
                         new_file, // OUT
-
-                        //true // false // SIMULATE
-                        flag_simulate // false // SIMULATE
+                        flag_simulate // SIMULATE
         );
     };
 }
@@ -241,6 +257,8 @@ fn dir_work(dir: &DirEntry) {
 
 #[allow(unused_must_use)]
 fn main() {
+    let replace_character = '_';
+
     /*
     // CWD instead ARG `pwd`
     let path_dir = env::current_dir().unwrap();
@@ -253,7 +271,7 @@ fn main() {
         process::exit(1);
     });
 
-    // VERIFY PATH IS VALID
+    // VERIFY PATH VALIDITY
     verify_path(&args.full_path);
     
     println!("\n#WORKING DIR: {}\n#SIMULATE: {}",
@@ -265,7 +283,7 @@ fn main() {
     let dir_list = fs::read_dir(args.full_path);
 
     dir_list
-        .unwrap() // is safe ?
+        .unwrap() // rather verify !!!
 
         /* // DEBUG
         .map(|e| e)
@@ -280,8 +298,9 @@ fn main() {
                      element
                          .map(|name| replace_char(&name,
                                                   args.simulate,
+                                                  replace_character,
                          ))
-                         .unwrap(); // make it safe !!!
+                         .unwrap(); // rather verify
                  },
                  
                  // DIR -> FUTURE USE
@@ -329,9 +348,9 @@ mod tests {
     #[test]
     fn under_score_name(){
         assert_eq!(under_score(&String::from("múčho můřká.áchjó.škýt"),
-                               '_'),
+                               '*'),
 
-                   String::from("mucho_murka_achjo_skyt"),
+                   String::from("mucho*murka*achjo*skyt"),
         )
     }
 }
