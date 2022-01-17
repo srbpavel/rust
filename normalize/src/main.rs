@@ -15,17 +15,10 @@ mod command_args;
 
 
 #[derive(Debug)]
-//pub struct MyFile<'p, 'e> {
 pub struct MyFile<'p> {
-
-    //pub entry: &'e DirEntry,
-
     pub path: &'p Path,
-    
     pub output: String,
-    
     pub uniq_output: String,
-
     pub rename_status: bool,
 }
 
@@ -35,58 +28,43 @@ pub trait Print {
 }
 
 
-//impl Print for MyFile<'_, '_> {
 impl Print for MyFile<'_> {
     fn print(&self) {
-        println!("\n  TRAIT Print>>> {:?}", self);
+        println!("\n  {:?}", self);
+
+        /*
+        println!("\n  {p:?}\n  {o}\n  {u}\n  {r}",
+                 p=self.path,
+                 o=self.output,
+                 u=self.uniq_output,
+                 r=self.rename_status,
+        );
+        */
     }
 }
 
-//impl <'p, 'e> MyFile<'_, '_> {
+
 impl <'p> MyFile<'_> {
     pub fn new(
-        //entry: &'e DirEntry,
-        
         path: &'p Path, 
-
         output: String,
-        
         uniq_output: String,
-
-        //rename_status: bool) -> MyFile<'p, 'e> {
         rename_status: bool) -> MyFile<'p> {
         
         MyFile {
-            //entry,
             path,
             output,
             uniq_output,
             rename_status,
-
             ..MyFile::default()
         }
     }
 
-    //pub fn default() -> MyFile<'p, 'e> {
     pub fn default() -> MyFile<'p> {
         MyFile {
-
-            /*
-            // UGLY
-            entry: &fs::read_dir(".")
-                .unwrap()
-                .last()
-                .unwrap()
-                .unwrap()
-            ,
-            */
-
             path: Path::new(""),
-            
             output: String::from(""),
-            
             uniq_output: String::from(""),
-
             rename_status: false,
         }
     }
@@ -133,6 +111,7 @@ fn parse_dir(dir: ReadDir,
              replace_character: char) {
     
     for element in dir {
+        // NOT SAFE
         match element // DirEntry
             .as_ref()
             .unwrap()
@@ -337,29 +316,13 @@ fn replace_char(entry: &DirEntry,
                 flag_simulate: bool,
                 replace_character: char) {
 
-    // BARE FILE_NAME
-    //let file_original = entry.file_name(); //OsString
+    // FULL_PATH
+    let path = entry.path();
+    let mut my_file = MyFile {path: &path, ..MyFile::default()};
 
-    /*
-    let mut my_file = MyFile {
-        entry: dir_entry,
-        
-        ..MyFile::default()
-    };
-    */
-    
-    //let path = Path::new(&file_original);
-    let path = entry.path(); // BETTER
-
-    // Struct
-    let mut my_file = MyFile {
-        path: &path,
-        
-        ..MyFile::default()
-    };
-
+    // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
     my_file.output = parse_file(&my_file.path,
-                            replace_character);
+                                replace_character);
 
     // REMOVE DUPLICITY of multiple replace_character
     let (uniq_output, rename_status) = remove_duplicity(&my_file.output,
@@ -389,48 +352,7 @@ fn replace_char(entry: &DirEntry,
         .iter()
         .collect();
 
-    /*
-    // DEBUG just to see -> change to silent / verbose
-    println!("\n #FILENAME:\n  {} -> file_name: {}\n  out: NAME.EXT ->  {}\n  uniq:{}{}\n  rename_status:{}{}  {}",
-             // FULL_PATH
-             format!("entry full_path: {:>1}{:?}",
-                     "",
-                     entry.path(),
-                     ),
-             
-             // FILENAME
-             //path.display(),
-             &my_file.path.display(),
-             
-             // NAME.EXT
-             //&output,
-             &my_file.output,
-             
-             // UNIQ
-             format!("{:>13}", ""),
-             //uniq_output,
-             &my_file.uniq_output,
-
-             format!("{:>4}", ""),
-
-             // STATUS
-             //rename_status,
-             &my_file.rename_status,
-
-             // INPUT -> OUTPUT
-             //if rename_status {
-             if my_file.rename_status {
-                 format!("\n  target: {:>10}{:?}",
-                         "",
-                         new_file,
-                 )
-             } else { String::from("") },
-             
-    );
-    */
-
     // RENAME TASK
-    //if rename_status {
     if my_file.rename_status {
         rename_file(entry.path(), // IN
                     new_file, // OUT
@@ -500,7 +422,7 @@ mod tests {
         )
     }
 
-    // OBSOLETE as file_name and file_extension are diveded
+    // OBSOLETE as file_name and file_extension are seperate
     #[test]
     fn replace_diacritics_with_dots(){
         assert_eq!(remove_diacritics("ŽÍžaLa.jŮlie"),
