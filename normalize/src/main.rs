@@ -6,10 +6,63 @@ use std::{env,
 };
 
 
+// https://github.com/YesSeri/diacritics/blob/main/src/lib.rs
+fn remove_diacritics(text: &str) -> String {
+    let no_diacritics: String = text
+        
+        .chars()
+
+        .map(|ch| String::from(ch))
+        .collect::<Vec<String>>()
+        .iter()
+
+        .map(|dia| match dia.as_ref() {
+
+            "À" | "Á" | "Â" | "Ã" | "Ä" | "Å" | "Æ" => "A",
+            "Þ" => "B",
+            "Ç" | "Č" => "C",
+            "Ď" | "Ð"  => "D",
+            "Ě" | "È" | "É" | "Ê" | "Ë" => "E",
+            "Ƒ" => "F",
+            "Ì" | "Í" | "Î" | "Ï" => "I",
+            "Ň" | "Ñ" => "N",
+            "Ò" | "Ó" | "Ô" | "Õ" | "Ö" | "Ø" => "O",
+            "Ř" =>"R",
+            "ß" => "ss",
+            "Š" => "S",
+            "Ť" => "T",
+            "Ů" | "Ù" | "Ú" | "Û" | "Ü" => "U",
+            "Ý" => "Y",
+            "Ž" => "Z",
+
+            "à" | "á" | "â" | "ã" | "ä" | "å" | "æ" => "a",
+            "þ" => "b",
+            "ç" | "č" => "c",
+            "ď" | "ð"  => "d",
+            "ě" | "è" | "é" | "ê" | "ë" => "e",
+            "ƒ" => "f",
+            "ì" | "í" | "î" | "ï" => "i",
+            "ñ" | "ň" => "n",
+            "ò" | "ó" | "ô" | "õ" | "ö" | "ø" => "o",
+            "ř" => "r",
+            "š" => "s",
+            "ť" => "t",
+            "ů" | "ù" | "ú" | "û" | "ü" => "u",
+            "ý" | "ÿ" => "y",
+            "ž" => "z",
+
+            _ => dia,
+        })
+        .collect();
+        
+    no_diacritics
+}
+
+
 #[allow(unused_must_use)]
 fn rename_filename(input: PathBuf,
                    output: PathBuf) {
-    println!("  @ WILL RENAME: {:?} -> {:?}",
+    println!("  @ WILL RENAME:    {:?} -> {:?}",
              input,
              output,
     );
@@ -18,7 +71,7 @@ fn rename_filename(input: PathBuf,
         // RENAME
         //fs::rename(input, output);
     } else {
-        println!("  WARNING: exists {:?}", output);
+        println!("  @ WARNING: exists {:?}", output);
     }
     
 }
@@ -51,7 +104,12 @@ fn remove_duplicity(s: &String) -> String {
 //fn under_score(s: String) -> String {
 fn under_score(s: &String) -> String {
 //fn under_score(s: &str) -> &str {
-    s
+
+    // REMOVE DIACRITICS
+    let no_dia = remove_diacritics(s);
+
+    // REPLACE other then AZaz09
+    no_dia
         .as_bytes()
         .iter()
         .map(|b| match b {
@@ -78,23 +136,23 @@ fn replace_char(filename: &DirEntry) {
 
     let path = Path::new(&file);
 
-    // NAME
+    // FILE: NAME
     let name = under_score( & match &path
                               .file_stem()
                               .and_then(|s| s.to_str()) {
                                   Some(n) => n.to_string(),
-                                  None => "".to_string()
+                                  None => String::from("")
                               }
     );
 
-    // EXTENSION
+    // FILE: EXTENSION
     let extension = match &path
         .extension()
         .and_then(|s| s.to_str()) {
             Some(e) => {
-                format!(".{}", e)
+                format!(".{}", remove_diacritics(e))
             },
-            None => "".to_string()
+            None => String::from("")
         };
 
     let output = format!("{}{}",
@@ -107,98 +165,44 @@ fn replace_char(filename: &DirEntry) {
     let rename_status = format!("{}", path.display()) != uniq_output;
 
     // PathBuf
-    let new_file: PathBuf = [filename.path().parent().unwrap(),
-                             Path::new(&uniq_output),
-    ].iter().collect();
+    let new_file: PathBuf = [
+        filename
+            .path()
+            .parent()
+            .unwrap(),
+        
+        Path::new(&uniq_output),
+    ]
+        .iter()
+        .collect();
 
-    /*
-    let new_file = format!("{:?}",
-                           filename
-                           .path()
-                           .parent()
-                           .unwrap()
-                           .join(&uniq_output),
-    );
-    */
-
-    println!("\n #FILENAME:\n  in: {:?} -> {}\n  out: NAME.EXT -> {}\n  uniq:{}{}\n  rename_status:{}{}\n   {:?}",
+    println!("\n #FILENAME:\n  {} -> file_name: {}\n  out: NAME.EXT ->  {}\n  uniq:{}{}\n  rename_status:{}{}  {}",
              // IN
-             filename.path(), // FULL_PATH
+             format!("full_path: {:>7}{:?}",
+                     "",
+                     filename.path(), // FULL_PATH
+                     ),
+             
+             
              path.display(), // JUST FILENAME
 
              // OUT
              &output,
 
-             format!("{:>12}", ""),
+             format!("{:>13}", ""),
              uniq_output,
 
-             format!("{:>3}", ""),
-             //format!("{}", path.display()) == uniq_output,
+             format!("{:>4}", ""),
+
              rename_status,
 
-             new_file,
+             if rename_status {
+                 format!("\n  target: {:>10}{:?}",
+                         "",
+                         new_file,
+                 )
+             } else { String::from("") },
              
-             /*
-             Path::new(&filename.file_name())
-             .extension()
-             .and_then(|s| s.to_str())
-             //.unwrap()
-             .unwrap_or_else(|| {
-                 println!("\nERROR: {c}",
-                           c=Path::new(&filename.file_name()).display()
-                 );
-                           
-                 ""
-             })
-             */
-             
-
-             // OUT -> EXTENSION
-             /*
-             under_score(
-                 Path::new(&filename.file_name())
-                     .extension()
-                     .and_then(|s| s.to_str()) //.and_then(OsStr::to_str)
-                     .unwrap()
-                     .to_string()
-             ),
-             */
-
-             /*
-             filename // split to "name" "." "extension" and join back
-             //.file_type()
-             .file_name()
-             */
-
-             /* OK
-             .into_string()
-             .unwrap()
-
-             .as_bytes()
-             .iter()
-             .map(|b| match b {
-                 low @ 97..=122 => (*low as char)
-                     .to_string(),
-
-                 high @ 65..=90 => (high.to_ascii_lowercase() as char)
-                     .to_string(),
-                 
-                 _ => "_".to_string()
-             }
-             )
-             .collect::<String>()
-             */
-             
-             /*
-             .chars()
-             .into_iter()
-             .map(|ch| ch
-                  .to_string()
-                  //.to_uppercase()
-                  //.map(|m| match )
-             )
-             .collect::<String>()
-             */
     );
 
     if rename_status {
@@ -232,27 +236,26 @@ fn main() {
 
     let dir_list = fs::read_dir(path_dir);
 
-    dir_list // Result
+    dir_list
         .unwrap()
-    //.count() // 4
 
-    /* // Ok(DirEntry)
+        //.count()
+        
+        /*
         .map(|e| e)
         .collect::<Vec<_>>()
-    */
+        */
         
         .map(|element| element
-             .as_ref().unwrap() // when i need to access ELEMENT in another map()
-             //.path() // full_path
-             //.file_name() // just file_name
+
+             .as_ref().unwrap() // when need access to ELEMENT in another map()
+
              .metadata()
              .map(|m| match m.is_dir() {
                  // DIR
-                 true =>
-                     
-                     "".to_string(),
-                 
-                 /*
+                 true => String::from(""),
+
+                 /* // FUTURE USE 
                  format!("DIR: {:#?}",
                  //"true",
                  element
@@ -264,7 +267,6 @@ fn main() {
 
                  // FILE
                  false => format!("FILE: {:?}",
-                                  //"false",
                                   element
                                   //.unwrap()
                                   //.file_name()
