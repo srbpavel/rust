@@ -15,21 +15,18 @@ mod command_args;
 
 
 #[derive(Debug)]
-pub struct MyFile {
+//pub struct MyFile<'p, 'e> {
+pub struct MyFile<'p> {
 
-    //pub input: DirEntry,
+    //pub entry: &'e DirEntry,
 
-    //pub path: &Path,
+    pub path: &'p Path,
     
-    //pub name: String,
-    //pub extension: String,
-
     pub output: String,
     
     pub uniq_output: String,
+
     pub rename_status: bool,
-    
-    //pub new_file: PathBuf,
 }
 
 
@@ -38,70 +35,61 @@ pub trait Print {
 }
 
 
-impl Print for MyFile {
+//impl Print for MyFile<'_, '_> {
+impl Print for MyFile<'_> {
     fn print(&self) {
         println!("\n  TRAIT Print>>> {:?}", self);
     }
 }
 
-impl MyFile {
+//impl <'p, 'e> MyFile<'_, '_> {
+impl <'p> MyFile<'_> {
     pub fn new(
-        //input: DirEntry,
-
-        //path: &Path, 
-
-        //name: String,
-        //extension: String
+        //entry: &'e DirEntry,
+        
+        path: &'p Path, 
 
         output: String,
         
         uniq_output: String,
-        rename_status: bool,
-    ) -> MyFile {
+
+        //rename_status: bool) -> MyFile<'p, 'e> {
+        rename_status: bool) -> MyFile<'p> {
         
         MyFile {
-            //input,
-
-            //path,
-
-            //name,
-            //extension,
-
+            //entry,
+            path,
             output,
-            
             uniq_output,
             rename_status,
-            //..MyFile::default()
+
+            ..MyFile::default()
         }
     }
 
-    /*
-    pub fn default() -> MyFile {
+    //pub fn default() -> MyFile<'p, 'e> {
+    pub fn default() -> MyFile<'p> {
         MyFile {
-            //input: String::from(""),
 
-            path: Box<Path::new()>,
+            /*
+            // UGLY
+            entry: &fs::read_dir(".")
+                .unwrap()
+                .last()
+                .unwrap()
+                .unwrap()
+            ,
+            */
+
+            path: Path::new(""),
             
-            //name: String::from(""),
-            //extension: String::from(""),
+            output: String::from(""),
             
             uniq_output: String::from(""),
+
             rename_status: false,
-            
-            //new_file: PathBuf,
         }
     }
-    */
-
-    /*
-    pub fn import_lp<'a>(&self,
-                         config: &TomlConfig) {
-        
-        import_lp_via_curl(config,
-                           &self)
-    }
-    */
-
 }
 
 
@@ -350,19 +338,44 @@ fn replace_char(entry: &DirEntry,
                 replace_character: char) {
 
     // BARE FILE_NAME
-    let file_original = entry.file_name(); //OsString
+    //let file_original = entry.file_name(); //OsString
 
-    let path = Path::new(&file_original);
+    /*
+    let mut my_file = MyFile {
+        entry: dir_entry,
+        
+        ..MyFile::default()
+    };
+    */
+    
+    //let path = Path::new(&file_original);
+    let path = entry.path(); // BETTER
 
-    let output = parse_file(path,
+    // Struct
+    let mut my_file = MyFile {
+        path: &path,
+        
+        ..MyFile::default()
+    };
+
+    my_file.output = parse_file(&my_file.path,
                             replace_character);
 
     // REMOVE DUPLICITY of multiple replace_character
-    let (uniq_output, rename_status) = remove_duplicity(&output,
+    let (uniq_output, rename_status) = remove_duplicity(&my_file.output,
                                                         replace_character,
-                                                        path,
+                                                        &my_file.path,
     );
 
+    my_file = MyFile {
+        uniq_output: uniq_output,
+        rename_status: rename_status,
+        ..my_file
+    };
+
+    my_file.print();
+    
+    
     let new_file: PathBuf = [
         // PATH
         entry
@@ -371,21 +384,12 @@ fn replace_char(entry: &DirEntry,
             .unwrap(),
 
         // FILENAME
-        Path::new(&uniq_output),
+        Path::new(&my_file.uniq_output),
     ]
         .iter()
         .collect();
 
-    
-    // Struct
-    let my_file = MyFile {output: output,
-
-                          uniq_output: uniq_output,
-                          rename_status: rename_status,
-    };
-    
-    my_file.print();
-    
+    /*
     // DEBUG just to see -> change to silent / verbose
     println!("\n #FILENAME:\n  {} -> file_name: {}\n  out: NAME.EXT ->  {}\n  uniq:{}{}\n  rename_status:{}{}  {}",
              // FULL_PATH
@@ -395,8 +399,9 @@ fn replace_char(entry: &DirEntry,
                      ),
              
              // FILENAME
-             path.display(),
-
+             //path.display(),
+             &my_file.path.display(),
+             
              // NAME.EXT
              //&output,
              &my_file.output,
@@ -422,6 +427,7 @@ fn replace_char(entry: &DirEntry,
              } else { String::from("") },
              
     );
+    */
 
     // RENAME TASK
     //if rename_status {
