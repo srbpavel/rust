@@ -18,7 +18,6 @@ mod command_args;
 pub struct MyFile<'p> {
     pub path: &'p Path,
     pub output: String,
-    //pub uniq_output: String,
     pub rename_status: bool,
 }
 
@@ -36,7 +35,6 @@ impl Print for MyFile<'_> {
         println!("\n  {p:?}\n  {o}\n  {u}\n  {r}",
                  p=self.path,
                  o=self.output,
-                 //u=self.uniq_output,
                  r=self.rename_status,
         );
         */
@@ -48,13 +46,11 @@ impl <'p> MyFile<'_> {
     pub fn new(
         path: &'p Path, 
         output: String,
-        //uniq_output: String,
         rename_status: bool) -> MyFile<'p> {
         
         MyFile {
             path,
             output,
-            //uniq_output,
             rename_status,
             ..MyFile::default()
         }
@@ -64,7 +60,6 @@ impl <'p> MyFile<'_> {
         MyFile {
             path: Path::new(""),
             output: String::from(""),
-            //uniq_output: String::from(""),
             rename_status: false,
         }
     }
@@ -119,7 +114,8 @@ fn list_dir(path: &Path) -> ReadDir {
 
 
 fn parse_dir(dir: ReadDir,
-             args: command_args::CmdArgs,
+             //args: command_args::CmdArgs,
+             simulate_flag: bool,
              replace_character: char) {
     
     for element in dir {
@@ -135,7 +131,8 @@ fn parse_dir(dir: ReadDir,
                 true => {
                     element
                         .map(|f| replace_char(&f,
-                                              args.simulate,
+                                              //args.simulate,
+                                              simulate_flag,
                                               replace_character,
                         ))
                         .unwrap(); // rather verify
@@ -148,46 +145,16 @@ fn parse_dir(dir: ReadDir,
                     .map(|d| dir_work(&d));
                     */
 
-                    // /* // PARSE DESCENDANT DIR
+                    // /* // now HARDCODER -> FUTURE as CmdArg
+                    // PARSE DESCENDANT DIR
                     parse_dir(list_dir(Path::new(&element.unwrap().path())),
-                              args.clone(),
+                              //args.clone(),
+                              simulate_flag,
                               replace_character);
                     // */
                 }
             }
     }
-    
-    /*
-    dir_list
-        /* // DEBUG
-        .map(|e| e)
-        .collect::<Vec<_>>()
-        */
-        
-        .map(|element| element
-             .as_ref().unwrap() // when need access to ELEMENT in another map()
-             .metadata()
-             .map(|m| match m.is_file() {
-                 true => {
-                     element
-                         .map(|name| replace_char(&name,
-                                                  args.simulate,
-                                                  replace_character,
-                         ))
-                         .unwrap(); // rather verify
-                 },
-                 
-                 // DIR -> FUTURE USE
-                 false => {
-                     /* 
-                     element
-                         .map(|name| dir_work(&name));
-                     */
-                 }
-             })
-        )
-        .collect::<Vec<_>>();
-    */
 }
 
 
@@ -354,7 +321,6 @@ fn replace_char(entry: &DirEntry,
             
     
             my_file = MyFile {
-                //uniq_output: uniq_output,
                 output: uniq_output,
                 rename_status: rename_status,
                 ..my_file
@@ -370,7 +336,6 @@ fn replace_char(entry: &DirEntry,
             .unwrap(),
 
         // FILENAME
-        //Path::new(&my_file.uniq_output),
         Path::new(&my_file.output),
     ]
         .iter()
@@ -420,27 +385,12 @@ fn main() {
              args.simulate,
     );
 
-    // READ DIR
-    /*
-    let dir = fs::read_dir(&args.full_path).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
-        
-        process::exit(1);
-    });
-    */
-
     // START WITH ARG DIR
     parse_dir(
         list_dir(Path::new(&args.full_path)),
-        args.clone(),
+        //args.clone(),
+        args.simulate,
         replace_character);
-    
-    // DIR WORK
-    /*
-    parse_dir(dir,
-              args,
-              replace_character);
-    */
 }
 
 
