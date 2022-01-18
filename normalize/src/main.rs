@@ -18,7 +18,7 @@ mod command_args;
 pub struct MyFile<'p> {
     pub path: &'p Path,
     pub output: String,
-    pub uniq_output: String,
+    //pub uniq_output: String,
     pub rename_status: bool,
 }
 
@@ -36,7 +36,7 @@ impl Print for MyFile<'_> {
         println!("\n  {p:?}\n  {o}\n  {u}\n  {r}",
                  p=self.path,
                  o=self.output,
-                 u=self.uniq_output,
+                 //u=self.uniq_output,
                  r=self.rename_status,
         );
         */
@@ -48,13 +48,13 @@ impl <'p> MyFile<'_> {
     pub fn new(
         path: &'p Path, 
         output: String,
-        uniq_output: String,
+        //uniq_output: String,
         rename_status: bool) -> MyFile<'p> {
         
         MyFile {
             path,
             output,
-            uniq_output,
+            //uniq_output,
             rename_status,
             ..MyFile::default()
         }
@@ -64,7 +64,7 @@ impl <'p> MyFile<'_> {
         MyFile {
             path: Path::new(""),
             output: String::from(""),
-            uniq_output: String::from(""),
+            //uniq_output: String::from(""),
             rename_status: false,
         }
     }
@@ -105,6 +105,18 @@ fn parse_file(path: &Path,
 }
 
 
+fn list_dir(path: &Path) -> ReadDir {
+    println!("\n>>> DIR_PATH: {}", path.display());
+
+    let dir = fs::read_dir(&path).unwrap_or_else(|err| {
+        eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
+        
+        process::exit(1);
+    });
+
+    dir
+}
+
 
 fn parse_dir(dir: ReadDir,
              args: command_args::CmdArgs,
@@ -134,7 +146,13 @@ fn parse_dir(dir: ReadDir,
                     /* 
                     element
                     .map(|d| dir_work(&d));
-                     */
+                    */
+
+                    // /* // PARSE DESCENDANT DIR
+                    parse_dir(list_dir(Path::new(&element.unwrap().path())),
+                              args.clone(),
+                              replace_character);
+                    // */
                 }
             }
     }
@@ -259,8 +277,7 @@ fn rename_file(input: PathBuf,
 
 
 fn remove_duplicity(text: &str,
-                    character: char,
-                    path: &Path) -> (String, bool) {
+                    character: char) -> String {
     
     let mut uniq = String::from("");
     let mut character_counter = 0;
@@ -279,10 +296,7 @@ fn remove_duplicity(text: &str,
         }
     }
 
-    // STATUS if rename is needed
-    let rename_status = format!("{}", path.display()) != uniq;
-    
-    (uniq, rename_status)
+    uniq
 }
 
 
@@ -324,37 +338,47 @@ fn replace_char(entry: &DirEntry,
     my_file.output = parse_file(&my_file.path,
                                 replace_character);
 
-    // REMOVE DUPLICITY of multiple replace_character
-    let (uniq_output, rename_status) = remove_duplicity(&my_file.output,
-                                                        replace_character,
-                                                        &my_file.path,
-    );
+    // TEST FOR replace_character duplicity
+    if my_file.output
+        .contains(
+            &format!("{ch}{ch}",
+                     ch=replace_character,
+            )) {
 
-    my_file = MyFile {
-        uniq_output: uniq_output,
-        rename_status: rename_status,
-        ..my_file
-    };
+            // REMOVE DUPLICITY of multiple replace_character 
+            let uniq_output = remove_duplicity(&my_file.output,
+                                               replace_character,
+            );
+            
+            let rename_status = format!("{}", path.display()) != uniq_output;
+            
+    
+            my_file = MyFile {
+                //uniq_output: uniq_output,
+                output: uniq_output,
+                rename_status: rename_status,
+                ..my_file
+            };
+        }
 
     my_file.print();
     
-    
     let new_file: PathBuf = [
-        // PATH
-        entry
-            .path()
+        // DIR
+        my_file.path
             .parent()
             .unwrap(),
 
         // FILENAME
-        Path::new(&my_file.uniq_output),
+        //Path::new(&my_file.uniq_output),
+        Path::new(&my_file.output),
     ]
         .iter()
         .collect();
 
     // RENAME TASK
     if my_file.rename_status {
-        rename_file(entry.path(), // IN
+        rename_file(my_file.path.to_path_buf(), // IN
                     new_file, // OUT
                     flag_simulate // SIMULATE
         );
@@ -391,22 +415,32 @@ fn main() {
     verify_path(&args.full_path);
     
     // DEBUG
-    println!("\n#WORKING DIR: {}\n#SIMULATE FLAG: {}",
+    println!("\n#WORK_DIR: {}\n#SIMULATE FLAG: {}",
              args.full_path,
              args.simulate,
     );
 
     // READ DIR
+    /*
     let dir = fs::read_dir(&args.full_path).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
         
         process::exit(1);
     });
+    */
 
+    // START WITH ARG DIR
+    parse_dir(
+        list_dir(Path::new(&args.full_path)),
+        args.clone(),
+        replace_character);
+    
     // DIR WORK
+    /*
     parse_dir(dir,
               args,
               replace_character);
+    */
 }
 
 

@@ -2,7 +2,7 @@ use std::{env,
           process,
 };
 
-
+#[derive(Debug, Clone)]
 pub struct CmdArgs {
     pub simulate: bool,
     pub full_path: String,
