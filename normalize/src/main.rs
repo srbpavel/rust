@@ -23,21 +23,23 @@ pub struct MyFile<'p> {
 
 
 pub trait Print {
+    fn print_debug(&self);
+    
     fn print(&self);
 }
 
 
 impl Print for MyFile<'_> {
-    fn print(&self) {
+    fn print_debug(&self) {
         println!("\n  {:?}", self);
+    }
 
-        /*
-        println!("\n  {p:?}\n  {o}\n  {u}\n  {r}",
+    fn print(&self) {
+        println!("\n  {p:?}\n  {o}\n  {r}",
                  p=self.path,
                  o=self.output,
                  r=self.rename_status,
         );
-        */
     }
 }
 
@@ -66,104 +68,63 @@ impl <'p> MyFile<'_> {
 }
 
 
-fn parse_file(path: &Path,
-              replace_character: char) -> String {
-    
-    // FILE: NAME -> diacritics + replace
-    let name = under_score(& match &path
-                           .file_stem()
-                           .and_then(|s| s.to_str()) {
-                               Some(n) => n.to_string(),
-                               None => String::from("")
-                           },
-                           
-                           replace_character,
-    );
-    
-    // FILE: EXTENSION -> only diacritics
-    let extension = match &path
-        .extension()
-        .and_then(|s| s.to_str()) {
-            Some(e) => {
-                format!(".{}", remove_diacritics(e))
-            },
-            None => String::from("")
-        };
-
-    // JOIN FILENAME FROM name + extension
-    let output = format!("{}{}",
-                         name,
-                         extension,
-    );
-
-    output
-}
-
-
-fn list_dir(path: &Path) -> ReadDir {
-    println!("\n>>> DIR_PATH: {}", path.display());
-
-    let dir = fs::read_dir(&path).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
-        
-        process::exit(1);
-    });
-
-    dir
-}
-
-
-fn parse_dir(dir: ReadDir,
-             //args: command_args::CmdArgs,
-             simulate_flag: bool,
-             replace_character: char) {
-    
-    for element in dir {
-        // NOT SAFE
-        match element // DirEntry
-            .as_ref()
-            .unwrap()
-            .metadata()
-            .unwrap()
-            .is_file() {
-                
-                // FILE
-                true => {
-                    element
-                        .map(|f| replace_char(&f,
-                                              //args.simulate,
-                                              simulate_flag,
-                                              replace_character,
-                        ))
-                        .unwrap(); // rather verify
-                },
-                
-                // DIR -> FUTURE USE
-                false => {
-                    /* 
-                    element
-                    .map(|d| dir_work(&d));
-                    */
-
-                    // /* // now HARDCODER -> FUTURE as CmdArg
-                    // PARSE DESCENDANT DIR
-                    parse_dir(list_dir(Path::new(&element.unwrap().path())),
-                              //args.clone(),
-                              simulate_flag,
-                              replace_character);
-                    // */
-                }
-            }
-    }
-}
-
-
 fn verify_path(path: &str) {
     if !Path::new(path).exists() {
         eprintln!("\nEXIT: PATH does not exists or no access {}", path);
         
         process::exit(1);
     };
+}
+
+
+fn rename_file(input: PathBuf,
+               output: PathBuf,
+               simulate: bool) {
+
+    // DEBUG
+    println!("  @ WILL RENAME:    {:?} -> {:?}",
+             input,
+             output,
+    );
+
+    // VERIFY NOT TO OVERWRITE if any
+    if !output.as_path().exists() {
+        if !simulate {
+            // RENAME
+            match fs::rename(input, output) {
+                Ok(_) => {},
+                Err(err) => {
+                    eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
+                }
+            }
+        }
+    } else {
+        println!("  @ WARNING: destination file exists {:?}", output);
+    }
+}
+
+
+fn remove_duplicity(text: &str,
+                    character: char) -> String {
+    
+    let mut uniq = String::from("");
+    let mut character_counter = 0;
+
+    for byte in text.as_bytes().iter() {
+        let ch = &String::from(*byte as char);
+
+        if ch == &String::from(character) {
+            character_counter += 1
+        } else {
+            character_counter = 0
+        }
+
+        if character_counter <= 1 {
+            uniq += ch
+        }
+    }
+
+    uniq
 }
 
 
@@ -217,58 +178,8 @@ fn remove_diacritics(text: &str) -> String {
 }
 
 
-fn rename_file(input: PathBuf,
-               output: PathBuf,
-               simulate: bool) {
-    
-    println!("  @ WILL RENAME:    {:?} -> {:?}",
-             input,
-             output,
-    );
-
-    // VERIFY NOT TO OVERWRITE if any
-    if !output.as_path().exists() {
-        if !simulate {
-            // RENAME
-            match fs::rename(input, output) {
-                Ok(_) => {},
-                Err(err) => {
-                    eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
-                }
-            }
-        }
-    } else {
-        println!("  @ WARNING: destination file exists {:?}", output);
-    }
-}
-
-
-fn remove_duplicity(text: &str,
-                    character: char) -> String {
-    
-    let mut uniq = String::from("");
-    let mut character_counter = 0;
-
-    for byte in text.as_bytes().iter() {
-        let cha = &String::from(*byte as char);
-
-        if cha == &String::from(character) {
-            character_counter += 1
-        } else {
-            character_counter = 0
-        }
-
-        if character_counter <= 1 {
-            uniq += cha
-        }
-    }
-
-    uniq
-}
-
-
-fn under_score(text: &str,
-               character: char) -> String {
+fn replace_char_to_substitute(text: &str,
+                              substitute: char) -> String {
 
     // REMOVE DIACRITICS
     let no_dia = remove_diacritics(text);
@@ -287,63 +198,95 @@ fn under_score(text: &str,
             // 09
             num @ 48..=57 => (*num as char),
             
-            _ => character,
+            _ => substitute,
         })
         .collect::<String>()
 }
 
 
-fn replace_char(entry: &DirEntry,
+fn parse_file(path: &Path,
+              substitute_char: char) -> String {
+    
+    // FILE: NAME -> replace + diacritics + lowercase
+    let name = replace_char_to_substitute(& match &path
+                           .file_stem()
+                           .and_then(|s| s.to_str()) {
+                               Some(n) => n.to_string(),
+                               None => String::from("")
+                           },
+                           
+                           substitute_char,
+    );
+    
+    // FILE: EXTENSION -> diacritics + lower_case
+    let extension = match &path
+        .extension()
+        .and_then(|s| s.to_str()) {
+            Some(e) => {
+                format!(".{}", remove_diacritics(&e.to_lowercase()))
+            },
+            None => String::from("")
+        };
+
+    // COLLECT FILENAME
+    let output = format!("{}{}",
+                         name,
+                         extension,
+    );
+
+    output
+}
+
+
+fn normalize_chars(entry: &DirEntry,
                 flag_simulate: bool,
-                replace_character: char) {
+                substitute_char: char) {
 
     // FULL_PATH
     let path = entry.path();
-    let mut my_file = MyFile {path: &path, ..MyFile::default()};
+
+    // Struct
+    let mut file = MyFile {path: &path, ..MyFile::default()};
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
-    my_file.output = parse_file(&my_file.path,
-                                replace_character);
+    file.output = parse_file(&file.path,
+                             substitute_char);
 
-    // TEST FOR replace_character duplicity
-    if my_file.output
+    // TEST FOR substitute_char duplicity
+    if file.output
         .contains(
             &format!("{ch}{ch}",
-                     ch=replace_character,
+                     ch=substitute_char,
             )) {
 
-            // REMOVE DUPLICITY of multiple replace_character 
-            let uniq_output = remove_duplicity(&my_file.output,
-                                               replace_character,
+            file.output = remove_duplicity(&file.output,
+                                           substitute_char,
             );
-            
-            let rename_status = format!("{}", path.display()) != uniq_output;
-            
-    
-            my_file = MyFile {
-                output: uniq_output,
-                rename_status: rename_status,
-                ..my_file
-            };
         }
 
-    my_file.print();
+    // if RENAME is needed
+    file.rename_status = file.output != format!("{}",
+                                                path
+                                                .file_name()
+                                                .unwrap()
+                                                .to_str()
+                                                .unwrap(),
+    );
+            
+    file.print_debug();
     
-    let new_file: PathBuf = [
-        // DIR
-        my_file.path
-            .parent()
-            .unwrap(),
-
-        // FILENAME
-        Path::new(&my_file.output),
+    let new_file: PathBuf = [file.path // DIR
+                             .parent()
+                             .unwrap(),
+                             
+                             Path::new(&file.output), // FILENAME
     ]
         .iter()
         .collect();
-
+    
     // RENAME TASK
-    if my_file.rename_status {
-        rename_file(my_file.path.to_path_buf(), // IN
+    if file.rename_status {
+        rename_file(file.path.to_path_buf(), // IN
                     new_file, // OUT
                     flag_simulate // SIMULATE
         );
@@ -351,18 +294,101 @@ fn replace_char(entry: &DirEntry,
 }
 
 
-// FUTURE USE
-/*
-fn dir_work(dir: &DirEntry) {
-    println!("\n #DIR: {:?}",
-             dir,
-    );
+fn parse_dir(dir: ReadDir,
+             simulate_flag: bool,
+             substitute_char: char) {
+    
+    for element in dir {
+        match element // DirEntry
+            .as_ref()
+            .unwrap() // NOT SAFE
+            .metadata()
+            .unwrap() // NOT SAFE
+            .is_file() {
+                
+                // FILE
+                true => {
+                    match &element {
+
+                        Ok(e) => {
+                            normalize_chars(&e,
+                                            simulate_flag,
+                                            substitute_char,
+                            )
+                        },
+
+                        Err(err) => {
+                            eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
+                                      element,
+                                      err,
+                            );
+                        }
+                    
+                    }
+                    /*
+                    element
+                        .map(|f| normalize_chars(&f,
+                                              simulate_flag,
+                                              substitute_char,
+                        ));
+                    */
+                },
+                
+                // DIR
+                false => {
+                    // /* // HARDCODER -> FUTURE as CmdArg
+                    // RECURSE PARSE DESCENDANT DIR
+                    match &element {
+
+                        Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
+                                           simulate_flag,
+                                           substitute_char),
+                        Err(err) => {
+                            eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
+                                      element,
+                                      err,
+                            );
+                        }
+                    };
+
+                    /*    
+                    parse_dir(list_dir(Path::new(&element.unwrap().path())),
+                              simulate_flag,
+                              substitute_char);
+                    */
+                    // */
+                }
+            }
+    }
 }
-*/
+
+
+fn list_dir(path: &Path) -> ReadDir {
+    println!("\n>>> DIR_PATH: {}", path.display());
+
+    /*
+    let dir = fs::read_dir(&path).unwrap_or_else(|err| {
+        eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
+        
+        process::exit(1); // do i need this or just want it ?
+    });
+    */
+
+    let dir = path
+        .read_dir() // INSTEAD fs::read_dir(&path)
+        .unwrap_or_else(|err| {
+            eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
+        
+            process::exit(1); // do i need this or just want it ?
+        });
+    
+    dir
+}
 
 
 fn main() {
-    let replace_character = '_';
+    // HARDCODED for now
+    let substitute_char = '_';
 
     /*
     // CWD instead ARG `pwd`
@@ -376,7 +402,7 @@ fn main() {
         process::exit(1);
     });
 
-    // VERIFY PATH
+    // VERIFY WORK PATH
     verify_path(&args.full_path);
     
     // DEBUG
@@ -386,11 +412,9 @@ fn main() {
     );
 
     // START WITH ARG DIR
-    parse_dir(
-        list_dir(Path::new(&args.full_path)),
-        //args.clone(),
-        args.simulate,
-        replace_character);
+    parse_dir(list_dir(Path::new(&args.full_path)),
+              args.simulate,
+              substitute_char);
 }
 
 
@@ -400,7 +424,7 @@ mod tests {
 
     #[test]
     fn replace_diacritics(){
-        assert_eq!(remove_diacritics("tRPaÍČek"),
+        assert_eq!(remove_diacritics("tRPaslÍČek"),
 
                    String::from("tRPaslICek"),
         )
@@ -425,8 +449,8 @@ mod tests {
     }
 
     #[test]
-    fn replace_character_name(){
-        assert_eq!(under_score(&String::from("múčho můřká.áchjó.škýt"),
+    fn replace_char_name(){
+        assert_eq!(replace_char_to_substitute(&String::from("múčho můřká.áchjó.škýt"),
                                '*'),
 
                    String::from("mucho*murka*achjo*skyt"),
