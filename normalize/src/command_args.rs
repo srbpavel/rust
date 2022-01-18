@@ -16,6 +16,8 @@ impl CmdArgs {
         println!("\n#COMMAND {:#?}",
                  args);
 
+        // CLAP TEST
+        /*
         const ARG_COUNT: usize = 2 + 1; // sum of struct CmdArgs members + 1 PROGRAM
 
         if args.len() < ARG_COUNT {
@@ -23,6 +25,7 @@ impl CmdArgs {
         } else if args.len() > ARG_COUNT {
             return Err("too many arguments")
         }
+        */
 
         let _program = match args.next() { // FUTURE_USE
 

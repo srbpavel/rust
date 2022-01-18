@@ -1,4 +1,4 @@
-use std::{env,
+use std::{//env,
 
           fs::{self,
                DirEntry,
@@ -10,9 +10,33 @@ use std::{env,
           process,
 };
 
+use clap::{Parser};
 
-mod command_args;
 
+//mod command_args;
+
+// /*
+#[derive(Debug)]
+#[derive(Parser)]
+#[clap(version = "0.1.0", name="NORMALIZE", about = "\nReplace non alpha-numeric characters + remove diacritics + lowercase in given path or current directory files / descendant directories", author = "\nPavel SRB <prace@srbpavel.cz>")]
+struct Args {
+    #[clap(parse(from_os_str))]
+    #[clap(default_value=".", help="working path / default `pwd`", index=1)]
+    full_path: std::path::PathBuf,
+
+    #[clap(parse(try_from_str))]
+    #[clap(short = 's', long = "simulate", help="dry run")]
+    simulate: bool,
+
+    #[clap(parse(try_from_str))]
+    #[clap(short = 'r', long = "recursive", help="apply also for descendant dirs")]
+    recursive: bool,
+
+    #[clap(short = 'v', long = "verbose", help="display debug info")]
+    verbose: bool,
+
+}
+// */
 
 #[derive(Debug)]
 pub struct MyFile<'p> {
@@ -68,7 +92,7 @@ impl <'p> MyFile<'_> {
 }
 
 
-fn create_path_buf(file: &MyFile) -> PathBuf {
+fn create_output_path_buf(file: &MyFile) -> PathBuf {
     [file.path // DIR
      .parent()
      .unwrap(),
@@ -80,9 +104,24 @@ fn create_path_buf(file: &MyFile) -> PathBuf {
 }
 
 
+/* OBSOLETE
 fn verify_path(path: &str) {
     if !Path::new(path).exists() {
         eprintln!("\nEXIT: PATH does not exists or no access {}", path);
+        
+        process::exit(1);
+    };
+}
+*/
+
+
+fn verify_path_buf(path: &PathBuf) {
+    let valid = path.as_path().exists();
+
+    println!("PATH_BUF -> PATH: {}", valid);
+
+    if !valid {
+        eprintln!("\nEXIT: PATH does not exists or no access {:?}", path);
         
         process::exit(1);
     };
@@ -274,6 +313,16 @@ fn normalize_chars(entry: &DirEntry,
             );
         }
 
+    /*
+    println!("UUU: {:?}",
+             path
+             .file_name()
+             .unwrap() // OsStr
+             .to_str()
+             .unwrap(),
+    );
+    */
+    
     // if RENAME is needed
     // multiple unsafe unwrap !!!
     file.rename_status = file.output != format!("{}",
@@ -289,7 +338,7 @@ fn normalize_chars(entry: &DirEntry,
     // RENAME TASK
     if file.rename_status {
         rename_file(file.path.to_path_buf(), // IN
-                    create_path_buf(&file), // OUT
+                    create_output_path_buf(&file), // OUT
                     flag_simulate // SIMULATE
         );
     };
@@ -298,7 +347,8 @@ fn normalize_chars(entry: &DirEntry,
 
 fn parse_dir(dir: ReadDir,
              simulate_flag: bool,
-             substitute_char: char) {
+             substitute_char: char,
+             recursive: bool) {
     
     // multiple unsafe unwrap !!!
     for element in dir {
@@ -332,21 +382,24 @@ fn parse_dir(dir: ReadDir,
                 
                 // DIR
                 false => {
-                    /* // HARDCODER -> FUTURE as CmdArg
+                    // /* // HARDCODER -> FUTURE as CmdArg
                     // RECURSE PARSE DESCENDANT DIR
-                    match &element {
-
-                        Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
-                                           simulate_flag,
-                                           substitute_char),
-                        Err(err) => {
-                            eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
-                                      element,
-                                      err,
-                            );
-                        }
-                    };
-                    */
+                    if recursive {
+                        match &element {
+                            
+                            Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
+                                               simulate_flag,
+                                               substitute_char,
+                                               recursive),
+                            Err(err) => {
+                                eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
+                                          element,
+                                          err,
+                                );
+                            }
+                        };
+                    }
+                    // */
                 }
             }
     }
@@ -369,6 +422,49 @@ fn list_dir(path: &Path) -> ReadDir {
 
 
 fn main() {
+    //ARGS
+    // /* // DERIVE style
+    let args = Args::parse();
+    // */
+
+    /*
+    // Builder Pattern
+    let args = App::new("Normalize")
+        .version("0.1.0")
+        .author("foookume. <prace@srbpavel.cz>")
+        .about("\nReplace non alpha-numeric cfusageharacters + remove diacritics + lowercase in files/directories")
+        .arg(Arg::new("full_path")
+             //.default_value="."
+             .about="work path"
+             .required(true)
+             .index(1))
+        .arg(Arg::new("s")
+             .short('s')
+             .long("simulate")
+             .about("enable: simulate"))
+        .arg(Arg::new("r")
+             .short('r')
+             .long("recursive")
+             .about("enable: apply to descendant directories"))
+        .arg(Arg::new("v")
+             .short('v')
+             .long("verbose")
+             .about("enable: display debug info"))
+        .get_matches();
+    */
+
+    println!("\n#CLAP: {:#?}", args);
+    
+    /*
+    println!("\n#CLAP:\n simulate: {s}\n recursive: {r}\n path: {p:?}",
+             s=args.simulate,
+             r=args.recursive,
+             p=args.full_path,
+    );
+    */
+    
+    //_
+
     // HARDCODED for now
     let substitute_char = '_';
 
@@ -378,25 +474,46 @@ fn main() {
     */
 
     // CMD ARGS: simulate flag + work dir path
+    /*
     let args = command_args::CmdArgs::new(env::args()).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
         
         process::exit(1);
     });
+    */
 
     // VERIFY WORK PATH
-    verify_path(&args.full_path);
-    
+    //verify_path(&args.full_path);
+    verify_path_buf(&args.full_path);
+
+    /*
     // DEBUG
-    println!("\n#WORK_DIR: {}\n#SIMULATE FLAG: {}",
-             args.full_path,
-             args.simulate,
+    println!("\n#SIMULATE FLAG: {s}\n#WORK_DIR: {p}",
+             p=args.full_path,
+             s=args.simulate,
     );
+    */
 
     // START WITH ARG DIR
-    parse_dir(list_dir(Path::new(&args.full_path)),
+    //parse_dir(list_dir(Path::new(&args.full_path)),
+    parse_dir(list_dir(&args.full_path),
+
+              /*
+              args.simulate
+              .parse::<bool>()
+              .unwrap(),
+              */
               args.simulate,
-              substitute_char);
+              
+              substitute_char,
+
+              /*
+              args.recursive
+              .parse::<bool>()
+              .unwrap(),
+              */
+              args.recursive,
+    );
 }
 
 
