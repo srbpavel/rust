@@ -2,7 +2,8 @@ use std::{env,
           process,
 };
 
-#[derive(Debug, Clone)]
+//#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CmdArgs {
     pub simulate: bool,
     pub full_path: String,
@@ -11,7 +12,7 @@ pub struct CmdArgs {
 
 impl CmdArgs {
     pub fn new(mut args: env::Args) -> Result<CmdArgs, &'static str> {
-        // HARDCODED as config with debug_flag's not parsed yet
+        // DEBUG -> HARDCODED as config with debug_flag's not parsed yet
         println!("\n#COMMAND {:#?}",
                  args);
 

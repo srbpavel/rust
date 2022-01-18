@@ -68,6 +68,18 @@ impl <'p> MyFile<'_> {
 }
 
 
+fn create_path_buf(file: &MyFile) -> PathBuf {
+    [file.path // DIR
+     .parent()
+     .unwrap(),
+     
+     Path::new(&file.output), // FILENAME
+    ]
+        .iter()
+        .collect()
+}
+
+
 fn verify_path(path: &str) {
     if !Path::new(path).exists() {
         eprintln!("\nEXIT: PATH does not exists or no access {}", path);
@@ -132,11 +144,9 @@ fn remove_duplicity(text: &str,
 fn remove_diacritics(text: &str) -> String {
     text
         .chars()
-
         .map(|ch| String::from(ch))
         .collect::<Vec<_>>()
         .iter()
-
         .map(|dia| match dia.as_ref() {
 
             "À" | "Á" | "Â" | "Ã" | "Ä" | "Å" | "Æ" => "A",
@@ -239,8 +249,8 @@ fn parse_file(path: &Path,
 
 
 fn normalize_chars(entry: &DirEntry,
-                flag_simulate: bool,
-                substitute_char: char) {
+                   flag_simulate: bool,
+                   substitute_char: char) {
 
     // FULL_PATH
     let path = entry.path();
@@ -275,20 +285,11 @@ fn normalize_chars(entry: &DirEntry,
     );
             
     file.print_debug();
-    
-    let new_file: PathBuf = [file.path // DIR
-                             .parent()
-                             .unwrap(),
-                             
-                             Path::new(&file.output), // FILENAME
-    ]
-        .iter()
-        .collect();
-    
+
     // RENAME TASK
     if file.rename_status {
         rename_file(file.path.to_path_buf(), // IN
-                    new_file, // OUT
+                    create_path_buf(&file), // OUT
                     flag_simulate // SIMULATE
         );
     };
@@ -431,9 +432,8 @@ mod tests {
 
     #[test]
     fn replace_char_name(){
-        assert_eq!(replace_char_to_substitute(&String::from("múčho můřká.áchjó.škýt"),
-                               '*'),
-
+        assert_eq!(replace_char_to_substitute(&String::from("múčho můřká.áchjó.škýt"), '*'),
+                   
                    String::from("mucho*murka*achjo*skyt"),
         )
     }
