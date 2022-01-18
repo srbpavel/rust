@@ -265,6 +265,7 @@ fn normalize_chars(entry: &DirEntry,
         }
 
     // if RENAME is needed
+    // multiple unsafe unwrap !!!
     file.rename_status = file.output != format!("{}",
                                                 path
                                                 .file_name()
@@ -298,12 +299,13 @@ fn parse_dir(dir: ReadDir,
              simulate_flag: bool,
              substitute_char: char) {
     
+    // multiple unsafe unwrap !!!
     for element in dir {
         match element // DirEntry
             .as_ref()
-            .unwrap() // NOT SAFE
+            .unwrap()
             .metadata()
-            .unwrap() // NOT SAFE
+            .unwrap()
             .is_file() {
                 
                 // FILE
@@ -325,18 +327,11 @@ fn parse_dir(dir: ReadDir,
                         }
                     
                     }
-                    /*
-                    element
-                        .map(|f| normalize_chars(&f,
-                                              simulate_flag,
-                                              substitute_char,
-                        ));
-                    */
                 },
                 
                 // DIR
                 false => {
-                    // /* // HARDCODER -> FUTURE as CmdArg
+                    /* // HARDCODER -> FUTURE as CmdArg
                     // RECURSE PARSE DESCENDANT DIR
                     match &element {
 
@@ -350,13 +345,7 @@ fn parse_dir(dir: ReadDir,
                             );
                         }
                     };
-
-                    /*    
-                    parse_dir(list_dir(Path::new(&element.unwrap().path())),
-                              simulate_flag,
-                              substitute_char);
                     */
-                    // */
                 }
             }
     }
@@ -365,14 +354,6 @@ fn parse_dir(dir: ReadDir,
 
 fn list_dir(path: &Path) -> ReadDir {
     println!("\n>>> DIR_PATH: {}", path.display());
-
-    /*
-    let dir = fs::read_dir(&path).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
-        
-        process::exit(1); // do i need this or just want it ?
-    });
-    */
 
     let dir = path
         .read_dir() // INSTEAD fs::read_dir(&path)
