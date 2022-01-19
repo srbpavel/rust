@@ -126,22 +126,19 @@ impl <'p> SingleFile<'_> {
 
 fn create_output_path_buf(file: &SingleFile) -> PathBuf {
     [
-    /*
-    file.path // ANCESTOR PATH DIR
-     .parent()
-     .unwrap(), // make it safe !!!
-    */
+        // ANCESTOR PATH DIR
         match file.path
             .parent() {
                 Some(d) => d,
-
+                
                 None => {
                     // EXIT not nice but how to skip ?
                     process::exit(1); 
                 },
             },
         
-        Path::new(&file.output), // FILENAME 
+        // FILENAME 
+        Path::new(&file.output),
     ]
         .iter()
         .collect()
@@ -323,7 +320,7 @@ fn parse_file(path: &Path,
     // FILE: NAME -> replace + diacritics + lowercase
     let name = replace_char_to_substitute(& match &path
                                           .file_stem()
-                                          .and_then(|s| s.to_str()) { // is safe ?
+                                          .and_then(|s| s.to_str()) {
                                               Some(n) => remove_diacritics(n),
                                               
                                               None => String::from("")
@@ -389,15 +386,38 @@ fn parse_dir(dir: ReadDir,
     for element in dir {
         match element // DirEntry
             .as_ref() // FOR INNER ELEMENT USAGE
-            //.unwrap()
-            //.metadata()
-            //.unwrap() // should have Metadata always as path valid ?
-            //.is_file() {
-            .and_then(|e| Ok(e.metadata().unwrap().is_file())) {
+            .and_then(|e| Ok(
+                // BOOL
+                /*
+                e
+                    .metadata()
+                    .unwrap() // should have Metadata always as path valid ?
+                    .is_file())
+            ) {
+                */
+
+                // String
+                /*
+                format!("{}", e
+                        .metadata()
+                        .unwrap() // should have Metadata always as path valid ?
+                        .is_file())
+            )) {
+                */
+
+                // /*
+                match e.metadata() {
+                    Ok(m) => format!("{}", m.is_file()),
+                    Err(_) => String::from("ERROR METADATA"),
+                }
+            )) {
+                // */
                 
-                Ok(n) => match n {
+                //Ok(n) => match n {
+                Ok(n) => match n.as_ref() {
                     // FILE
-                    true => {
+                    //true => {
+                    "true" => {
                         match &element {
                             Ok(file) => {
                                 normalize_chars(&file,
@@ -415,7 +435,8 @@ fn parse_dir(dir: ReadDir,
                     },
 
                     // DIR
-                    false => {
+                    //false => {
+                    "false" => {
                         // RECURSE PARSE DESCENDANT DIR
                         if args.recursive {
                             match &element {
@@ -435,7 +456,9 @@ fn parse_dir(dir: ReadDir,
                                 }
                             };
                         }
-                    }
+                    },
+
+                    _ => {},
                 },
                 
                 Err(err) => {
