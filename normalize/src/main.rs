@@ -84,26 +84,7 @@ impl SfTrait for SingleFile<'_> {
                                                         
                                                         None => "",
                                                     }
-                                                    /*
-                                                    self.path
-                                                    .file_name()
-                                                    .unwrap()
-                                                    .to_str()
-                                                    .unwrap(),
-                                                    */
         );
-        
-        /*
-        println!("UU: {}",
-                 match self.path
-                 .file_name()
-                 .and_then(|s| s.to_str()) {
-                     Some(n) => n,
-                     
-                     None => "",
-                 }
-        );
-        */
     }
     
     fn rename(&self,
@@ -144,11 +125,23 @@ impl <'p> SingleFile<'_> {
 
 
 fn create_output_path_buf(file: &SingleFile) -> PathBuf {
-    [file.path // ANCESTOR PATH DIR
+    [
+    /*
+    file.path // ANCESTOR PATH DIR
      .parent()
      .unwrap(), // make it safe !!!
-     
-     Path::new(&file.output), // FILENAME 
+    */
+        match file.path
+            .parent() {
+                Some(d) => d,
+
+                None => {
+                    // EXIT not nice but how to skip ?
+                    process::exit(1); 
+                },
+            },
+        
+        Path::new(&file.output), // FILENAME 
     ]
         .iter()
         .collect()
@@ -389,13 +382,13 @@ fn normalize_chars(entry: &DirEntry,
 }
 
 
+// too long !!!
 fn parse_dir(dir: ReadDir,
              args: &Args) {
     
-    // multiple unsafe unwrap !!!
     for element in dir {
         match element // DirEntry
-            .as_ref() // for inner element usage
+            .as_ref() // FOR INNER ELEMENT USAGE
             //.unwrap()
             //.metadata()
             //.unwrap() // should have Metadata always as path valid ?
@@ -403,7 +396,6 @@ fn parse_dir(dir: ReadDir,
             .and_then(|e| Ok(e.metadata().unwrap().is_file())) {
                 
                 Ok(n) => match n {
-                    
                     // FILE
                     true => {
                         match &element {
@@ -577,9 +569,14 @@ mod tests {
 
     #[test]
     fn replace_char_name(){
-        assert_eq!(replace_char_to_substitute(&String::from("múčho můřká.áchjó.škýt"), '*'),
-                   
-                   String::from("mucho*murka*achjo*skyt"),
+        assert_eq!(
+            replace_char_to_substitute(
+                &remove_diacritics(
+                    &String::from("múčho můřká.áchjó.škýt")),
+                
+                '*'),
+            
+            String::from("mucho*murka*achjo*skyt"),
         )
     }
 }
