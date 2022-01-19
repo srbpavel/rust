@@ -20,14 +20,26 @@ pub struct MyFile<'p> {
 }
 
 
-pub trait Print {
+pub trait All {
     fn print_debug(&self);
     
     fn print(&self);
+
+    fn get_rename_status(& mut self,
+                         path: &PathBuf);
+
+    fn test_char_duplicity(& mut self,
+                           args: &Args);
+
+    fn rename(&self,
+              args: &Args);
+
+    fn parse(& mut self,
+             args: &Args);
 }
 
 
-impl Print for MyFile<'_> {
+impl All for MyFile<'_> {
     fn print_debug(&self) {
         println!("\n  {:?}", self);
     }
@@ -37,6 +49,61 @@ impl Print for MyFile<'_> {
                  p=self.path,
                  o=self.output,
                  r=self.rename_status,
+        );
+    }
+
+    fn get_rename_status(& mut self,
+                         path: &PathBuf) {
+
+        // multiple unsafe unwrap !!!
+        self.rename_status = self.output != format!("{}",
+                                                    path
+                                                    .file_name()
+                                                    .unwrap()
+                                                    .to_str()
+                                                    .unwrap(),
+        );
+
+        /*
+        println!("UU: {:?}",
+                 self.path
+                 .file_name()
+                 .unwrap() // OsStr
+                 .to_str()
+                 .unwrap(),
+        );
+        */
+    }
+
+    fn test_char_duplicity(& mut self,
+                           args: &Args) {
+        
+        if self.output
+            .contains(
+                &format!("{ch}{ch}",
+                         ch=args.substitute_char,
+                )) {
+                
+                self.output = remove_duplicity(&self.output,
+                                               args.substitute_char,
+                );
+            }
+    }
+
+    fn rename(&self,
+              args: &Args) {
+
+        rename_file(self.path.to_path_buf(), // IN
+                    create_output_path_buf(&self), // OUT
+                    args.simulate
+        );
+    }
+
+    fn parse(& mut self,
+             args: &Args) {
+
+        self.output = parse_file(&self.path,
+                                 args.substitute_char,
         );
     }
 }
@@ -282,50 +349,20 @@ fn normalize_chars(entry: &DirEntry,
     let mut file = MyFile {path: &path, ..MyFile::default()};
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
-    file.output = parse_file(&file.path,
-                             args.substitute_char,
-    );
+    file.parse(&args);
 
     // TEST FOR substitute_char duplicity
-    if file.output
-        .contains(
-            &format!("{ch}{ch}",
-                     ch=args.substitute_char,
-            )) {
-
-            file.output = remove_duplicity(&file.output,
-                                           args.substitute_char,
-            );
-        }
-
-    /*
-    println!("UUU: {:?}",
-             path
-             .file_name()
-             .unwrap() // OsStr
-             .to_str()
-             .unwrap(),
-    );
-    */
+    file.test_char_duplicity(&args);
     
     // if RENAME is needed
-    // multiple unsafe unwrap !!!
-    file.rename_status = file.output != format!("{}",
-                                                path
-                                                .file_name()
-                                                .unwrap()
-                                                .to_str()
-                                                .unwrap(),
-    );
-            
+    file.get_rename_status(&path);
+
+    // DEBUG
     file.print_debug();
 
     // RENAME TASK
     if file.rename_status {
-        rename_file(file.path.to_path_buf(), // IN
-                    create_output_path_buf(&file), // OUT
-                    args.simulate
-        );
+        file.rename(&args)
     };
 }
 
@@ -412,16 +449,8 @@ fn main() {
         println!("\n#CMD: {:#?}", args);
     };
     
-    // VERIFY WORK PATH: if exists and relative -> absolute
-    /*
-    let work_dir = list_dir(
-        &verify_path_buf(&args.path)
-    );
-    */
-    
     // START WITH ARG DIR
     parse_dir(
-        //work_dir,
         list_dir(
             &verify_path_buf(&args.path)
         ),
