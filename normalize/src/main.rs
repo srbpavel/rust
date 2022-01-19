@@ -13,34 +13,33 @@ use command_args::{Args};
 
 
 #[derive(Debug)]
-pub struct MyFile<'p> {
+pub struct SingleFile<'p> {
     pub path: &'p Path,
     pub output: String,
     pub rename_status: bool,
 }
 
 
-pub trait All {
-    fn print_debug(&self);
+pub trait Trait {
+    fn debug(&self);
     
     fn print(&self);
 
-    fn get_rename_status(& mut self,
-                         path: &PathBuf);
+    fn parse(& mut self,
+             args: &Args);
+    
+    fn char_duplicity(& mut self,
+                      args: &Args);
 
-    fn test_char_duplicity(& mut self,
-                           args: &Args);
+    fn update_rename_status(& mut self);
 
     fn rename(&self,
               args: &Args);
-
-    fn parse(& mut self,
-             args: &Args);
 }
 
 
-impl All for MyFile<'_> {
-    fn print_debug(&self) {
+impl Trait for SingleFile<'_> {
+    fn debug(&self) {
         println!("\n  {:?}", self);
     }
 
@@ -52,12 +51,34 @@ impl All for MyFile<'_> {
         );
     }
 
-    fn get_rename_status(& mut self,
-                         path: &PathBuf) {
+    fn parse(& mut self,
+             args: &Args) {
+
+        self.output = parse_file(&self.path,
+                                 args.substitute_char,
+        );
+    }
+    
+    fn char_duplicity(& mut self,
+                      args: &Args) {
+
+        if self.output
+            .contains(
+                &format!("{ch}{ch}",
+                         ch=args.substitute_char,
+                )) {
+                
+                self.output = remove_duplicity(&self.output,
+                                               args.substitute_char,
+                );
+            }
+    }
+
+    fn update_rename_status(& mut self) {
 
         // multiple unsafe unwrap !!!
         self.rename_status = self.output != format!("{}",
-                                                    path
+                                                    self.path
                                                     .file_name()
                                                     .unwrap()
                                                     .to_str()
@@ -74,57 +95,37 @@ impl All for MyFile<'_> {
         );
         */
     }
-
-    fn test_char_duplicity(& mut self,
-                           args: &Args) {
-        
-        if self.output
-            .contains(
-                &format!("{ch}{ch}",
-                         ch=args.substitute_char,
-                )) {
-                
-                self.output = remove_duplicity(&self.output,
-                                               args.substitute_char,
-                );
-            }
-    }
-
+    
     fn rename(&self,
               args: &Args) {
 
         rename_file(self.path.to_path_buf(), // IN
                     create_output_path_buf(&self), // OUT
-                    args.simulate
+                    //args.simulate,
+                    &args,
         );
     }
 
-    fn parse(& mut self,
-             args: &Args) {
 
-        self.output = parse_file(&self.path,
-                                 args.substitute_char,
-        );
-    }
 }
 
 
-impl <'p> MyFile<'_> {
+impl <'p> SingleFile<'_> {
     pub fn new(
         path: &'p Path, 
         output: String,
-        rename_status: bool) -> MyFile<'p> {
+        rename_status: bool) -> SingleFile<'p> {
         
-        MyFile {
+        SingleFile {
             path,
             output,
             rename_status,
-            ..MyFile::default()
+            ..SingleFile::default()
         }
     }
 
-    pub fn default() -> MyFile<'p> {
-        MyFile {
+    pub fn default() -> SingleFile<'p> {
+        SingleFile {
             path: Path::new(""),
             output: String::from(""),
             rename_status: false,
@@ -133,48 +134,56 @@ impl <'p> MyFile<'_> {
 }
 
 
-fn create_output_path_buf(file: &MyFile) -> PathBuf {
-    [file.path // DIR
+fn create_output_path_buf(file: &SingleFile) -> PathBuf {
+    [file.path // ANCESTOR PATH DIR
      .parent()
      .unwrap(),
      
-     Path::new(&file.output), // FILENAME
+     Path::new(&file.output), // FILENAME 
     ]
         .iter()
         .collect()
 }
 
 
-fn verify_path_buf(path: &PathBuf) -> PathBuf {
-    if !path.as_path().exists() {
+//fn verify_path_buf(path: &PathBuf) -> PathBuf {
+fn verify_path_buf(args: &Args) -> PathBuf {
+
+    let path = &args.path;
+    
+    if !path.exists() {
         eprintln!("\nEXIT: PATH does not exists or no access {:?}", path);
 
         // EXIT as path is essential
         process::exit(1);
     };
 
-    // DEBUG
     let mut data = format!("\n#PATH: {:?}",
                            path,
     );
-    
-    let full_path = if path.is_relative() {
+
+    // IF RELATIVE WE CHANGE TO ABSOLUTE AND UPDATE
+    let full_path: PathBuf = if path.is_relative() {
+        
         let fp = path
             .canonicalize()
-            .unwrap();
-        
+            .unwrap(); // should never fail as verified so safe ?
+
         data = format!("\n#PATH: {:?} -> {:?}",
                        path,
                        fp,
         );
-
+        
         fp
             
     } else {
         path.to_path_buf()
     };
 
-    println!("{}", data);
+    // DEBUG
+    if args.verbose {
+        println!("{}", data);
+    };
 
     full_path
 }
@@ -182,20 +191,36 @@ fn verify_path_buf(path: &PathBuf) -> PathBuf {
 
 fn rename_file(input: PathBuf,
                output: PathBuf,
-               simulate: bool) {
+               //simulate: bool,
+               args: &Args) {
 
-    // DEBUG
-    println!("  @ WILL RENAME:    {:?} -> {:?}",
-             input,
-             output,
+    let debug_data = format!("{:?} -> {:?}",
+                           input,
+                           output,
     );
+    
+    // DEBUG
+    if args.verbose {
+        println!("  @ WILL RENAME: {}", debug_data);
+        
+        /*
+        println!("  @ WILL RENAME:    {:?} -> {:?}",
+                 input,
+                 output,
+        );
+        */
+    };
 
     // VERIFY NOT TO OVERWRITE if any
     if !output.as_path().exists() {
-        if !simulate {
+        //if !simulate {
+        if !args.simulate {
             // RENAME
             match fs::rename(input, output) {
-                Ok(_) => {},
+                Ok(_) => {
+                    println!("{}", debug_data);
+                },
+                
                 Err(err) => {
                     eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
                 }
@@ -342,23 +367,28 @@ fn parse_file(path: &Path,
 fn normalize_chars(entry: &DirEntry,
                    args: &Args) {
 
-    // FULL_PATH
-    let path = entry.path();
-
     // Struct
-    let mut file = MyFile {path: &path, ..MyFile::default()};
+    let mut file = SingleFile {
+
+        // FULL_PATH
+        path: &entry.path(),
+
+        ..SingleFile::default()
+    };
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
     file.parse(&args);
 
     // TEST FOR substitute_char duplicity
-    file.test_char_duplicity(&args);
+    file.char_duplicity(&args);
     
     // if RENAME is needed
-    file.get_rename_status(&path);
+    file.update_rename_status();
 
     // DEBUG
-    file.print_debug();
+    if args.verbose {
+        file.debug();
+    };
 
     // RENAME TASK
     if file.rename_status {
@@ -406,9 +436,13 @@ fn parse_dir(dir: ReadDir,
                     if args.recursive {
                         match &element {
                             
-                            Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
-                                               &args,
-                            ),
+                            Ok(e) =>
+                                parse_dir(
+                                    list_dir(Path::new(&e.path()),
+                                             &args,
+                                    ),
+                                    &args,
+                                ),
 
                             Err(err) => {
                                 eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
@@ -424,9 +458,13 @@ fn parse_dir(dir: ReadDir,
 }
 
 
-fn list_dir(path: &Path) -> ReadDir {
+fn list_dir(path: &Path,
+            args: &Args) -> ReadDir {
+
     // DEBUG
-    println!("\n>>> DIR_PATH: {}", path.display());
+    if args.verbose {
+        println!("\n>>> DIR_PATH: {}", path.display());
+    }
 
     let dir = path
         .read_dir() // INSTEAD fs::read_dir(&path)
@@ -452,7 +490,9 @@ fn main() {
     // START WITH ARG DIR
     parse_dir(
         list_dir(
-            &verify_path_buf(&args.path)
+            //&verify_path_buf(&args.path)
+            &verify_path_buf(&args),
+            &args,
         ),
         &args,
     );
