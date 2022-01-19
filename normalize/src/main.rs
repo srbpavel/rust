@@ -387,27 +387,25 @@ fn match_element(n: &str,
 
     match n.as_ref() {
         // FILE
-        //true => {
         "true" => {
             match &element {
-
+                
                 Ok(file) => {
                     normalize_chars(&file,
                                     &args,
                     )
                 },
                 
-                            Err(err) => {
-                                eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
-                                          element,
-                                          err,
-                                );
-                            }
+                Err(err) => {
+                    eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
+                              element,
+                              err,
+                    );
+                }
             }
         },
         
         // DIR
-        //false => {
         "false" => {
             // RECURSE PARSE DESCENDANT DIR
             if args.recursive {
@@ -429,13 +427,13 @@ fn match_element(n: &str,
                 };
             }
         },
-        
+
+        // ERROR from DirEntry.metadata()
         _ => {},
     }
 }
 
 
-// too long !!!
 fn parse_dir(dir: ReadDir,
              args: &Args) {
     
@@ -443,33 +441,23 @@ fn parse_dir(dir: ReadDir,
         match element // DirEntry
             .as_ref() // FOR INNER ELEMENT USAGE
             .and_then(|e| Ok(
-                // BOOL
-                /*
-                e
-                    .metadata()
-                    .unwrap() // should have Metadata always as path valid ?
-                    .is_file())
-            ) {
-                */
 
-                // String
-                /*
-                format!("{}", e
-                        .metadata()
-                        .unwrap() // should have Metadata always as path valid ?
-                        .is_file())
-            )) {
-                */
-
-                // /*
                 match e.metadata() {
+                    // BOOL TO STRING AS NEED TO HANDLE if METADATA ERROR
                     Ok(m) => format!("{}", m.is_file()),
-                    Err(_) => String::from("ERROR METADATA"),
+
+                    Err(err) => {
+                        eprintln!("\nERROR: element METADATA: {:?}\n>>> Reason: {}",
+                                  element,
+                                  err,
+                        );
+                        
+                        String::from("")
+                    }
                 }
-            )) {
-                // */
                 
-                //Ok(n) => match n {
+            )) {
+                
                 Ok(n) => {
                     match_element(&n,
                                   element,
@@ -478,53 +466,6 @@ fn parse_dir(dir: ReadDir,
                     
                 },
 
-                /* match n.as_ref() {
-                    // FILE
-                    //true => {
-                    "true" => {
-                        match &element {
-                            Ok(file) => {
-                                normalize_chars(&file,
-                                                &args,
-                                )
-                            },
-                            
-                            Err(err) => {
-                                eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
-                                          element,
-                                          err,
-                                );
-                            }
-                        }
-                    },
-
-                    // DIR
-                    //false => {
-                    "false" => {
-                        // RECURSE PARSE DESCENDANT DIR
-                        if args.recursive {
-                            match &element {
-                                Ok(dir) =>
-                                    parse_dir(
-                                        list_dir(Path::new(&dir.path()),
-                                                 &args,
-                                        ),
-                                        &args,
-                                    ),
-                                
-                                Err(err) => {
-                                    eprintln!("\nERROR: DIR element: {:?}\n>>> Reason: {}",
-                                              element,
-                                              err,
-                                    );
-                                }
-                            };
-                        }
-                    },
-                    _ => {},
-                },
-                 */
-                
                 Err(err) => {
                     eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
                               element,
