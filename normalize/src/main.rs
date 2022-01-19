@@ -99,17 +99,6 @@ impl SfTrait for SingleFile<'_> {
 
             None => {}
         }
-        
-        /*
-        let (output, parent_path_status) = create_output_path_buf(&self);
-
-        if parent_path_status {
-            rename_file(self.path.to_path_buf(), // IN
-                        output, // OUT
-                        &args,
-            )
-        };
-        */
     }
 }
 
@@ -138,8 +127,8 @@ impl <'p> SingleFile<'_> {
 }
 
 
-//fn create_output_path_buf(file: &SingleFile) -> (PathBuf, bool) {
 fn create_output_path_buf(file: &SingleFile) -> Option<PathBuf> {
+
     let dir = match file
         .path
         .parent() {
@@ -153,27 +142,7 @@ fn create_output_path_buf(file: &SingleFile) -> Option<PathBuf> {
     ]
          .iter()
          .collect()
-         )
-
-
-    /*
-    let (status, dir) = match file
-        .path
-        .parent() {
-            Some(parent) => (true, parent),
-            
-            None => (false, Path::new("")),
-        };
-
-    ([dir, // ANCESTOR PATH DIR
-      Path::new(&file.output), // FILENAME 
-    ]
-     .iter()
-     .collect(),
-
-     status, // if PARENT is valid
     )
-    */
 }
 
 
@@ -191,12 +160,21 @@ fn verify_path_buf(args: &Args,
     );
 
     // IF RELATIVE WE CHANGE TO ABSOLUTE AND UPDATE
-    let full_path: PathBuf = if path.is_relative() {
-        
-        let fp = path
-            .canonicalize()
-            .unwrap(); // should never fail as verified so safe ?
+    let full_path_buf: PathBuf = if path.is_relative() {
 
+        let fp = match path.canonicalize() {
+            Ok(full_path) => full_path,
+
+            Err(err) => {
+                eprintln!("\nERROR: {:?} relative to full_path conversion\nREASON >>> {}",
+                          path,
+                          err,
+                );
+                
+                return None
+            },
+        };
+        
         debug_data = format!("\n#PATH: {:?} -> {:?}",
                              path,
                              fp,
@@ -213,7 +191,7 @@ fn verify_path_buf(args: &Args,
         println!("{}", debug_data);
     };
 
-    Some(full_path)
+    Some(full_path_buf)
 }
 
 
@@ -415,8 +393,8 @@ fn match_element(n: &str,
                  element: Result<DirEntry, io::Error>,
                  args: &Args) {
 
-    //match n.as_ref() {
     match n {
+        // FILE
         "true" => {
             match &element {
                 Ok(file) => {
@@ -501,8 +479,8 @@ fn parse_dir(dir: ReadDir,
 }
 
 
-fn list_dir(path: &Path,
-            args: &Args) -> Option<ReadDir> {
+fn list_dir(args: &Args,
+            path: &Path) -> Option<ReadDir> {  
 
     // DEBUG
     if args.verbose {
@@ -533,8 +511,8 @@ fn prepare_dir_parse(args: &Args,
                           &path,
     ) {
         Some(full_path) => {
-            match list_dir(&full_path,
-                           &args,
+            match list_dir(&args,
+                           &full_path,
             ) {
                 Some(dir_data) => {
                     
