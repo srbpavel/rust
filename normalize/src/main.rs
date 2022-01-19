@@ -8,36 +8,8 @@ use std::{fs::{self,
           process,
 };
 
-use clap::{Parser};
-
 mod command_args;
 use command_args::{Args};
-
-
-/*
-#[derive(Debug)]
-#[derive(Parser)]
-#[clap(version = "0.1.0", name="NORMALIZE", about = "\nReplace non alpha-numeric characters + remove diacritics + lowercase in given path or current directory files / descendant directories", author = "\nPavel SRB <prace@srbpavel.cz>")]
-struct Args {
-    #[clap(parse(from_os_str))]
-    #[clap(default_value=".", help="working path / `pwd`", index=1)]
-    path: std::path::PathBuf,
-
-    #[clap(parse(try_from_str))]
-    #[clap(short = 's', long = "simulate", help="dry run")]
-    simulate: bool,
-
-    #[clap(parse(try_from_str))]
-    #[clap(short = 'r', long = "recursive", help="apply also for descendant dirs")]
-    recursive: bool,
-
-    #[clap(short = 'v', long = "verbose", help="display debug info")]
-    verbose: bool,
-
-    #[clap(name="SUBSTITUTE CHAR", short = 'c', long = "substitute", default_value="_", help="substitute char")]
-    substitute_char: char,
-}
-*/
 
 
 #[derive(Debug)]
@@ -301,13 +273,7 @@ fn parse_file(path: &Path,
 
 
 fn normalize_chars(entry: &DirEntry,
-                   args: &Args,
-                   /*
-                   simulate: bool,
-                   substitute_char: char
-                   */
-
-) {
+                   args: &Args) {
 
     // FULL_PATH
     let path = entry.path();
@@ -317,7 +283,6 @@ fn normalize_chars(entry: &DirEntry,
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
     file.output = parse_file(&file.path,
-                             //substitute_char,
                              args.substitute_char,
     );
 
@@ -329,7 +294,6 @@ fn normalize_chars(entry: &DirEntry,
             )) {
 
             file.output = remove_duplicity(&file.output,
-                                           //substitute_char,
                                            args.substitute_char,
             );
         }
@@ -360,21 +324,14 @@ fn normalize_chars(entry: &DirEntry,
     if file.rename_status {
         rename_file(file.path.to_path_buf(), // IN
                     create_output_path_buf(&file), // OUT
-                    //simulate // SIMULATE
-                    args.simulate // SIMULATE
+                    args.simulate
         );
     };
 }
 
 
 fn parse_dir(dir: ReadDir,
-             args: &Args,
-             /*
-             simulate: bool,
-             substitute_char: char,
-             recursive: bool
-             */
-) {
+             args: &Args) {
     
     // multiple unsafe unwrap !!!
     for element in dir {
@@ -391,10 +348,6 @@ fn parse_dir(dir: ReadDir,
 
                         Ok(e) => {
                             normalize_chars(&e,
-                                            /*
-                                            simulate,
-                                            substitute_char,
-                                            */
                                             &args,
                                             
                             )
@@ -412,19 +365,12 @@ fn parse_dir(dir: ReadDir,
                 
                 // DIR
                 false => {
-                    // /* // HARDCODER -> FUTURE as CmdArg
                     // RECURSE PARSE DESCENDANT DIR
-                    //if recursive {
                     if args.recursive {
                         match &element {
                             
                             Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
-                                               /*
-                                               simulate,
-                                               substitute_char,
-                                               recursive,
-                                               */
-                                              &args,
+                                               &args,
                             ),
 
                             Err(err) => {
@@ -435,7 +381,6 @@ fn parse_dir(dir: ReadDir,
                             }
                         };
                     }
-                    // */
                 }
             }
     }
@@ -443,11 +388,12 @@ fn parse_dir(dir: ReadDir,
 
 
 fn list_dir(path: &Path) -> ReadDir {
+    // DEBUG
     println!("\n>>> DIR_PATH: {}", path.display());
 
     let dir = path
         .read_dir() // INSTEAD fs::read_dir(&path)
-        .unwrap_or_else(|err| {
+        .unwrap_or_else(|err| { // -> match
             eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
         
             process::exit(1); // do i need this or just want it ?
@@ -459,8 +405,7 @@ fn list_dir(path: &Path) -> ReadDir {
 
 fn main() {
     //CMD ARGS
-    //let args = Args::parse();
-    let args = Args::parse();
+    let args = command_args::read();
 
     // DEBUG CMD
     if args.verbose {
@@ -468,31 +413,18 @@ fn main() {
     };
     
     // VERIFY WORK PATH: if exists and relative -> absolute
-    //let full_path = verify_path_buf(&args.path);
-    //args.path = verify_path_buf(&args.path);
-
+    /*
     let work_dir = list_dir(
         &verify_path_buf(&args.path)
     );
+    */
     
     // START WITH ARG DIR
-    //parse_dir(list_dir(&full_path),
-    //parse_dir(list_dir(&args.path),
     parse_dir(
-        /*
+        //work_dir,
         list_dir(
             &verify_path_buf(&args.path)
         ),
-        */
-        work_dir,
-        
-        /*
-        args.simulate,
-            
-        args.substitute_char,
-            
-        args.recursive,
-        */
         &args,
     );
 }
