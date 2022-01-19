@@ -568,7 +568,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_char_name(){
+    fn replace_char_name_with_dia(){
         assert_eq!(
             replace_char_to_substitute(
                 &remove_diacritics(
@@ -577,6 +577,18 @@ mod tests {
                 '*'),
             
             String::from("mucho*murka*achjo*skyt"),
+        )
+    }
+
+    #[test]
+    fn replace_char_name_without_dia(){
+        assert_eq!(
+            replace_char_to_substitute(
+                &String::from("mucho*murka*achjo*skyt"),
+                
+                '_'),
+            
+            String::from("mucho_murka_achjo_skyt"),
         )
     }
 }
