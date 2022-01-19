@@ -5,7 +5,7 @@ use std::{fs::{self,
           path::{Path,
                  PathBuf},
 
-          process,
+          //process,
 
           io,
 };
@@ -92,13 +92,22 @@ impl SfTrait for SingleFile<'_> {
     fn rename(&self,
               args: &Args) {
 
+        /*
         rename_file(self.path.to_path_buf(), // IN
                     create_output_path_buf(&self), // OUT
                     &args,
         );
+        */
+
+        let (output, parent_path_status) = create_output_path_buf(&self);
+
+        if parent_path_status {
+            rename_file(self.path.to_path_buf(), // IN
+                        output, // OUT
+                        &args,
+            )
+        };
     }
-
-
 }
 
 
@@ -126,7 +135,25 @@ impl <'p> SingleFile<'_> {
 }
 
 
-fn create_output_path_buf(file: &SingleFile) -> PathBuf {
+fn create_output_path_buf(file: &SingleFile) -> (PathBuf, bool) {
+    let (status, dir) = match file
+        .path
+        .parent() {
+            Some(parent) => (true, parent),
+            
+            None => (false, Path::new("")),
+        };
+
+    ([dir, // ANCESTOR PATH DIR
+      Path::new(&file.output), // FILENAME 
+    ]
+     .iter()
+     .collect(),
+
+     status, // if PARENT is valid
+    )
+    
+    /*
     [
         // ANCESTOR PATH DIR
         match file.path
@@ -144,38 +171,47 @@ fn create_output_path_buf(file: &SingleFile) -> PathBuf {
     ]
         .iter()
         .collect()
+    */
 }
 
 
-fn verify_path_buf(args: &Args) -> PathBuf {
+//fn verify_path_buf(args: &Args) -> PathBuf {
+fn verify_path_buf(args: &Args,
+                   path: &Path) -> Option<PathBuf> {
 
-    if !args.path.exists() {
-        eprintln!("\nEXIT: PATH does not exists or no access {:?}", args.path);
+    //if !args.path.exists() {
+    if !path.exists() {
+        //eprintln!("\nERROR: PATH does not exists or no access {:?}", args.path);
+        eprintln!("\nERROR: PATH does not exists or no access {:?}", path);
 
-        // EXIT as path is essential
-        process::exit(1);
+        return None
     };
 
     let mut debug_data = format!("\n#PATH: {:?}",
-                                 args.path,
+                                 //args.path,
+                                 path,
     );
 
     // IF RELATIVE WE CHANGE TO ABSOLUTE AND UPDATE
-    let full_path: PathBuf = if args.path.is_relative() {
+    //let full_path: PathBuf = if args.path.is_relative() {
+    let full_path: PathBuf = if path.is_relative() {
         
-        let fp = args.path
+        //let fp = args.path
+        let fp = path
             .canonicalize()
             .unwrap(); // should never fail as verified so safe ?
 
         debug_data = format!("\n#PATH: {:?} -> {:?}",
-                             args.path,
+                             //args.path,
+                             path,
                              fp,
         );
         
         fp
             
     } else {
-        args.path.to_path_buf()
+        //args.path.to_path_buf()
+        path.to_path_buf()
     };
 
     // DEBUG
@@ -183,7 +219,7 @@ fn verify_path_buf(args: &Args) -> PathBuf {
         println!("{}", debug_data);
     };
 
-    full_path
+    Some(full_path)
 }
 
 
@@ -382,12 +418,15 @@ fn normalize_chars(entry: &DirEntry,
 
 
 fn match_element(n: &str,
+//fn match_element(n: bool,
                  element: Result<DirEntry, io::Error>,
                  args: &Args) {
 
-    match n.as_ref() {
+    //match n.as_ref() {
+    match n {
         // FILE
         "true" => {
+        //true => {
             match &element {
                 
                 Ok(file) => {
@@ -407,17 +446,68 @@ fn match_element(n: &str,
         
         // DIR
         "false" => {
+        //false => {
             // RECURSE PARSE DESCENDANT DIR
             if args.recursive {
                 match &element {
-                    Ok(dir) =>
+                    Ok(dir) => {
+
+                        prepare_dir_parse(&args,
+                                          Path::new(&dir.path()),
+                        );
+                        
+                        /*
+                        match verify_path_buf(&args,
+                                              Path::new(&dir.path()),
+                        ) {
+
+                            Some(full_path) => {
+                                let (dir_data, read_dir_status) = list_dir(&full_path,
+                                                                           &args,
+                                );
+                                
+                                // DEBUG
+                                //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
+                                
+                                if read_dir_status {
+                                    parse_dir(
+                                        dir_data,
+                                        &args,
+                                    )
+                                };
+                            },
+                            
+                            None => {}
+                        }
+                        */
+
+                        
+                        /*
+                        let (dir_data, read_dir_status) = list_dir(Path::new(&dir.path()),
+                                                          &args,
+                        );
+
+                        // DEBUG
+                        //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
+                        
+                        if read_dir_status {
+                            parse_dir(
+                                dir_data,
+                                &args,
+                            )
+                        };
+                        */
+
+                        /*
                         parse_dir(
                             list_dir(Path::new(&dir.path()),
                                      &args,
                             ),
                             &args,
                         ),
-                    
+                        */
+                    },
+                        
                     Err(err) => {
                         eprintln!("\nERROR: DIR element: {:?}\n>>> Reason: {}",
                                   element,
@@ -428,8 +518,10 @@ fn match_element(n: &str,
             }
         },
 
-        // ERROR from DirEntry.metadata()
+        // /*
+        // ERROR ARM from DirEntry.metadata()
         _ => {},
+        // */
     }
 }
 
@@ -440,22 +532,20 @@ fn parse_dir(dir: ReadDir,
     for element in dir {
         match element // DirEntry
             .as_ref() // FOR INNER ELEMENT USAGE
-            .and_then(|e| Ok(
-
-                match e.metadata() {
-                    // BOOL TO STRING AS NEED TO HANDLE if METADATA ERROR
-                    Ok(m) => format!("{}", m.is_file()),
-
-                    Err(err) => {
-                        eprintln!("\nERROR: element METADATA: {:?}\n>>> Reason: {}",
-                                  element,
-                                  err,
-                        );
-                        
-                        String::from("")
-                    }
-                }
+            .and_then(|e| Ok(match e.metadata() {
+                // BOOL TO STRING AS NEED TO HANDLE if METADATA ERROR
+                Ok(m) => format!("{}", m.is_file()),
                 
+                Err(err) => {
+                    eprintln!("\nERROR: element METADATA: {:?}\n>>> Reason: {}",
+                              element,
+                              err,
+                    );
+                    
+                    String::from("")
+                }
+            }
+                             
             )) {
                 
                 Ok(n) => {
@@ -464,8 +554,15 @@ fn parse_dir(dir: ReadDir,
                                   &args,
                     );
                     
+                    /* no need to type back 
+                    match_element(n.parse::<bool>().unwrap(),
+                                  element,
+                                  &args,
+                    );
+                    */
+                    
                 },
-
+                
                 Err(err) => {
                     eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
                               element,
@@ -478,22 +575,64 @@ fn parse_dir(dir: ReadDir,
 
 
 fn list_dir(path: &Path,
-            args: &Args) -> ReadDir {
+            //args: &Args) -> ReadDir { // + bool
+            args: &Args) -> (ReadDir, bool) {
 
     // DEBUG
     if args.verbose {
         println!("\n>>> DIR_PATH: {}", path.display());
     }
 
-    let dir = path
-        .read_dir() // INSTEAD fs::read_dir(&path)
-        .unwrap_or_else(|err| { // -> match
+    //let dir = match path.read_dir() {
+    let (status, dir) = match path.read_dir() {
+        //Ok(d) => d,
+        Ok(d) => (true, d),
+        
+        Err(err) => {
+            eprintln!("\nEXIT: Problem reading directory: {:?}\nREASON >>> {}",
+                      path,
+                      err,
+            );
+
+            (false, Path::new("").read_dir().unwrap())
+            /*
             eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
         
             process::exit(1); // do i need this or just want it ?
-        });
+            */
+        },
+    };
     
-    dir
+    //dir
+    (dir, status)
+}
+
+
+fn prepare_dir_parse(args: &Args,
+                     path: &Path) {
+    
+    match verify_path_buf(&args,
+                          //&args.path,
+                          &path,
+    ) {
+        Some(full_path) => {
+            let (dir_data, read_dir_status) = list_dir(&full_path,
+                                                       &args,
+            );
+            
+            // DEBUG
+            //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
+            
+            if read_dir_status {
+                parse_dir(
+                    dir_data,
+                    &args,
+                )
+            };
+        },
+        
+        None => {}
+    }
 }
 
 
@@ -505,9 +644,54 @@ fn main() {
     if args.verbose {
         println!("\n#CMD: {:#?}", args);
     };
+
+    // 
+    //prepare_dir_parse(&args);
+    prepare_dir_parse(&args,
+                      &args.path,
+    );
     
+    /*
+    match verify_path_buf(&args) {
+        Some(full_path) => {
+            let (dir_data, read_dir_status) = list_dir(&full_path,
+                                                       &args,
+            );
+            
+            // DEBUG
+            //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
+            
+            if read_dir_status {
+                parse_dir(
+                    dir_data,
+                    &args,
+                )
+            };
+        },
+        
+        None => {}
+    }
+    */
+
+    /*
     // START WITH ARG DIR
-    // not nice to have &args 3x times
+    let (dir_data, read_dir_status) = list_dir(&verify_path_buf(&args),
+                                               &args,
+    );
+
+    // DEBUG
+    //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
+    
+    if read_dir_status {
+        parse_dir(
+            dir_data,
+            &args,
+        )
+    };
+    */
+
+    /*
+    // not nice to have &args 3 times
     parse_dir(
         list_dir(
             &verify_path_buf(&args),
@@ -515,6 +699,7 @@ fn main() {
         ),
         &args,
     );
+    */
 }
 
 
@@ -528,18 +713,11 @@ mod tests {
 
         let args = Args {
             path: Path::new(".").to_path_buf(),
-            simulate: false,
-            recursive: false,
-            verbose: false,
-            substitute_char: '_',
+            ..Args::default()
         };
 
         let cwd = env::current_dir().unwrap();
 
-        assert_eq!(verify_path_buf(&args),
-                   Path::new(&cwd).to_path_buf(),
-        )
-        
         /* // $cargo test -- --nocapture
         // ugly, but just be sure
         println!("TEST:\n cwd: {:?}\n rel: {:?}",
@@ -553,7 +731,6 @@ mod tests {
                  )
                  .collect::<Vec<_>>(),
                  
-                 //relative
                  args.path
                  .read_dir()
                  .unwrap()
@@ -567,6 +744,10 @@ mod tests {
                  .collect::<Vec<_>>(),
         );
         */
+        
+        assert_eq!(verify_path_buf(&args),
+                   Path::new(&cwd).to_path_buf(),
+        )
     }
     
     #[test]

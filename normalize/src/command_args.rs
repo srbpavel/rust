@@ -1,11 +1,13 @@
 use clap::{Parser};
+use std::path::Path;
+
 
 #[derive(Debug)]
 #[derive(Parser)]
 #[clap(
     version = "0.1.0",
     name="NORMALIZE",
-    about = "\nReplace non alpha-numeric characters + remove diacritics + lowercase in given path or current directory files / descendant directories",
+    about = "\nRename files with non alpha-numeric characters + remove diacritics + lowercase in given path or current directory and descendant directories",
     author = "\nPavel SRB <prace@srbpavel.cz>")]
 pub struct Args {
     #[clap(parse(from_os_str))]
@@ -42,6 +44,19 @@ pub struct Args {
         default_value="_",
         help="substitute char")]
     pub substitute_char: char,
+}
+
+
+impl Args {
+    pub fn default() -> Args {
+        Args {
+            path: Path::new("").to_path_buf(),
+            simulate: false,
+            recursive: false,
+            verbose: false,
+            substitute_char: '_',
+        }
+    }
 }
 
 
