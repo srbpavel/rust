@@ -418,15 +418,12 @@ fn normalize_chars(entry: &DirEntry,
 
 
 fn match_element(n: &str,
-//fn match_element(n: bool,
                  element: Result<DirEntry, io::Error>,
                  args: &Args) {
 
     //match n.as_ref() {
     match n {
-        // FILE
         "true" => {
-        //true => {
             match &element {
                 
                 Ok(file) => {
@@ -446,66 +443,13 @@ fn match_element(n: &str,
         
         // DIR
         "false" => {
-        //false => {
             // RECURSE PARSE DESCENDANT DIR
             if args.recursive {
                 match &element {
                     Ok(dir) => {
-
                         prepare_dir_parse(&args,
                                           Path::new(&dir.path()),
                         );
-                        
-                        /*
-                        match verify_path_buf(&args,
-                                              Path::new(&dir.path()),
-                        ) {
-
-                            Some(full_path) => {
-                                let (dir_data, read_dir_status) = list_dir(&full_path,
-                                                                           &args,
-                                );
-                                
-                                // DEBUG
-                                //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
-                                
-                                if read_dir_status {
-                                    parse_dir(
-                                        dir_data,
-                                        &args,
-                                    )
-                                };
-                            },
-                            
-                            None => {}
-                        }
-                        */
-
-                        
-                        /*
-                        let (dir_data, read_dir_status) = list_dir(Path::new(&dir.path()),
-                                                          &args,
-                        );
-
-                        // DEBUG
-                        //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
-                        
-                        if read_dir_status {
-                            parse_dir(
-                                dir_data,
-                                &args,
-                            )
-                        };
-                        */
-
-                        /*
-                        parse_dir(
-                            list_dir(Path::new(&dir.path()),
-                                     &args,
-                            ),
-                            &args,
-                        ),
-                        */
                     },
                         
                     Err(err) => {
@@ -518,10 +462,8 @@ fn match_element(n: &str,
             }
         },
 
-        // /*
         // ERROR ARM from DirEntry.metadata()
         _ => {},
-        // */
     }
 }
 
@@ -553,14 +495,6 @@ fn parse_dir(dir: ReadDir,
                                   element,
                                   &args,
                     );
-                    
-                    /* no need to type back 
-                    match_element(n.parse::<bool>().unwrap(),
-                                  element,
-                                  &args,
-                    );
-                    */
-                    
                 },
                 
                 Err(err) => {
@@ -575,36 +509,33 @@ fn parse_dir(dir: ReadDir,
 
 
 fn list_dir(path: &Path,
-            //args: &Args) -> ReadDir { // + bool
-            args: &Args) -> (ReadDir, bool) {
+            //args: &Args) -> (ReadDir, bool) {
+            args: &Args) -> Option<ReadDir> {
 
     // DEBUG
     if args.verbose {
         println!("\n>>> DIR_PATH: {}", path.display());
     }
 
-    //let dir = match path.read_dir() {
-    let (status, dir) = match path.read_dir() {
-        //Ok(d) => d,
-        Ok(d) => (true, d),
+    let dir = match path.read_dir() {
+    //let (status, dir) = match path.read_dir() {
+        Ok(d) => d,
+        //Ok(d) => (true, d),
         
         Err(err) => {
-            eprintln!("\nEXIT: Problem reading directory: {:?}\nREASON >>> {}",
+            eprintln!("\nERROR: Problem reading directory: {:?}\nREASON >>> {}",
                       path,
                       err,
             );
 
-            (false, Path::new("").read_dir().unwrap())
-            /*
-            eprintln!("\nEXIT: Problem reading directory\nREASON >>> {}", err);
-        
-            process::exit(1); // do i need this or just want it ?
-            */
+            //(false, Path::new("").read_dir().unwrap())
+            return None
         },
     };
     
     //dir
-    (dir, status)
+    //(dir, status)
+    Some(dir)
 }
 
 
@@ -612,10 +543,25 @@ fn prepare_dir_parse(args: &Args,
                      path: &Path) {
     
     match verify_path_buf(&args,
-                          //&args.path,
                           &path,
     ) {
         Some(full_path) => {
+            match list_dir(&full_path,
+                           &args,
+            ) {
+                Some(dir_data) => {
+                    
+                    parse_dir(
+                        dir_data,
+                        &args,
+                    )
+                },
+                
+                None => {}
+            }
+        },
+
+            /*
             let (dir_data, read_dir_status) = list_dir(&full_path,
                                                        &args,
             );
@@ -629,8 +575,8 @@ fn prepare_dir_parse(args: &Args,
                     &args,
                 )
             };
-        },
-        
+            */
+            
         None => {}
     }
 }
@@ -645,61 +591,10 @@ fn main() {
         println!("\n#CMD: {:#?}", args);
     };
 
-    // 
-    //prepare_dir_parse(&args);
+    // START WITH ARG DIR 
     prepare_dir_parse(&args,
                       &args.path,
     );
-    
-    /*
-    match verify_path_buf(&args) {
-        Some(full_path) => {
-            let (dir_data, read_dir_status) = list_dir(&full_path,
-                                                       &args,
-            );
-            
-            // DEBUG
-            //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
-            
-            if read_dir_status {
-                parse_dir(
-                    dir_data,
-                    &args,
-                )
-            };
-        },
-        
-        None => {}
-    }
-    */
-
-    /*
-    // START WITH ARG DIR
-    let (dir_data, read_dir_status) = list_dir(&verify_path_buf(&args),
-                                               &args,
-    );
-
-    // DEBUG
-    //println!("\nLIST_DIR [{}]: {:?}", status, dir_data);
-    
-    if read_dir_status {
-        parse_dir(
-            dir_data,
-            &args,
-        )
-    };
-    */
-
-    /*
-    // not nice to have &args 3 times
-    parse_dir(
-        list_dir(
-            &verify_path_buf(&args),
-            &args,
-        ),
-        &args,
-    );
-    */
 }
 
 
