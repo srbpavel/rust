@@ -6,6 +6,8 @@ use std::{fs::{self,
                  PathBuf},
 
           process,
+
+          io,
 };
 
 mod command_args;
@@ -379,6 +381,60 @@ fn normalize_chars(entry: &DirEntry,
 }
 
 
+fn match_element(n: &str,
+                 element: Result<DirEntry, io::Error>,
+                 args: &Args) {
+
+    match n.as_ref() {
+        // FILE
+        //true => {
+        "true" => {
+            match &element {
+
+                Ok(file) => {
+                    normalize_chars(&file,
+                                    &args,
+                    )
+                },
+                
+                            Err(err) => {
+                                eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
+                                          element,
+                                          err,
+                                );
+                            }
+            }
+        },
+        
+        // DIR
+        //false => {
+        "false" => {
+            // RECURSE PARSE DESCENDANT DIR
+            if args.recursive {
+                match &element {
+                    Ok(dir) =>
+                        parse_dir(
+                            list_dir(Path::new(&dir.path()),
+                                     &args,
+                            ),
+                            &args,
+                        ),
+                    
+                    Err(err) => {
+                        eprintln!("\nERROR: DIR element: {:?}\n>>> Reason: {}",
+                                  element,
+                                  err,
+                        );
+                    }
+                };
+            }
+        },
+        
+        _ => {},
+    }
+}
+
+
 // too long !!!
 fn parse_dir(dir: ReadDir,
              args: &Args) {
@@ -414,7 +470,15 @@ fn parse_dir(dir: ReadDir,
                 // */
                 
                 //Ok(n) => match n {
-                Ok(n) => match n.as_ref() {
+                Ok(n) => {
+                    match_element(&n,
+                                  element,
+                                  &args,
+                    );
+                    
+                },
+
+                /* match n.as_ref() {
                     // FILE
                     //true => {
                     "true" => {
@@ -457,9 +521,9 @@ fn parse_dir(dir: ReadDir,
                             };
                         }
                     },
-
                     _ => {},
                 },
+                 */
                 
                 Err(err) => {
                     eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
