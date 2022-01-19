@@ -1,6 +1,4 @@
-use std::{//env,
-
-          fs::{self,
+use std::{fs::{self,
                DirEntry,
                ReadDir},
 
@@ -12,17 +10,18 @@ use std::{//env,
 
 use clap::{Parser};
 
+mod command_args;
+use command_args::{Args};
 
-//mod command_args;
 
-// /*
+/*
 #[derive(Debug)]
 #[derive(Parser)]
 #[clap(version = "0.1.0", name="NORMALIZE", about = "\nReplace non alpha-numeric characters + remove diacritics + lowercase in given path or current directory files / descendant directories", author = "\nPavel SRB <prace@srbpavel.cz>")]
 struct Args {
     #[clap(parse(from_os_str))]
-    #[clap(default_value=".", help="working path / default `pwd`", index=1)]
-    full_path: std::path::PathBuf,
+    #[clap(default_value=".", help="working path / `pwd`", index=1)]
+    path: std::path::PathBuf,
 
     #[clap(parse(try_from_str))]
     #[clap(short = 's', long = "simulate", help="dry run")]
@@ -35,8 +34,11 @@ struct Args {
     #[clap(short = 'v', long = "verbose", help="display debug info")]
     verbose: bool,
 
+    #[clap(name="SUBSTITUTE CHAR", short = 'c', long = "substitute", default_value="_", help="substitute char")]
+    substitute_char: char,
 }
-// */
+*/
+
 
 #[derive(Debug)]
 pub struct MyFile<'p> {
@@ -104,27 +106,38 @@ fn create_output_path_buf(file: &MyFile) -> PathBuf {
 }
 
 
-/* OBSOLETE
-fn verify_path(path: &str) {
-    if !Path::new(path).exists() {
-        eprintln!("\nEXIT: PATH does not exists or no access {}", path);
-        
-        process::exit(1);
-    };
-}
-*/
-
-
-fn verify_path_buf(path: &PathBuf) {
-    let valid = path.as_path().exists();
-
-    println!("PATH_BUF -> PATH: {}", valid);
-
-    if !valid {
+fn verify_path_buf(path: &PathBuf) -> PathBuf {
+    if !path.as_path().exists() {
         eprintln!("\nEXIT: PATH does not exists or no access {:?}", path);
-        
+
+        // EXIT as path is essential
         process::exit(1);
     };
+
+    // DEBUG
+    let mut data = format!("\n#PATH: {:?}",
+                           path,
+    );
+    
+    let full_path = if path.is_relative() {
+        let fp = path
+            .canonicalize()
+            .unwrap();
+        
+        data = format!("\n#PATH: {:?} -> {:?}",
+                       path,
+                       fp,
+        );
+
+        fp
+            
+    } else {
+        path.to_path_buf()
+    };
+
+    println!("{}", data);
+
+    full_path
 }
 
 
@@ -288,8 +301,13 @@ fn parse_file(path: &Path,
 
 
 fn normalize_chars(entry: &DirEntry,
-                   flag_simulate: bool,
-                   substitute_char: char) {
+                   args: &Args,
+                   /*
+                   simulate: bool,
+                   substitute_char: char
+                   */
+
+) {
 
     // FULL_PATH
     let path = entry.path();
@@ -299,17 +317,20 @@ fn normalize_chars(entry: &DirEntry,
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
     file.output = parse_file(&file.path,
-                             substitute_char);
+                             //substitute_char,
+                             args.substitute_char,
+    );
 
     // TEST FOR substitute_char duplicity
     if file.output
         .contains(
             &format!("{ch}{ch}",
-                     ch=substitute_char,
+                     ch=args.substitute_char,
             )) {
 
             file.output = remove_duplicity(&file.output,
-                                           substitute_char,
+                                           //substitute_char,
+                                           args.substitute_char,
             );
         }
 
@@ -339,23 +360,28 @@ fn normalize_chars(entry: &DirEntry,
     if file.rename_status {
         rename_file(file.path.to_path_buf(), // IN
                     create_output_path_buf(&file), // OUT
-                    flag_simulate // SIMULATE
+                    //simulate // SIMULATE
+                    args.simulate // SIMULATE
         );
     };
 }
 
 
 fn parse_dir(dir: ReadDir,
-             simulate_flag: bool,
+             args: &Args,
+             /*
+             simulate: bool,
              substitute_char: char,
-             recursive: bool) {
+             recursive: bool
+             */
+) {
     
     // multiple unsafe unwrap !!!
     for element in dir {
         match element // DirEntry
-            .as_ref()
+            .as_ref() // for inner element usage
             .unwrap()
-            .metadata()
+            .metadata() // Metadata
             .unwrap()
             .is_file() {
                 
@@ -365,8 +391,12 @@ fn parse_dir(dir: ReadDir,
 
                         Ok(e) => {
                             normalize_chars(&e,
-                                            simulate_flag,
+                                            /*
+                                            simulate,
                                             substitute_char,
+                                            */
+                                            &args,
+                                            
                             )
                         },
 
@@ -384,13 +414,19 @@ fn parse_dir(dir: ReadDir,
                 false => {
                     // /* // HARDCODER -> FUTURE as CmdArg
                     // RECURSE PARSE DESCENDANT DIR
-                    if recursive {
+                    //if recursive {
+                    if args.recursive {
                         match &element {
                             
                             Ok(e) => parse_dir(list_dir(Path::new(&e.path())),
-                                               simulate_flag,
+                                               /*
+                                               simulate,
                                                substitute_char,
-                                               recursive),
+                                               recursive,
+                                               */
+                                              &args,
+                            ),
+
                             Err(err) => {
                                 eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
                                           element,
@@ -422,97 +458,42 @@ fn list_dir(path: &Path) -> ReadDir {
 
 
 fn main() {
-    //ARGS
-    // /* // DERIVE style
+    //CMD ARGS
+    //let args = Args::parse();
     let args = Args::parse();
-    // */
 
-    /*
-    // Builder Pattern
-    let args = App::new("Normalize")
-        .version("0.1.0")
-        .author("foookume. <prace@srbpavel.cz>")
-        .about("\nReplace non alpha-numeric cfusageharacters + remove diacritics + lowercase in files/directories")
-        .arg(Arg::new("full_path")
-             //.default_value="."
-             .about="work path"
-             .required(true)
-             .index(1))
-        .arg(Arg::new("s")
-             .short('s')
-             .long("simulate")
-             .about("enable: simulate"))
-        .arg(Arg::new("r")
-             .short('r')
-             .long("recursive")
-             .about("enable: apply to descendant directories"))
-        .arg(Arg::new("v")
-             .short('v')
-             .long("verbose")
-             .about("enable: display debug info"))
-        .get_matches();
-    */
-
-    println!("\n#CLAP: {:#?}", args);
+    // DEBUG CMD
+    if args.verbose {
+        println!("\n#CMD: {:#?}", args);
+    };
     
-    /*
-    println!("\n#CLAP:\n simulate: {s}\n recursive: {r}\n path: {p:?}",
-             s=args.simulate,
-             r=args.recursive,
-             p=args.full_path,
+    // VERIFY WORK PATH: if exists and relative -> absolute
+    //let full_path = verify_path_buf(&args.path);
+    //args.path = verify_path_buf(&args.path);
+
+    let work_dir = list_dir(
+        &verify_path_buf(&args.path)
     );
-    */
     
-    //_
-
-    // HARDCODED for now
-    let substitute_char = '_';
-
-    /*
-    // CWD instead ARG `pwd`
-    let path_dir = env::current_dir().unwrap();
-    */
-
-    // CMD ARGS: simulate flag + work dir path
-    /*
-    let args = command_args::CmdArgs::new(env::args()).unwrap_or_else(|err| {
-        eprintln!("\nEXIT: Problem parsing arguments\nREASON >>> {}", err);
-        
-        process::exit(1);
-    });
-    */
-
-    // VERIFY WORK PATH
-    //verify_path(&args.full_path);
-    verify_path_buf(&args.full_path);
-
-    /*
-    // DEBUG
-    println!("\n#SIMULATE FLAG: {s}\n#WORK_DIR: {p}",
-             p=args.full_path,
-             s=args.simulate,
-    );
-    */
-
     // START WITH ARG DIR
-    //parse_dir(list_dir(Path::new(&args.full_path)),
-    parse_dir(list_dir(&args.full_path),
-
-              /*
-              args.simulate
-              .parse::<bool>()
-              .unwrap(),
-              */
-              args.simulate,
-              
-              substitute_char,
-
-              /*
-              args.recursive
-              .parse::<bool>()
-              .unwrap(),
-              */
-              args.recursive,
+    //parse_dir(list_dir(&full_path),
+    //parse_dir(list_dir(&args.path),
+    parse_dir(
+        /*
+        list_dir(
+            &verify_path_buf(&args.path)
+        ),
+        */
+        work_dir,
+        
+        /*
+        args.simulate,
+            
+        args.substitute_char,
+            
+        args.recursive,
+        */
+        &args,
     );
 }
 
@@ -520,7 +501,45 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+    
+    #[test]
+    fn relative_path_to_absolute(){
+        let cwd = env::current_dir().unwrap();
+        let relative = Path::new(".").to_path_buf();
 
+        /* // $cargo run -- --nocapture
+        // ugly, but just be sure
+        println!("TEST:\n cwd: {:?}\n rel: {:?}",
+                 cwd
+                 .read_dir()
+                 .unwrap()
+                 .map(|res| res.map(|e| e
+                                    .path()
+                 )
+                      .unwrap()
+                 )
+                 .collect::<Vec<_>>(),
+                 
+                 relative
+                 .read_dir()
+                 .unwrap()
+                 .map(|res| res.map(|e| e
+                                    .path()
+                                    .canonicalize()
+                                    .unwrap()
+                 )
+                                    .unwrap()
+                 )
+                 .collect::<Vec<_>>(),
+        );
+        */
+        
+        assert_eq!(verify_path_buf(&relative),
+                   Path::new(&cwd).to_path_buf(),
+        )
+    }
+    
     #[test]
     fn replace_diacritics(){
         assert_eq!(remove_diacritics("tRPaslÍČek"),
