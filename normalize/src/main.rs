@@ -29,8 +29,8 @@ pub trait SfTrait {
              args: &Args);
     
     fn char_duplicity(& mut self,
-                      args: &Args);
-
+                      substitute_char: char);
+    
     fn update_rename_status(& mut self);
 
     fn rename(&self,
@@ -60,38 +60,48 @@ impl SfTrait for SingleFile<'_> {
     }
     
     fn char_duplicity(& mut self,
-                      args: &Args) {
+                      substitute_char: char) {
 
         if self.output
             .contains(
                 &format!("{ch}{ch}",
-                         ch=args.substitute_char,
+                         ch=substitute_char,
                 )) {
                 
                 self.output = remove_duplicity(&self.output,
-                                               args.substitute_char,
+                                               substitute_char,
                 );
             }
     }
 
     fn update_rename_status(& mut self) {
 
-        // multiple unsafe unwrap !!!
         self.rename_status = self.output != format!("{}",
+                                                    match self.path
+                                                    .file_name()
+                                                    .and_then(|s| s.to_str()) {
+                                                        Some(n) => n,
+                                                        
+                                                        None => "",
+                                                    }
+                                                    /*
                                                     self.path
                                                     .file_name()
                                                     .unwrap()
                                                     .to_str()
                                                     .unwrap(),
+                                                    */
         );
-
+        
         /*
-        println!("UU: {:?}",
-                 self.path
+        println!("UU: {}",
+                 match self.path
                  .file_name()
-                 .unwrap() // OsStr
-                 .to_str()
-                 .unwrap(),
+                 .and_then(|s| s.to_str()) {
+                     Some(n) => n,
+                     
+                     None => "",
+                 }
         );
         */
     }
@@ -136,7 +146,7 @@ impl <'p> SingleFile<'_> {
 fn create_output_path_buf(file: &SingleFile) -> PathBuf {
     [file.path // ANCESTOR PATH DIR
      .parent()
-     .unwrap(),
+     .unwrap(), // make it safe !!!
      
      Path::new(&file.output), // FILENAME 
     ]
@@ -294,11 +304,7 @@ fn remove_diacritics(text: &str) -> String {
 fn replace_char_to_substitute(text: &str,
                               substitute: char) -> String {
 
-    // REMOVE DIACRITICS
-    //let no_dia = remove_diacritics(text);
-
     // REPLACE OTHER THEN: 09AZaz AND upper to lower_case
-    //no_dia
     text
         .as_bytes()
         .iter()
@@ -325,10 +331,7 @@ fn parse_file(path: &Path,
     let name = replace_char_to_substitute(& match &path
                                           .file_stem()
                                           .and_then(|s| s.to_str()) { // is safe ?
-                                              Some(n) =>
-
-                                                  //n.to_string(),
-                                                  remove_diacritics(n),
+                                              Some(n) => remove_diacritics(n),
                                               
                                               None => String::from("")
                                           },
@@ -342,6 +345,7 @@ fn parse_file(path: &Path,
             Some(e) => {
                 format!(".{}", remove_diacritics(&e.to_lowercase()))
             },
+            
             None => String::from("")
         };
 
@@ -368,7 +372,7 @@ fn normalize_chars(entry: &DirEntry,
     file.parse(&args);
 
     // TEST FOR substitute_char duplicity and replace if any
-    file.char_duplicity(&args);
+    file.char_duplicity(args.substitute_char);
     
     // if RENAME is needed
     file.update_rename_status();
@@ -392,49 +396,61 @@ fn parse_dir(dir: ReadDir,
     for element in dir {
         match element // DirEntry
             .as_ref() // for inner element usage
-            .unwrap()
-            .metadata()
-            .unwrap() // should have Metadata always as path valid ?
-            .is_file() {
-                // FILE
-                true => {
-                    match &element {
-                        Ok(file) => {
-                            normalize_chars(&file,
-                                            &args,
-                            )
-                        },
-
-                        Err(err) => {
-                            eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
-                                      element,
-                                      err,
-                            );
-                        }
-                    }
-                },
-
-                // DIR
-                false => {
-                    // RECURSE PARSE DESCENDANT DIR
-                    if args.recursive {
+            //.unwrap()
+            //.metadata()
+            //.unwrap() // should have Metadata always as path valid ?
+            //.is_file() {
+            .and_then(|e| Ok(e.metadata().unwrap().is_file())) {
+                
+                Ok(n) => match n {
+                    
+                    // FILE
+                    true => {
                         match &element {
-                            Ok(dir) =>
-                                parse_dir(
-                                    list_dir(Path::new(&dir.path()),
-                                             &args,
-                                    ),
-                                    &args,
-                                ),
-
+                            Ok(file) => {
+                                normalize_chars(&file,
+                                                &args,
+                                )
+                            },
+                            
                             Err(err) => {
-                                eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
+                                eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
                                           element,
                                           err,
                                 );
                             }
-                        };
+                        }
+                    },
+
+                    // DIR
+                    false => {
+                        // RECURSE PARSE DESCENDANT DIR
+                        if args.recursive {
+                            match &element {
+                                Ok(dir) =>
+                                    parse_dir(
+                                        list_dir(Path::new(&dir.path()),
+                                                 &args,
+                                        ),
+                                        &args,
+                                    ),
+                                
+                                Err(err) => {
+                                    eprintln!("\nERROR: DIR element: {:?}\n>>> Reason: {}",
+                                              element,
+                                              err,
+                                    );
+                                }
+                            };
+                        }
                     }
+                },
+                
+                Err(err) => {
+                    eprintln!("\nERROR: element: {:?}\n>>> Reason: {}",
+                              element,
+                              err,
+                    );
                 }
             }
     }
