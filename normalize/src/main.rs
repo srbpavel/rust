@@ -20,7 +20,7 @@ pub struct SingleFile<'p> {
 }
 
 
-pub trait Trait {
+pub trait SfTrait {
     fn debug(&self);
     
     fn print(&self);
@@ -38,7 +38,7 @@ pub trait Trait {
 }
 
 
-impl Trait for SingleFile<'_> {
+impl SfTrait for SingleFile<'_> {
     fn debug(&self) {
         println!("\n  {:?}", self);
     }
@@ -101,7 +101,6 @@ impl Trait for SingleFile<'_> {
 
         rename_file(self.path.to_path_buf(), // IN
                     create_output_path_buf(&self), // OUT
-                    //args.simulate,
                     &args,
         );
     }
@@ -146,43 +145,40 @@ fn create_output_path_buf(file: &SingleFile) -> PathBuf {
 }
 
 
-//fn verify_path_buf(path: &PathBuf) -> PathBuf {
 fn verify_path_buf(args: &Args) -> PathBuf {
 
-    let path = &args.path;
-    
-    if !path.exists() {
-        eprintln!("\nEXIT: PATH does not exists or no access {:?}", path);
+    if !args.path.exists() {
+        eprintln!("\nEXIT: PATH does not exists or no access {:?}", args.path);
 
         // EXIT as path is essential
         process::exit(1);
     };
 
-    let mut data = format!("\n#PATH: {:?}",
-                           path,
+    let mut debug_data = format!("\n#PATH: {:?}",
+                                 args.path,
     );
 
     // IF RELATIVE WE CHANGE TO ABSOLUTE AND UPDATE
-    let full_path: PathBuf = if path.is_relative() {
+    let full_path: PathBuf = if args.path.is_relative() {
         
-        let fp = path
+        let fp = args.path
             .canonicalize()
             .unwrap(); // should never fail as verified so safe ?
 
-        data = format!("\n#PATH: {:?} -> {:?}",
-                       path,
-                       fp,
+        debug_data = format!("\n#PATH: {:?} -> {:?}",
+                             args.path,
+                             fp,
         );
         
         fp
             
     } else {
-        path.to_path_buf()
+        args.path.to_path_buf()
     };
 
     // DEBUG
     if args.verbose {
-        println!("{}", data);
+        println!("{}", debug_data);
     };
 
     full_path
@@ -191,7 +187,6 @@ fn verify_path_buf(args: &Args) -> PathBuf {
 
 fn rename_file(input: PathBuf,
                output: PathBuf,
-               //simulate: bool,
                args: &Args) {
 
     let debug_data = format!("{:?} -> {:?}",
@@ -202,23 +197,15 @@ fn rename_file(input: PathBuf,
     // DEBUG
     if args.verbose {
         println!("  @ WILL RENAME: {}", debug_data);
-        
-        /*
-        println!("  @ WILL RENAME:    {:?} -> {:?}",
-                 input,
-                 output,
-        );
-        */
     };
 
     // VERIFY NOT TO OVERWRITE if any
     if !output.as_path().exists() {
-        //if !simulate {
         if !args.simulate {
             // RENAME
             match fs::rename(input, output) {
                 Ok(_) => {
-                    println!("{}", debug_data);
+                    println!("  RENAME: {}", debug_data);
                 },
                 
                 Err(err) => {
@@ -227,7 +214,7 @@ fn rename_file(input: PathBuf,
             }
         }
     } else {
-        println!("  @ WARNING: destination file exists {:?}", output);
+        println!("  @ WARNING: destination file exists >>> {}", debug_data);
     }
 }
 
@@ -308,10 +295,11 @@ fn replace_char_to_substitute(text: &str,
                               substitute: char) -> String {
 
     // REMOVE DIACRITICS
-    let no_dia = remove_diacritics(text);
+    //let no_dia = remove_diacritics(text);
 
     // REPLACE OTHER THEN: 09AZaz AND upper to lower_case
-    no_dia
+    //no_dia
+    text
         .as_bytes()
         .iter()
         .map(|b| match b {
@@ -335,13 +323,16 @@ fn parse_file(path: &Path,
     
     // FILE: NAME -> replace + diacritics + lowercase
     let name = replace_char_to_substitute(& match &path
-                           .file_stem()
-                           .and_then(|s| s.to_str()) {
-                               Some(n) => n.to_string(),
-                               None => String::from("")
-                           },
-                           
-                           substitute_char,
+                                          .file_stem()
+                                          .and_then(|s| s.to_str()) { // is safe ?
+                                              Some(n) =>
+
+                                                  //n.to_string(),
+                                                  remove_diacritics(n),
+                                              
+                                              None => String::from("")
+                                          },
+                                          substitute_char,
     );
     
     // FILE: EXTENSION -> diacritics + lower_case
@@ -367,19 +358,16 @@ fn parse_file(path: &Path,
 fn normalize_chars(entry: &DirEntry,
                    args: &Args) {
 
-    // Struct
-    let mut file = SingleFile {
+    // FULL_PATH
+    let mut file = SingleFile {path: &entry.path(),
 
-        // FULL_PATH
-        path: &entry.path(),
-
-        ..SingleFile::default()
+                               ..SingleFile::default()
     };
 
-    // SPLIT NAME + EXT -> remove dia + replace non 09AZaz
+    // SPLIT NAME + EXT -> remove dia + replace non 09AZaz <- join back
     file.parse(&args);
 
-    // TEST FOR substitute_char duplicity
+    // TEST FOR substitute_char duplicity and replace if any
     file.char_duplicity(&args);
     
     // if RENAME is needed
@@ -390,7 +378,7 @@ fn normalize_chars(entry: &DirEntry,
         file.debug();
     };
 
-    // RENAME TASK
+    // RENAME
     if file.rename_status {
         file.rename(&args)
     };
@@ -405,18 +393,15 @@ fn parse_dir(dir: ReadDir,
         match element // DirEntry
             .as_ref() // for inner element usage
             .unwrap()
-            .metadata() // Metadata
-            .unwrap()
+            .metadata()
+            .unwrap() // should have Metadata always as path valid ?
             .is_file() {
-                
                 // FILE
                 true => {
                     match &element {
-
-                        Ok(e) => {
-                            normalize_chars(&e,
+                        Ok(file) => {
+                            normalize_chars(&file,
                                             &args,
-                                            
                             )
                         },
 
@@ -426,19 +411,17 @@ fn parse_dir(dir: ReadDir,
                                       err,
                             );
                         }
-                    
                     }
                 },
-                
+
                 // DIR
                 false => {
                     // RECURSE PARSE DESCENDANT DIR
                     if args.recursive {
                         match &element {
-                            
-                            Ok(e) =>
+                            Ok(dir) =>
                                 parse_dir(
-                                    list_dir(Path::new(&e.path()),
+                                    list_dir(Path::new(&dir.path()),
                                              &args,
                                     ),
                                     &args,
@@ -488,9 +471,9 @@ fn main() {
     };
     
     // START WITH ARG DIR
+    // not nice to have &args 3x times
     parse_dir(
         list_dir(
-            //&verify_path_buf(&args.path)
             &verify_path_buf(&args),
             &args,
         ),
@@ -506,10 +489,22 @@ mod tests {
     
     #[test]
     fn relative_path_to_absolute(){
-        let cwd = env::current_dir().unwrap();
-        let relative = Path::new(".").to_path_buf();
 
-        /* // $cargo run -- --nocapture
+        let args = Args {
+            path: Path::new(".").to_path_buf(),
+            simulate: false,
+            recursive: false,
+            verbose: false,
+            substitute_char: '_',
+        };
+
+        let cwd = env::current_dir().unwrap();
+
+        assert_eq!(verify_path_buf(&args),
+                   Path::new(&cwd).to_path_buf(),
+        )
+        
+        /* // $cargo test -- --nocapture
         // ugly, but just be sure
         println!("TEST:\n cwd: {:?}\n rel: {:?}",
                  cwd
@@ -522,7 +517,8 @@ mod tests {
                  )
                  .collect::<Vec<_>>(),
                  
-                 relative
+                 //relative
+                 args.path
                  .read_dir()
                  .unwrap()
                  .map(|res| res.map(|e| e
@@ -535,10 +531,6 @@ mod tests {
                  .collect::<Vec<_>>(),
         );
         */
-        
-        assert_eq!(verify_path_buf(&relative),
-                   Path::new(&cwd).to_path_buf(),
-        )
     }
     
     #[test]
