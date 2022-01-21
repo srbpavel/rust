@@ -5,7 +5,7 @@ use std::{fs::{self,
           path::{Path,
                  PathBuf},
 
-          io,
+          //io,
 };
 
 mod command_args;
@@ -75,7 +75,6 @@ impl SfTrait for SingleFile<'_> {
     }
 
     fn update_rename_status(& mut self) {
-
         self.rename_status = self.output != format!("{}",
                                                     match self.path
                                                     .file_name()
@@ -155,10 +154,10 @@ fn verify_path_buf(args: &Args,
         return None
     };
 
-    let mut debug_data = format!("\n#PATH: {:?}",
+    let mut debug_data = format!("\n#ABSOLUTE PATH: {:?}",
                                  path,
     );
-
+    
     // IF RELATIVE WE CHANGE TO ABSOLUTE AND UPDATE
     let full_path_buf: PathBuf = if path.is_relative() {
 
@@ -174,8 +173,8 @@ fn verify_path_buf(args: &Args,
                 return None
             },
         };
-        
-        debug_data = format!("\n#PATH: {:?} -> {:?}",
+
+        debug_data = format!("\n#RELATIVE: {:?} -> ABSOLUTE {:?}",
                              path,
                              fp,
         );
@@ -255,6 +254,7 @@ fn remove_duplicity(text: &str,
 
 // MATCH TABLE FROM https://github.com/YesSeri/diacritics/blob/main/src/lib.rs
 fn remove_diacritics(text: &str) -> String {
+
     text
         .chars()
         .map(|ch| String::from(ch))
@@ -359,11 +359,15 @@ fn parse_file(path: &Path,
 }
 
 
-fn normalize_chars(entry: &DirEntry,
-                   args: &Args) {
+//fn normalize_chars(entry: &DirEntry,
+fn normalize_chars<'f>(entry: &'f Path,
+                   //args: &Args) -> PathBuf {
+                   //args: &Args) -> String {
+                   args: &'f Args) -> SingleFile<'f > {
 
     // FULL_PATH
-    let mut file = SingleFile {path: &entry.path(),
+    //let mut file = SingleFile {path: &entry.path(),
+    let mut file = SingleFile {path: &entry,
 
                                ..SingleFile::default()
     };
@@ -378,19 +382,28 @@ fn normalize_chars(entry: &DirEntry,
     file.update_rename_status();
 
     // DEBUG
+    /*
     if args.verbose {
         file.debug();
     };
+    */
 
     // RENAME
+    /*
     if file.rename_status {
         file.rename(&args)
     };
+    */
+
+    //file.path.to_path_buf()
+    //Path::new(&file.output).to_path_buf()
+    //String::from(file.output)
+    file
 }
 
 
 fn match_element(n: &str,
-                 element: Result<DirEntry, io::Error>,
+                 element: Result<DirEntry, std::io::Error>,
                  args: &Args) {
 
     match n {
@@ -398,9 +411,32 @@ fn match_element(n: &str,
         "true" => {
             match &element {
                 Ok(file) => {
+
+                    let path = &file.path();
+
+                    let single_file = normalize_chars(path,
+                                                      &args,
+                    );
+                    
+                    /*
                     normalize_chars(&file,
                                     &args,
                     )
+                    */
+
+                    // DEBUG
+                    if args.verbose {
+                        single_file.debug();
+                    };
+                    
+                    
+                    // RENAME
+                    // /*
+                    if single_file.rename_status {
+                        single_file.rename(&args)
+                    };
+                    // */
+                    
                 },
                 
                 Err(err) => {
@@ -418,7 +454,7 @@ fn match_element(n: &str,
             if args.recursive {
                 match &element {
                     Ok(dir) => {
-                        prepare_dir_parse(&args,
+                        prepare_parse_dir(&args,
                                           Path::new(&dir.path()),
                         );
                     },
@@ -479,13 +515,15 @@ fn parse_dir(dir: ReadDir,
 }
 
 
-fn list_dir(args: &Args,
-            path: &Path) -> Option<ReadDir> {  
+//fn list_dir(_args: &Args,
+fn list_dir(path: &Path) -> Option<ReadDir> {  
 
     // DEBUG
+    /*
     if args.verbose {
         println!("\n>>> DIR_PATH: {}", path.display());
     }
+    */
 
     let dir = match path.read_dir() {
         Ok(d) => d,
@@ -504,16 +542,18 @@ fn list_dir(args: &Args,
 }
 
 
-fn prepare_dir_parse(args: &Args,
+fn prepare_parse_dir(args: &Args,
                      path: &Path) {
     
     match verify_path_buf(&args,
                           &path,
     ) {
         Some(full_path) => {
+            /*
             match list_dir(&args,
                            &full_path,
-            ) {
+            */
+            match list_dir(&full_path) {
                 Some(dir_data) => {
                     
                     parse_dir(
@@ -541,7 +581,7 @@ fn main() {
     };
 
     // START WITH ARG DIR 
-    prepare_dir_parse(&args,
+    prepare_parse_dir(&args,
                       &args.path,
     );
 }
@@ -551,15 +591,57 @@ fn main() {
 mod tests {
     use super::*;
     use std::env;
-    
+
     #[test]
-    fn relative_path_to_absolute(){
+    fn normalize_file() {
+        use std::fs::{File, remove_file};
+    
+        let name_in = "ŽÍžaLa.jŮlie.není.Šnek";
+        
+        let _file = File::create(name_in);
+
+        let path_in = Path::new(name_in);
 
         let args = Args {
             path: Path::new(".").to_path_buf(),
+            simulate: false, //true,
+            recursive: false,
+            verbose: true,
             ..Args::default()
         };
 
+        // Struct
+        let normalized_file = normalize_chars(path_in,
+                                              &args,
+        );
+
+        /*
+        assert_eq!("zizala_julie_neni.snek",
+                   &result,
+        );
+        */
+
+        let _remove = remove_file(path_in);
+        
+        assert_eq!(Path::new("zizala_julie_neni.snek"),
+                   Path::new(&normalized_file.output),
+        );
+        
+    }
+
+
+    #[test]
+    fn relative_path_to_absolute() {
+
+        let args = Args {
+            path: Path::new(".").to_path_buf(),
+            simulate: true,
+            recursive: false,
+            verbose: false,
+            ..Args::default()
+        };
+
+        // TRY TO SIMULATE ERROR
         let cwd = env::current_dir().unwrap();
 
         /* // $cargo test -- --nocapture
@@ -597,7 +679,7 @@ mod tests {
     }
     
     #[test]
-    fn replace_diacritics(){
+    fn replace_diacritics() {
         assert_eq!(remove_diacritics("tRPaslÍČek"),
 
                    String::from("tRPaslICek"),
@@ -606,7 +688,7 @@ mod tests {
 
     // OBSOLETE as file_name and file_extension are seperate
     #[test]
-    fn replace_diacritics_with_dots(){
+    fn replace_diacritics_with_dots() {
         assert_eq!(remove_diacritics("ŽÍžaLa.jŮlie"),
 
                    String::from("ZIzaLa.jUlie"),
@@ -614,7 +696,7 @@ mod tests {
     }
 
     #[test]
-    fn char_duplicity(){
+    fn char_duplicity() {
         assert_eq!(remove_duplicity(&String::from("a---B-c--D"),
                                     '-'),
 
@@ -623,7 +705,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_char_name_with_dia(){
+    fn replace_char_name_with_dia() {
         assert_eq!(
             replace_char_to_substitute(
                 &remove_diacritics(
@@ -636,7 +718,7 @@ mod tests {
     }
 
     #[test]
-    fn replace_char_name_without_dia(){
+    fn replace_char_name_without_dia() {
         assert_eq!(
             replace_char_to_substitute(
                 &String::from("mucho*murka*achjo*skyt"),
