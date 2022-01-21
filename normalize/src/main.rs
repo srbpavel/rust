@@ -4,6 +4,8 @@ use std::{fs::{self,
 
           path::{Path,
                  PathBuf},
+
+          io::{Error, ErrorKind},
 };
 
 mod command_args;
@@ -32,7 +34,6 @@ pub trait SfTrait {
     fn update_rename_status(& mut self);
 
     fn rename(&self,
-              //args: &Args);
               args: &Args) -> Result<(), std::io::Error>;
 }
 
@@ -89,18 +90,17 @@ impl SfTrait for SingleFile<'_> {
               args: &Args) -> Result<(), std::io::Error> {
 
         match create_output_path_buf(&self) {
-            Some(output) =>
-                {
+            Some(output) => {
                 rename_file(self.path.to_path_buf(), // IN
                             output, // OUT
                             &args,
-                )//;//,
-                },
+                )
+            },
             
             None => {
                 std::result::Result::Err{
-                    0: std::io::Error::new(
-                        std::io::ErrorKind::Other,
+                    0: Error::new(
+                        ErrorKind::Other,
                         format!("\n#ERROR: {:#?}\nREASON >>> rename not started as not valid PathBuf",
                                 self.path)
                     )
@@ -235,10 +235,10 @@ fn rename_file(input: PathBuf,
             }
             */
         } else {
-            //std::result::Result::Ok(())
+
             std::result::Result::Err{
-                0: std::io::Error::new(
-                    std::io::ErrorKind::Other,
+                0: Error::new(
+                    ErrorKind::Other,
                     format!("\n#WARNING: {:#?}\nREASON >>> rename with simulate true",
                             args)
                 )
@@ -248,11 +248,9 @@ fn rename_file(input: PathBuf,
     } else {
        println!("  @ WARNING: destination file exists >>> {}", debug_data);
 
-       //std::result::Result::Ok(())
-
        std::result::Result::Err{
-           0: std::io::Error::new(
-               std::io::ErrorKind::Other,
+           0: Error::new(
+               ErrorKind::Other,
                format!("  @ WARNING: destination file exists >>> {}",
                        debug_data)
            )
@@ -437,8 +435,20 @@ fn match_element(n: &str,
                     
                     // RENAME
                     if single_file.rename_status {
-                        let rename_status = single_file.rename(&args);
-                        println!("  #RENAME_STATUS: {:?}", rename_status);
+                        let _rename_status = single_file.rename(&args);
+                        //println!("  #RENAME_STATUS: {:?}", rename_status);
+
+                        /*
+                        match _rename_status {
+                            Ok(status) => {
+                                println!("  RENAME_STATUS: {:?}", status);
+                            },
+                            
+                            Err(err) => {
+                                eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
+                            }
+                        }
+                        */
                         
                     };
                 },
@@ -595,7 +605,7 @@ mod tests {
         let _create_result = File::create(name_in);
         let path_in = Path::new(name_in);
 
-        // FAKE ARGS
+        // TEST ARGS
         let args = Args {
             verbose: true,
             ..Args::default()
@@ -613,13 +623,14 @@ mod tests {
         };
         */
 
+        // RENAME
         let rename_status = normalized_file.rename(&args);
         println!("RENAME_STATUS {:#?}", rename_status);
        
-        // ORIGINAL
+        // DELETE ORIGINAL
         //let remove_result = remove_file(path_in);
-        // RENAMED
-        //let remove_result = remove_file(&normalized_file.output);
+
+        // DELETE NORMALIZED
         let remove_result = match remove_file(&normalized_file.output) {
             Ok(()) => true,
             Err(_) => false,
@@ -627,8 +638,8 @@ mod tests {
         
         println!("DELETE_STATUS {:#?}", remove_result);
 
-        
-        // just testing name, not real existing path
+
+        // Path compare
         /*
         assert_eq!(Path::new("zizala_julie_neni.snek"),
                    Path::new(&normalized_file.output),
@@ -646,7 +657,8 @@ mod tests {
         // /*
         assert_eq!(remove_result, true);
         // */
-        
+
+        // RENAME RESULT status
         /*
         assert_eq!(normalized_file.rename(&args),
                    Ok(()),
