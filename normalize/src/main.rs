@@ -223,35 +223,25 @@ fn rename_file(input: PathBuf,
             // RENAME
             fs::rename(input, output)
 
-            /*
-            match fs::rename(input, output) {
-                Ok(_) => {
-                    println!("  RENAME: {}", debug_data);
-                },
-                
-                Err(err) => {
-                    eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
-                }
-            }
-            */
         } else {
 
             std::result::Result::Err{
                 0: Error::new(
                     ErrorKind::Other,
-                    format!("\n#WARNING: {:#?}\nREASON >>> rename with simulate true",
-                            args)
+                    format!("# Err WARNING: {:?} REASON >>> .rename() with simulate: {}",
+                            output,
+                            args.simulate,
+                    )
                 )
             }
         }
        
     } else {
-       println!("  @ WARNING: destination file exists >>> {}", debug_data);
 
        std::result::Result::Err{
            0: Error::new(
                ErrorKind::Other,
-               format!("  @ WARNING: destination file exists >>> {}",
+               format!("@ Err ERROR: destination file exists >>> {}",
                        debug_data)
            )
        }
@@ -432,29 +422,26 @@ fn match_element(n: &str,
                         single_file.debug();
                     };
                     
-                    
                     // RENAME
                     if single_file.rename_status {
-                        let _rename_status = single_file.rename(&args);
-                        //println!("  #RENAME_STATUS: {:?}", rename_status);
+                        let rename_status = single_file.rename(&args);
 
-                        /*
-                        match _rename_status {
-                            Ok(status) => {
-                                println!("  RENAME_STATUS: {:?}", status);
+                        match rename_status {
+                            Ok(_) => {
+                                if args.verbose{ 
+                                    println!("  RENAME_STATUS: Ok");
+                                }
                             },
                             
                             Err(err) => {
-                                eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
+                                eprintln!("  RENAME_STATUS: {}", err);
                             }
                         }
-                        */
-                        
                     };
                 },
                 
                 Err(err) => {
-                    eprintln!("\nERROR: FILE element: {:?}\n>>> Reason: {}",
+                    eprintln!("  ERROR: FILE element: {:?}\n>>> Reason: {}",
                               element,
                               err,
                     );
@@ -484,7 +471,7 @@ fn match_element(n: &str,
         },
 
         // ERROR ARM from DirEntry.metadata()
-        _ => {},
+        _ => { /* nothing to do for now */ },
     }
 }
 
@@ -496,7 +483,7 @@ fn parse_dir(dir: ReadDir,
         match element // DirEntry
             .as_ref() // FOR INNER ELEMENT USAGE
             .and_then(|e| Ok(match e.metadata() {
-                // BOOL TO STRING AS NEED TO HANDLE if METADATA ERROR
+                // BOOL -> STRING as need to handle if metadata ERROR
                 Ok(m) => format!("{}", m.is_file()),
                 
                 Err(err) => {
@@ -512,7 +499,7 @@ fn parse_dir(dir: ReadDir,
             )) {
                 
                 Ok(n) => {
-                    match_element(&n,
+                    match_element(&n, // n is "true" || "false" || ""
                                   element,
                                   &args,
                     );
@@ -565,11 +552,19 @@ fn prepare_parse_dir(args: &Args,
                     )
                 },
                 
-                None => {}
+                None => {
+                    // PERMISSION DENIED to read dir data
+                    // future use
+                    eprintln!("Err <list_dir> path: {:?} {:?}", path, args);
+                }
             }
         },
 
-        None => {}
+        None => {
+            // NON EXISTING path/dir
+            // future use
+            eprintln!("Err <verify_path_buf> path {:?} {:?}", path, args);
+        }
     }
 }
 
@@ -605,9 +600,10 @@ mod tests {
         let _create_result = File::create(name_in);
         let path_in = Path::new(name_in);
 
-        // TEST ARGS
         let args = Args {
-            verbose: true,
+            verbose: false,
+            // DEBUG
+            //verbose: true,
             ..Args::default()
         };
 
@@ -616,56 +612,44 @@ mod tests {
         );
 
         // RENAME
-        /*
-        if normalized_file.rename_status {
-            normalized_file.rename(&args);
-        
-        };
-        */
-
-        // RENAME
+        // NOT TESTING STATUS as "name_in" is created to be renamed
         let rename_status = normalized_file.rename(&args);
-        println!("RENAME_STATUS {:#?}", rename_status);
-       
+
+        //OBSOLETE
         // DELETE ORIGINAL
-        //let remove_result = remove_file(path_in);
+        // let remove_result = remove_file(path_in);
 
         // DELETE NORMALIZED
         let remove_result = match remove_file(&normalized_file.output) {
             Ok(()) => true,
             Err(_) => false,
         };
+
+        if args.verbose {
+            println!("  @ RENAME_STATUS: {:?}\n  @ DELETE_STATUS: {:?}",
+                     rename_status,
+                     remove_result,
+            )
+        }
         
-        println!("DELETE_STATUS {:#?}", remove_result);
-
-
-        // Path compare
+        // to compare Path
         /*
         assert_eq!(Path::new("zizala_julie_neni.snek"),
                    Path::new(&normalized_file.output),
         );
         */
 
-        // Path status
+        // to compare Path status
         /*
         assert_eq!(Path::new(&normalized_file.output).exists(),
                    true,
         );
         */
 
-        // DELETE status
-        // /*
-        assert_eq!(remove_result, true);
-        // */
-
-        // RENAME RESULT status
-        /*
-        assert_eq!(normalized_file.rename(&args),
-                   Ok(()),
-        );
-        */
+        // to compare DELETE result to bool
+        // all previous steps needs to be valid to succed
+        assert_eq!(remove_result, true)
     }
-
 
     #[test]
     fn relative_path_to_absolute() {
