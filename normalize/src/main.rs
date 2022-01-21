@@ -4,8 +4,6 @@ use std::{fs::{self,
 
           path::{Path,
                  PathBuf},
-
-          //io,
 };
 
 mod command_args;
@@ -34,7 +32,8 @@ pub trait SfTrait {
     fn update_rename_status(& mut self);
 
     fn rename(&self,
-              args: &Args);
+              //args: &Args);
+              args: &Args) -> Result<(), std::io::Error>;
 }
 
 
@@ -87,16 +86,26 @@ impl SfTrait for SingleFile<'_> {
     }
     
     fn rename(&self,
-              args: &Args) {
+              args: &Args) -> Result<(), std::io::Error> {
 
         match create_output_path_buf(&self) {
-            Some(output) => 
+            Some(output) =>
+                {
                 rename_file(self.path.to_path_buf(), // IN
                             output, // OUT
                             &args,
-                ),
-
-            None => {}
+                )//;//,
+                },
+            
+            None => {
+                std::result::Result::Err{
+                    0: std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("\n#ERROR: {:#?}\nREASON >>> rename not started as not valid PathBuf",
+                                self.path)
+                    )
+                }
+            }
         }
     }
 }
@@ -196,7 +205,7 @@ fn verify_path_buf(args: &Args,
 
 fn rename_file(input: PathBuf,
                output: PathBuf,
-               args: &Args) {
+               args: &Args) -> Result<(), std::io::Error> {
 
     let debug_data = format!("{:?} -> {:?}",
                            input,
@@ -209,9 +218,12 @@ fn rename_file(input: PathBuf,
     };
 
     // VERIFY NOT TO OVERWRITE if any
-    if !output.as_path().exists() {
+   if !output.as_path().exists() {
         if !args.simulate {
             // RENAME
+            fs::rename(input, output)
+
+            /*
             match fs::rename(input, output) {
                 Ok(_) => {
                     println!("  RENAME: {}", debug_data);
@@ -221,9 +233,30 @@ fn rename_file(input: PathBuf,
                     eprintln!("\nERROR: RENAME\nREASON >>> {}", err);
                 }
             }
+            */
+        } else {
+            //std::result::Result::Ok(())
+            std::result::Result::Err{
+                0: std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("\n#WARNING: {:#?}\nREASON >>> rename with simulate true",
+                            args)
+                )
+            }
         }
+       
     } else {
-        println!("  @ WARNING: destination file exists >>> {}", debug_data);
+       println!("  @ WARNING: destination file exists >>> {}", debug_data);
+
+       //std::result::Result::Ok(())
+
+       std::result::Result::Err{
+           0: std::io::Error::new(
+               std::io::ErrorKind::Other,
+               format!("  @ WARNING: destination file exists >>> {}",
+                       debug_data)
+           )
+       }
     }
 }
 
@@ -359,46 +392,24 @@ fn parse_file(path: &Path,
 }
 
 
-//fn normalize_chars(entry: &DirEntry,
 fn normalize_chars<'f>(entry: &'f Path,
-                   //args: &Args) -> PathBuf {
-                   //args: &Args) -> String {
-                   args: &'f Args) -> SingleFile<'f > {
+                       args: &'f Args) -> SingleFile<'f > {
 
     // FULL_PATH
-    //let mut file = SingleFile {path: &entry.path(),
-    let mut file = SingleFile {path: &entry,
-
-                               ..SingleFile::default()
+    let mut single_file = SingleFile {path: &entry,
+                                      ..SingleFile::default()
     };
 
     // SPLIT NAME + EXT -> remove dia + replace non 09AZaz <- join back
-    file.parse(&args);
+    single_file.parse(&args);
 
     // TEST FOR substitute_char duplicity and replace if any
-    file.char_duplicity(args.substitute_char);
+    single_file.char_duplicity(args.substitute_char);
     
     // if RENAME is needed
-    file.update_rename_status();
+    single_file.update_rename_status();
 
-    // DEBUG
-    /*
-    if args.verbose {
-        file.debug();
-    };
-    */
-
-    // RENAME
-    /*
-    if file.rename_status {
-        file.rename(&args)
-    };
-    */
-
-    //file.path.to_path_buf()
-    //Path::new(&file.output).to_path_buf()
-    //String::from(file.output)
-    file
+    single_file
 }
 
 
@@ -418,12 +429,6 @@ fn match_element(n: &str,
                                                       &args,
                     );
                     
-                    /*
-                    normalize_chars(&file,
-                                    &args,
-                    )
-                    */
-
                     // DEBUG
                     if args.verbose {
                         single_file.debug();
@@ -431,12 +436,11 @@ fn match_element(n: &str,
                     
                     
                     // RENAME
-                    // /*
                     if single_file.rename_status {
-                        single_file.rename(&args)
+                        let rename_status = single_file.rename(&args);
+                        println!("  #RENAME_STATUS: {:?}", rename_status);
+                        
                     };
-                    // */
-                    
                 },
                 
                 Err(err) => {
@@ -515,15 +519,7 @@ fn parse_dir(dir: ReadDir,
 }
 
 
-//fn list_dir(_args: &Args,
 fn list_dir(path: &Path) -> Option<ReadDir> {  
-
-    // DEBUG
-    /*
-    if args.verbose {
-        println!("\n>>> DIR_PATH: {}", path.display());
-    }
-    */
 
     let dir = match path.read_dir() {
         Ok(d) => d,
@@ -549,10 +545,7 @@ fn prepare_parse_dir(args: &Args,
                           &path,
     ) {
         Some(full_path) => {
-            /*
-            match list_dir(&args,
-                           &full_path,
-            */
+
             match list_dir(&full_path) {
                 Some(dir_data) => {
                     
@@ -593,40 +586,72 @@ mod tests {
     use std::env;
 
     #[test]
-    fn normalize_file() {
-        use std::fs::{File, remove_file};
+    fn normalize_filename() {
+        use std::fs::{File,
+                      remove_file,
+        };
     
         let name_in = "ŽÍžaLa.jŮlie.není.Šnek";
-        
-        let _file = File::create(name_in);
-
+        let _create_result = File::create(name_in);
         let path_in = Path::new(name_in);
 
+        // FAKE ARGS
         let args = Args {
-            path: Path::new(".").to_path_buf(),
-            simulate: false, //true,
-            recursive: false,
             verbose: true,
             ..Args::default()
         };
 
-        // Struct
-        let normalized_file = normalize_chars(path_in,
-                                              &args,
+        let normalized_file: SingleFile = normalize_chars(path_in,
+                                                          &args,
         );
 
+        // RENAME
         /*
-        assert_eq!("zizala_julie_neni.snek",
-                   &result,
-        );
+        if normalized_file.rename_status {
+            normalized_file.rename(&args);
+        
+        };
         */
 
-        let _remove = remove_file(path_in);
+        let rename_status = normalized_file.rename(&args);
+        println!("RENAME_STATUS {:#?}", rename_status);
+       
+        // ORIGINAL
+        //let remove_result = remove_file(path_in);
+        // RENAMED
+        //let remove_result = remove_file(&normalized_file.output);
+        let remove_result = match remove_file(&normalized_file.output) {
+            Ok(()) => true,
+            Err(_) => false,
+        };
         
+        println!("DELETE_STATUS {:#?}", remove_result);
+
+        
+        // just testing name, not real existing path
+        /*
         assert_eq!(Path::new("zizala_julie_neni.snek"),
                    Path::new(&normalized_file.output),
         );
+        */
+
+        // Path status
+        /*
+        assert_eq!(Path::new(&normalized_file.output).exists(),
+                   true,
+        );
+        */
+
+        // DELETE status
+        // /*
+        assert_eq!(remove_result, true);
+        // */
         
+        /*
+        assert_eq!(normalized_file.rename(&args),
+                   Ok(()),
+        );
+        */
     }
 
 
@@ -641,9 +666,10 @@ mod tests {
             ..Args::default()
         };
 
-        // TRY TO SIMULATE ERROR
+        // TRY TO SIMULATE ERROR !!!
         let cwd = env::current_dir().unwrap();
 
+        // DEBUG TEST
         /* // $cargo test -- --nocapture
         // ugly, but just be sure
         println!("TEST:\n cwd: {:?}\n rel: {:?}",
