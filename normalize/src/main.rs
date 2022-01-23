@@ -142,16 +142,6 @@ impl SfTrait for SingleFile<'_> {
                                 self.path)
                     )
                 )
-                
-                /*
-                std::result::Result::Err{
-                    0: Error::new(
-                        ErrorKind::Other,
-                        format!("\n#ERROR: {:#?}\nREASON >>> rename not started as not valid PathBuf",
-                                self.path)
-                    )
-                }
-                */
             }
         }
     }
@@ -275,25 +265,11 @@ fn rename_file(input: PathBuf,
             Err(
                 Error::new(
                     ErrorKind::Other,
-                    //format!("# Err WARNING: {:?} REASON >>> .rename() with simulate: {}",
                     format!("# INFO: simulate {:?}",
                             output,
-                            //args.simulate,
                     )
                 )
             )
-            
-            /*
-            std::result::Result::Err{
-                0: Error::new(
-                    ErrorKind::Other,
-                    format!("# Err WARNING: {:?} REASON >>> .rename() with simulate: {}",
-                            output,
-                            args.simulate,
-                    )
-                )
-            }
-            */
         }
        
     } else {
@@ -305,16 +281,6 @@ fn rename_file(input: PathBuf,
                        debug_data)
            )
        )
-           
-       /*
-       std::result::Result::Err{
-           0: Error::new(
-               ErrorKind::Other,
-               format!("@ Err ERROR: destination file exists >>> {}",
-                       debug_data)
-           )
-       }
-       */
     }
 }
 
@@ -653,7 +619,7 @@ fn main() {
                       &args.path,
     );
 
-    // ENUM
+    // ENUM 
     /*
     println!("\n#ENUM: {a:?} / {a} // {c:?} / {ci}",
              a=Letters::A,
