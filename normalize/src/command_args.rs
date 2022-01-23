@@ -1,7 +1,7 @@
 use clap::{Parser};
 use std::path::Path;
 
-
+// TRY to do the same with Build Patern
 #[derive(Debug)]
 #[derive(Parser)]
 #[clap(
@@ -10,14 +10,14 @@ use std::path::Path;
     about = "\nRename files with non alpha-numeric characters + remove diacritics + lowercase in given path or current directory and descendant directories",
     author = "\nPavel SRB <prace@srbpavel.cz>")]
 pub struct Args {
-    #[clap(parse(from_os_str))]
+    #[clap(parse(from_os_str))] // path is possitional + default_value
     #[clap(
         default_value=".",
         help="working path / `pwd`",
         index=1)]
     pub path: std::path::PathBuf,
 
-    #[clap(parse(try_from_str))]
+    #[clap(parse(try_from_str))] // this + bool type -> sets arg as required
     #[clap(
         short = 's',
         long = "simulate",
@@ -41,7 +41,7 @@ pub struct Args {
         name="SUBSTITUTE CHAR",
         short = 'c',
         long = "substitute",
-        default_value="_",
+        default_value="_", // default + char type -> optional
         help="substitute char")]
     pub substitute_char: char,
 }

@@ -6,10 +6,46 @@ use std::{fs::{self,
                  PathBuf},
 
           io::{Error, ErrorKind},
+
 };
 
 mod command_args;
 use command_args::{Args};
+
+
+/*
+use std::fmt;
+
+#[allow(dead_code)]
+#[derive(Debug)]
+enum Letters {
+    A,
+    B,
+    C,
+    D
+}
+
+
+impl fmt::Display for Letters {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // /*
+        let printable = match *self {
+            Letters::A => "aaa",
+            Letters::B => "bbb",
+            Letters::C => "ccc",
+            Letters::D => "ddd",
+        };
+
+        write!(f, "{}", printable)
+        // */
+
+        /*
+        write!(f, "{:?}", self) // this call's Debug::fmt
+        write!(f, "{}", self) // call's Display    
+        */
+    }
+}
+*/
 
 
 #[derive(Debug)]
@@ -34,7 +70,7 @@ pub trait SfTrait {
     fn update_rename_status(& mut self);
 
     fn rename(&self,
-              args: &Args) -> Result<(), std::io::Error>;
+              args: &Args) -> Result<(), Error>;
 }
 
 
@@ -87,7 +123,7 @@ impl SfTrait for SingleFile<'_> {
     }
     
     fn rename(&self,
-              args: &Args) -> Result<(), std::io::Error> {
+              args: &Args) -> Result<(), Error> {
 
         match create_output_path_buf(&self) {
             Some(output) => {
@@ -98,6 +134,16 @@ impl SfTrait for SingleFile<'_> {
             },
             
             None => {
+
+                Err(
+                    Error::new(
+                        ErrorKind::Other,
+                        format!("\n#ERROR: {:#?}\nREASON >>> rename not started as not valid PathBuf",
+                                self.path)
+                    )
+                )
+                
+                /*
                 std::result::Result::Err{
                     0: Error::new(
                         ErrorKind::Other,
@@ -105,6 +151,7 @@ impl SfTrait for SingleFile<'_> {
                                 self.path)
                     )
                 }
+                */
             }
         }
     }
@@ -205,7 +252,7 @@ fn verify_path_buf(args: &Args,
 
 fn rename_file(input: PathBuf,
                output: PathBuf,
-               args: &Args) -> Result<(), std::io::Error> {
+               args: &Args) -> Result<(), Error> {
 
     let debug_data = format!("{:?} -> {:?}",
                            input,
@@ -221,10 +268,22 @@ fn rename_file(input: PathBuf,
    if !output.as_path().exists() {
         if !args.simulate {
             // RENAME
-            fs::rename(input, output)
+            fs::rename(input, output) // -> Ok()
 
         } else {
-
+            // SIMULATE
+            Err(
+                Error::new(
+                    ErrorKind::Other,
+                    //format!("# Err WARNING: {:?} REASON >>> .rename() with simulate: {}",
+                    format!("# INFO: simulate {:?}",
+                            output,
+                            //args.simulate,
+                    )
+                )
+            )
+            
+            /*
             std::result::Result::Err{
                 0: Error::new(
                     ErrorKind::Other,
@@ -234,10 +293,20 @@ fn rename_file(input: PathBuf,
                     )
                 )
             }
+            */
         }
        
     } else {
 
+       Err(
+           Error::new(
+               ErrorKind::Other,
+               format!("@ Err ERROR: destination file exists >>> {}",
+                       debug_data)
+           )
+       )
+           
+       /*
        std::result::Result::Err{
            0: Error::new(
                ErrorKind::Other,
@@ -245,6 +314,7 @@ fn rename_file(input: PathBuf,
                        debug_data)
            )
        }
+       */
     }
 }
 
@@ -402,7 +472,7 @@ fn normalize_chars<'f>(entry: &'f Path,
 
 
 fn match_element(n: &str,
-                 element: Result<DirEntry, std::io::Error>,
+                 element: Result<DirEntry, Error>,
                  args: &Args) {
 
     match n {
@@ -582,6 +652,31 @@ fn main() {
     prepare_parse_dir(&args,
                       &args.path,
     );
+
+    // ENUM
+    /*
+    println!("\n#ENUM: {a:?} / {a} // {c:?} / {ci}",
+             a=Letters::A,
+             c=Letters::C,
+             ci=Letters::C as u8,
+    );
+
+    let pozdrav = || "zdar a silu";
+    let ahoooj = |name: &str| { format!("ahoooj {}", name) };
+    println!("pozdrav: {} / {}",
+             pozdrav(),
+             ahoooj("vole"),
+             );
+    
+    let low = "fookume";
+    let high = "PaVeL sRb";
+    let velka = |t: &str| String::from(t).to_uppercase();
+    let mala = |t: &str| String::from(t).to_lowercase();
+    println!("nahoru: {} / dolu: {}",
+             velka(low),
+             mala(high),
+    );
+    */
 }
 
 
@@ -613,7 +708,7 @@ mod tests {
 
         // RENAME
         // NOT TESTING STATUS as "name_in" is created to be renamed
-        let rename_status = normalized_file.rename(&args);
+        let rename_result = normalized_file.rename(&args);
 
         //OBSOLETE
         // DELETE ORIGINAL
@@ -627,7 +722,7 @@ mod tests {
 
         if args.verbose {
             println!("  @ RENAME_STATUS: {:?}\n  @ DELETE_STATUS: {:?}",
-                     rename_status,
+                     rename_result,
                      remove_result,
             )
         }
@@ -648,7 +743,7 @@ mod tests {
 
         // to compare DELETE result to bool
         // all previous steps needs to be valid to succed
-        assert_eq!(remove_result, true)
+        assert!(remove_result)
     }
 
     #[test]
