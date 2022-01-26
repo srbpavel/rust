@@ -250,9 +250,12 @@ fn rename_file(input: PathBuf,
     );
     
     // DEBUG
+    println!("  {}", debug_data);
+    /*
     if args.verbose {
         println!("  @ WILL RENAME: {}", debug_data);
     };
+    */
 
     // VERIFY NOT TO OVERWRITE if any
    if !output.as_path().exists() {
@@ -266,7 +269,8 @@ fn rename_file(input: PathBuf,
                 Error::new(
                     ErrorKind::Other,
                     format!("# INFO: simulate {:?}",
-                            output,
+                            //output,
+                            input,
                     )
                 )
             )
@@ -456,6 +460,8 @@ fn match_element(n: &str,
                     // DEBUG
                     if args.verbose {
                         single_file.debug();
+                    } else {
+                        println!("");
                     };
                     
                     // RENAME
@@ -473,6 +479,9 @@ fn match_element(n: &str,
                                 eprintln!("  RENAME_STATUS: {}", err);
                             }
                         }
+                    } else {
+                        println!("  RENAME_STATUS: no need to rename {:?}",
+                        single_file.path);
                     };
                 },
                 
@@ -591,7 +600,7 @@ fn prepare_parse_dir(args: &Args,
                 None => {
                     // PERMISSION DENIED to read dir data
                     // future use
-                    eprintln!("Err <list_dir> path: {:?} {:?}", path, args);
+                    eprintln!("Err <list_dir> path: {:?} {:?}\n", path, args);
                 }
             }
         },
@@ -599,7 +608,7 @@ fn prepare_parse_dir(args: &Args,
         None => {
             // NON EXISTING path/dir
             // future use
-            eprintln!("Err <verify_path_buf> path {:?} {:?}", path, args);
+            eprintln!("Err <verify_path_buf> path: {:?} {:?}\n", path, args);
         }
     }
 }
