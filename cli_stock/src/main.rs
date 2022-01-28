@@ -3,47 +3,41 @@ use clap::Clap;
 use std::io::{Error, ErrorKind};
 use yahoo_finance_api as yahoo;
 
-use async_std::prelude::*;
-use async_trait::async_trait;
+use futures::StreamExt; // for_each_concurent || for_each
+//use async_std::stream::StreamExt; // did not succed to compile
+//use async_std::prelude::*;
 
+use rand::Rng;
 
 #[derive(Clap)]
 #[clap(
-    version = "1.2",
-    author = "Pavel SRB <prace@srbpavel.cz>",
-    about = "A Manning LiveProject: async Rust -> originaly from Claus Matzinger"
+    version = "1.0",
+    author = "Claus Matzinger",
+    about = "A Manning LiveProject: async Rust"
 )]
 #[derive(Debug)]
 struct Opts {
-    /// string like AAPL,MSFT,UBER or filename
-    #[clap(
-        short,
-        long,
-        default_value = "AAPL,MSFT,UBER,GOOG",
-    )]
+    #[clap(short, long, default_value = "AAPL,MSFT,UBER,GOOG")]
     symbols: String,
 
-    /// format 2020-12-20T00:00:00Z
     #[clap(short, long)]
     from: String,
 
-    /// debug info
+    /// DEBUG via sleep to verify async is working
     #[clap(parse(try_from_str))]
     #[clap(short, long, default_value = "false")]
     verify: bool,
 }
 
 
-type RecordType = f64;
-
 /// computed values for each collect member
 #[derive(Debug)]
 struct Record {
-    min: RecordType,
-    max: RecordType,
-    last: RecordType,
-    diff: RecordType,
-    sma: Vec<RecordType>,
+    min: f64,
+    max: f64,
+    last: f64,
+    diff: f64,
+    sma: Vec<f64>,
 }
 
 
@@ -61,42 +55,30 @@ impl Signal {
     }
 }
 
-#[async_trait]
 trait AsyncStockSignal {
     type SignalType;
 
-    async fn a_min(&self, series: &[f64]) -> Option<Self::SignalType>;
-    async fn a_max(&self, series: &[f64]) -> Option<Self::SignalType>;
-    async fn a_last(&self, series: &[f64]) -> Option<Self::SignalType>;
+    fn min(&self, series: &[f64]) -> Option<Self::SignalType>;
+
+    fn max(&self, series: &[f64]) -> Option<Self::SignalType>;
+
+    fn last(&self, series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for simple f64 result's
-#[async_trait]
 impl AsyncStockSignal for Signal {
     type SignalType = f64;
 
-    async fn a_min(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
-
-        if series.is_empty() {
-            None
-        } else {
-            Some(series.iter().fold(f64::MAX, |acc, q| acc.min(*q)))
-        }
+    fn min(&self, series: &[f64]) -> Option<Self::SignalType> {
+        min(&series)
     }
             
-    async fn a_max(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
-
-        if series.is_empty() {
-            None
-        } else {
-            Some(series.iter().fold(f64::MIN, |acc, q| acc.max(*q)))
-        }
+    fn max(&self, series: &[f64]) -> Option<Self::SignalType> {
+        max(&series)
     }
 
-    async fn a_last(&self,
-                    series: &[f64]) -> Option<Self::SignalType> {
+    fn last(&self,
+            series: &[f64]) -> Option<Self::SignalType> {
 
         match series.last() {
             Some(l) => Some(*l),
@@ -105,348 +87,305 @@ impl AsyncStockSignal for Signal {
     }
 }
 
-#[async_trait]
 trait PriceDifference {
     type SignalType;
 
-    async fn a_diff(&self,
-                    series: &[f64]) -> Option<Self::SignalType>;
+    fn diff(&self, series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for tuple (f64, f64) <- (ABS, REL)
 /// no need to shrink it to single f64 in case of future use
-#[async_trait]
 impl PriceDifference for Signal {
     type SignalType = (f64, f64);
 
-    async fn a_diff(&self,
-                    series: &[f64]) -> Option<Self::SignalType> {
-
-        if !series.is_empty() {
-            // unwrap is safe here even if first == last
-            let (first, last) = (series.first().unwrap(), series.last().unwrap());
-            let abs_diff = last - first;
-            let first = if *first == 0.0 { 1.0 } else { *first };
-            let rel_diff = abs_diff / first;
-
-            Some((abs_diff, rel_diff))
-
-        } else {
-
-            None
-        }
+    fn diff(&self, series: &[f64]) -> Option<Self::SignalType> {
+        price_diff(&series)
     }
 }
 
-#[async_trait]
 trait WindowedSMA {
     type SignalType;
 
-    async fn a_sma(&self,
-                   series: &[f64]) -> Option<Self::SignalType>;
+    fn sma(&self,
+           series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for Vec<f64>
-#[async_trait]
 impl WindowedSMA for Signal {
     type SignalType = Vec<f64>;
 
-    async fn a_sma(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
-
-        if !series.is_empty() && self.window_size > 1 {
-            Some(
-                series
-                    .windows(self.window_size,)
-                    .map(|w| w.iter().sum::<f64>() / w.len() as f64)
-                    .collect(),
-            )
-
-        } else {
-
-            None
-        }
+    fn sma(&self,
+           series: &[f64]) -> Option<Self::SignalType> {
+        
+        n_window_sma(self.window_size,
+                     &series,
+        )
     }
 }
 
+
+fn price_diff(a: &[f64]) -> Option<(f64, f64)> {
+    if !a.is_empty() {
+        // unwrap is safe here even if first == last
+        let (first, last) = (a.first().unwrap(), a.last().unwrap());
+        let abs_diff = last - first;
+        let first = if *first == 0.0 { 1.0 } else { *first };
+        let rel_diff = abs_diff / first;
+        Some((abs_diff, rel_diff))
+    } else {
+        None
+    }
+}
+
+fn n_window_sma(n: usize, series: &[f64]) -> Option<Vec<f64>> {
+    if !series.is_empty() && n > 1 {
+        Some(
+            series
+                .windows(n)
+                .map(|w| w.iter().sum::<f64>() / w.len() as f64)
+                .collect(),
+        )
+    } else {
+        None
+    }
+}
+
+fn max(series: &[f64]) -> Option<f64> {
+    if series.is_empty() {
+        None
+    } else {
+        Some(series.iter().fold(f64::MIN, |acc, q| acc.max(*q)))
+    }
+}
+
+fn min(series: &[f64]) -> Option<f64> {
+    if series.is_empty() {
+        None
+    } else {
+        Some(series.iter().fold(f64::MAX, |acc, q| acc.min(*q)))
+    }
+}
+
+// ASYNC
 async fn fetch_closing_data(
     symbol: &str,
     beginning: &DateTime<Utc>,
     end: &DateTime<Utc>,
-    _debug: bool) -> std::io::Result<Vec<f64>> {
+    _debug: bool,
+    _delay: u64) -> std::io::Result<Vec<f64>> {
 
     //println!("FETCH: {} -> {}", symbol, _delay);
     
     let provider = yahoo::YahooConnector::new();
 
-    /*
-    pub struct YResponse {
-        pub chart: YChart,
-    }
-
-    pub struct YChart {
-        pub result: Vec<YQuoteBlock>,
-        pub error: Option<String>,
-    }
-    */
-    
     let response = provider
         .get_quote_history(symbol, *beginning, *end)
         .await
-        .map_err(|_| Error::from(ErrorKind::InvalidData))?;
-
-    /*
-    println!("RESPONSE: {:?}",
-             response
-             .chart
-             .result
-             .last() //.len()
-             .unwrap()
-             //.meta
-             // .timestamp // 1608561000 len() 10 -> sec
-             .indicators // QuoteBlock
-             ,
-    );
-
-    Result<Vec<Quote>, YahooError>
-
-    pub struct Quote {
-        pub timestamp: u64,
-        pub open: f64,
-        pub high: f64,
-        pub low: f64,
-        pub volume: u64,
-        pub close: f64,
-        pub adjclose: f64,
-    }
-
-    Quote { timestamp: 1642775400,
-            open: 314.80999755859375,
-            high: 318.30999755859375,
-            low: 303.0400085449219,
-            volume: 28661700,
-            close: 303.1700134277344,
-            adjclose: 303.1700134277344
-    }
-    */
+        .map_err(|_| Error::from(ErrorKind::InvalidData))
+        ?
+        //.unwrap()
+        ;
     
     let mut quotes = response
         .quotes()
-        .map_err(|_| Error::from(ErrorKind::InvalidData))?;
-
-    /* // DEBUG
-    println!("\nLAST: {:?}",
-             quotes
-             .last()
-             .unwrap()
-             //.adjclose // this is what we get for our Result Vec<f64>
-             ,
-    );
-    */
+        .map_err(|_| Error::from(ErrorKind::InvalidData))
+        ?
+        //.unwrap()
+        ;
     
     if !quotes.is_empty() {
         quotes
-            // sort slice with key extraction
             .sort_by_cached_key(|k| k.timestamp);
-
-        /*
-        println!("QUOTES SORTED: {:?}",
-                 &quotes
-                 .last()
-                 .unwrap(),
-        );
-        */
-
-        /* 
-        Ok(quotes
-           .iter()
-           .map(|q| q.adjclose as f64).collect())
-         */
         
         let adj = quotes
             .iter()
-            // filter adjclose + type conversion
             .map(|q| q.adjclose as f64)
             .collect::<Vec<_>>();
-
-        /*
-        println!("QUOTES MAP: {:?}",
-                 &adj
-                 .last(),
-        );
-        */
         
         Ok(adj)
             
-    } else {
-
-        Ok(vec![])
-    }
+    } else { Ok(vec![]) }
 }
 
-/// computed all value and store in Record
-/// traits are ASYNC
-async fn a_blocks(closes: &Vec<f64>,
-                  _debug: bool) -> Option<Record> {
+fn do_sync_symbol(symbol: &str,
+                  from: &DateTime<Utc>,
+                  to: &DateTime<Utc>,
+                  debug: bool,
+                  delay: u64) {
+
+    // ORIG
+    let closes = futures::executor::block_on(
+        fetch_closing_data(&symbol,
+                           &from,
+                           &to,
+                           debug,
+                           delay,
+        )
+    );
+
+    parse_closes(&from,
+                 &symbol,
+                 &closes.unwrap(),
+                 debug,
+    );
+}
+
+
+async fn do_async_symbol(symbol: &str,
+                         from: &DateTime<Utc>,
+                         to: &DateTime<Utc>,
+                         debug: bool,
+                         delay: u64) {
+
+    // STD
+    let closes = async { 
+        fetch_closing_data(&symbol,
+                           &from,
+                           &to,
+                           debug,
+                           delay,
+        ).await
+    };
+
+    //async {
+        parse_closes(&from,
+                     &symbol,
+                     &closes.await.unwrap(),
+                     debug,
+        );
+    //};
+}
+
+
+fn parse_closes(from: &DateTime<Utc>,
+                      symbol: &str,
+                      closes: &Vec<f64>,
+                      debug: bool) {
 
     if !closes.is_empty() {
 
-        let signal = &Signal { window_size: 30 };
-
-        let max = signal.a_max(&closes).await.unwrap();
-        let min = signal.a_min(&closes).await.unwrap();
+        let signal = &Signal { window_size: 30,
+        };
         
-        let last = match signal.a_last(&closes).await {
+        let record: Record = futures::executor::block_on(blocks(
+            &closes,
+            &signal,
+            debug,
+        ));
+        
+        // CSV data
+        println!(
+            "{f},{sy},${l:.2},{p:.2}%,${mi:.2},${ma:.2},${s:.2}",
+            f=from.to_rfc3339(),
+            sy=symbol,
+            l=record.last,
+            p=record.diff * 100.0,
+            mi=record.min,
+            ma=record.max,
+            s=record.sma.last().unwrap_or(&0.0)
+        );
+    }
+}
+
+async fn verify_delay(delay: u64,
+                      caller: &str,
+                      debug: bool) {
+
+    if caller.contains("SYM") {
+        println!(">>> SLEEP: start -> {}: {}",
+                 caller,
+                 delay,
+        );
+    }
+    
+    async_std::task::sleep(std::time::Duration::from_millis(delay*100)).await;
+
+    if caller.contains("SYM") {
+        println!(">>> SLEEP: end -> {}: {}",
+                 caller,
+                 delay,
+        );
+    }
+    
+    if debug {
+        println!("  [{delay}] {caller}");
+    }
+}
+
+async fn blocks(closes: &Vec<f64>,
+                signal: &Signal,
+                test: bool) -> Record {
+
+    let max = async {
+        // ASYNC verification via SLEEP
+        if test {
+            verify_delay(5,
+                         &format!(" {}", "max"),
+                         test).await;
+
+        }
+
+        signal.max(&closes).unwrap()
+        
+    };
+
+    let min = async {
+        if test {
+            verify_delay(3,
+                         &format!(" {}", "min"),
+                         test).await;
+        }
+        
+        signal.min(&closes).unwrap()
+    };
+    
+    let last = async {
+        if test {
+            verify_delay(1,
+                         &format!(" {}", "last"),
+                         test).await;
+        }
+            
+        match signal.last(&closes) {
             Some(l) => l,
             None => 0.0,
-        };
-        
-        let diff = signal.a_diff(&closes).await.unwrap_or((0.0, 0.0));
-        
-        let sma = signal.a_sma(&closes).await.unwrap_or_default();
-
-        let record = Record { max: max,
-                              min: min,
-                              last: last,
-                              diff: diff.1, // (ABS, REL)
-                              sma: sma,
-        };
-
-        Some(record)
-            
-    } else {
-        
-        None
-    }
-}
-
-/// show computed values is CSV format
-//async fn display_record(record_block: &Option<Record>,
-fn display_record(record_block: &Option<Record>,
-                  symbol: &str,
-                  from: &DateTime<Utc>,
-                  tick_counter: &u64,
-                  time_stamp: DateTime<Utc>,
-                  verify_flag: bool) {
-    
-    match record_block {
-
-        Some(record) => {
-
-            let debug_info = if verify_flag {
-                format!("{time_stamp:50} {tick_counter:10}")
-            } else {
-                String::from("")
-            };
-            
-            println!(
-                "{:100}{}",
-                     
-                format!(
-                    "{f},{symbol},${last:.2},{diff:.2}%,${min:.2},${max:.2},${sma:.2} ",
-                    f=from.to_rfc3339(),
-                    last=record.last,
-                    diff=record.diff * 100.0,
-                    min=record.min,
-                    max=record.max,
-                    sma=record.sma.last().unwrap_or(&0.0),
-                ),
-
-                debug_info,
-            );
-            
-        },
-        
-        None => {
-            
-        },
-    }
-}
-
-/// command arg symbols as string or filename
-fn choose_symbols(symbols: &str,
-                  verify_flag: bool) -> String {
-
-    let symbols_path = std::path::Path::new(symbols);
-    
-    let symbols_text = match symbols_path.exists() {
-
-        true => {
-
-            let content = std::fs::read_to_string(symbols_path)
-                .expect(
-                    &format!(
-                        "error reading file: {:?}",
-                        symbols_path,
-                    )
-                );
-
-            if verify_flag {
-                println!("FILE_SYMBOLS: <{}>", content.trim());
-            }
-
-            content
-        },
-
-        false => {
-
-            if verify_flag {
-                println!("ARG_SYMBOLS: <{}>", symbols);
-            }
-
-            String::from(symbols)
         }
     };
 
-    symbols_text
-}
-
-/// download new symbol data and compute values
-async fn parse_symbol(symbol: &str,
-                      from: &DateTime<Utc>,
-                      to: &DateTime<Utc>,
-                      tick_counter: &u64,
-                      debug: bool) -> Option<Record> {
-
-    // INTERVAT ts
-    let time_stamp = Utc::now();
-    
-    // DATA download
-    let data = fetch_closing_data(&symbol,
-                                  &from,
-                                  &to,
-                                  debug,
-    ).await;
-
-    // Record
-    match data {
-        
-        Ok(closes) => {
-
-            let record_block = a_blocks(&closes,
-                                        debug,
-            ).await;
+    let diff = async {
+        if test {
+            verify_delay(4,
+                         &format!(" {}", "diff"),
+                         test).await;
+        }
             
-            // display line CSV format
-            display_record(&record_block, // -> Option not Future
-                           &symbol,
-                           &from,
-                           &tick_counter,
-                           time_stamp,
-                           debug);//.await;
-            
-            record_block
-            
-        },
-        
-        Err(why) => {
-            eprintln!("ERROR: in CLOSE for SYMBOL: <{}>\n>>> REASON: {}",
-                      symbol,
-                      why,
-            );
+        signal.diff(&closes).unwrap_or((0.0, 0.0))
+    };
 
-            None
-        },
+    let sma = async {
+        if test {
+            verify_delay(2,
+                         &format!(" {}", "sma"),
+                         test).await;
+        }
+            
+        signal.sma(&closes).unwrap_or_default()
+    };
+
+
+    // tuple <- join!()
+    let values = futures::join!(max,
+                                min,
+                                last,
+                                diff,
+                                sma,
+    );
+
+    Record { max: values.0,
+             min: values.1,
+             last: values.2,
+             diff: values.3.1, // (ABS, REL)
+             sma: values.4,
     }
 }
 
@@ -455,66 +394,116 @@ async fn parse_symbol(symbol: &str,
 async fn main() {
 
     let opts = Opts::parse();
-
+    
     let from: DateTime<Utc> = opts.from.parse().expect("Couldn't parse 'from' date");
+    let to = Utc::now();
 
     let verify_flag: bool = opts.verify;
+    
+    println!("period start,symbol,price,change %,min,max,30d avg");
 
-    let to = Utc::now(); // for SYMBOLS time window
-
-    let mut start = String::from("");
-
-    if verify_flag {
-        start = String::from(format!("\nSTART: {}\n", to));
-    }
-
-    let symbols = choose_symbols(&opts.symbols,
-                                 verify_flag);
-
-    let all_symbols = symbols
+    let all_symbols = opts
+        .symbols
         .split(',')
         .collect::<Vec<_>>();
-    
-    println!("{}period start,symbol,price,change %,min,max,30d avg",
-             start,
-    );
-    
-    let delay = 30;
-    //let delay = 5;
-    
-    let mut interval = async_std::stream::interval(
-        std::time::Duration::from_millis(delay*1000));
-    
-    let mut tick_counter:u64 = 0;
+        
+    let len = all_symbols.len() as u64;
+    println!("LEN: {}", len);
 
-    while let Some(_) = interval.next().await {
+    // ASYNC ITER
+    // /*
+    /*
+    async_std::stream::from_iter(all_symbols)
+        //async_std::stream::stream::for_each::ForEachFuture
+        .for_each(move |symbol| async move {
+            let mut rng = rand::thread_rng();
+            let sleep_ms: u64 = rng.gen_range(0..len*3);
 
-        tick_counter += 1;
+            println!("SYMBOL: {} -> {}", symbol, sleep_ms);
 
-        if verify_flag {
-            println!("\nINTERVAL: {} / {}",
-                     tick_counter,
-                     Utc::now(),
+            /*
+            async_std::task::sleep(
+                std::time::Duration::from_millis(
+                    sleep_ms*100)).await;
+            */
+            // /*
+            if verify_flag {
+
+                verify_delay(sleep_ms,
+                             &format!("SYMBOL: {}", symbol),
+                             verify_flag, // DEBUG
+                             
+                ).await;
+            }
+            // */
+
+            /*
+            let closes = futures::executor::block_on(
+                fetch_closing_data(&symbol,
+                                   &from,
+                                   &to,
+                                   verify_flag,//debug,
+                                   sleep_ms,//delay,
+                )
+            );
+
+            parse_closes(&from,
+                         &symbol,
+                         &closes.unwrap(),
+                         verify_flag,//debug,
+            );
+            */
+            
+            /* // SYNC - WORKING but not correct order
+            do_sync_symbol(&symbol,
+                           &from,
+                           &to,
+                           verify_flag,
+                           sleep_ms,
+            );
+            */
+
+            /* // ASYNC
+            do_async_symbol(&symbol,
+                           &from,
+                           &to,
+                           verify_flag,
+                           sleep_ms,
+            ).await;
+            */ 
+
+        }).await;
+
+    */
+        
+    // ASYNC ITER iii
+    /*
+    futures::stream::iter(all_symbols)
+        .for_each_concurrent(20, |symbol| async move {
+            
+            let mut rng = rand::thread_rng();
+            let sleep_ms: u64 = rng.gen_range(0..len*3);
+
+            // SLEEP to verify ASYNC
+            if verify_flag {
+                
+                verify_delay(sleep_ms,
+                             &format!("SYMBOL: {}", symbol),
+                             verify_flag, // DEBUG
+                ).await;
+            }
+            
+            // SYMBOL task
+            do_sync_symbol(&symbol,
+                           &from,
+                           &to,
+                           verify_flag,
+                           sleep_ms,
             );
         }
+        ).await
+    */
         
-        let queries: Vec<_> = all_symbols
-            .iter()
-            
-            .filter(|&s| !"".eq(*s)) // filter invalid SYMBOL
-            
-            .map(|&symbol| parse_symbol(&symbol,
-                                        &from,
-                                        &to,
-                                        &tick_counter,
-                                        verify_flag,
-            ))
-            
-            .collect();
-
-        // JOIN all symbols FUTURE
-        let _ = futures::future::join_all(queries).await;
-    }
 }
 
 
