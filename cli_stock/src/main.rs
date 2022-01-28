@@ -3,11 +3,9 @@ use clap::Clap;
 use std::io::{Error, ErrorKind};
 use yahoo_finance_api as yahoo;
 
-use futures::StreamExt; // for_each_concurent || for_each
-//use async_std::stream::StreamExt; // did not succed to compile
-//use async_std::prelude::*;
-
+use futures::StreamExt;
 use rand::Rng;
+
 
 #[derive(Clap)]
 #[clap(
@@ -171,10 +169,15 @@ async fn fetch_closing_data(
     symbol: &str,
     beginning: &DateTime<Utc>,
     end: &DateTime<Utc>,
-    _debug: bool,
-    _delay: u64) -> std::io::Result<Vec<f64>> {
+    debug: bool,
+    delay: u64) -> std::io::Result<Vec<f64>> {
 
-    //println!("FETCH: {} -> {}", symbol, _delay);
+    if debug {
+        verify_delay(delay,
+                     &format!(" fetch: {}", symbol),
+                     debug,
+        ).await;
+    }
     
     let provider = yahoo::YahooConnector::new();
 
@@ -212,8 +215,14 @@ fn do_sync_symbol(symbol: &str,
                   to: &DateTime<Utc>,
                   debug: bool,
                   delay: u64) {
+    
+    /*
+    let closes = fetch_closing_data(&symbol,
+                                    &from,
+                                    &to,
+    ).unwrap();
+    */
 
-    // ORIG
     let closes = futures::executor::block_on(
         fetch_closing_data(&symbol,
                            &from,
@@ -221,8 +230,9 @@ fn do_sync_symbol(symbol: &str,
                            debug,
                            delay,
         )
+        //.unwrap()
     );
-
+    
     parse_closes(&from,
                  &symbol,
                  &closes.unwrap(),
@@ -231,48 +241,22 @@ fn do_sync_symbol(symbol: &str,
 }
 
 
-async fn do_async_symbol(symbol: &str,
-                         from: &DateTime<Utc>,
-                         to: &DateTime<Utc>,
-                         debug: bool,
-                         delay: u64) {
-
-    // STD
-    let closes = async { 
-        fetch_closing_data(&symbol,
-                           &from,
-                           &to,
-                           debug,
-                           delay,
-        ).await
-    };
-
-    //async {
-        parse_closes(&from,
-                     &symbol,
-                     &closes.await.unwrap(),
-                     debug,
-        );
-    //};
-}
-
-
 fn parse_closes(from: &DateTime<Utc>,
-                      symbol: &str,
-                      closes: &Vec<f64>,
-                      debug: bool) {
+                symbol: &str,
+                closes: &Vec<f64>,
+                debug: bool) {
 
     if !closes.is_empty() {
 
         let signal = &Signal { window_size: 30,
         };
-        
+
         let record: Record = futures::executor::block_on(blocks(
             &closes,
             &signal,
             debug,
         ));
-        
+
         // CSV data
         println!(
             "{f},{sy},${l:.2},{p:.2}%,${mi:.2},${ma:.2},${s:.2}",
@@ -291,22 +275,8 @@ async fn verify_delay(delay: u64,
                       caller: &str,
                       debug: bool) {
 
-    if caller.contains("SYM") {
-        println!(">>> SLEEP: start -> {}: {}",
-                 caller,
-                 delay,
-        );
-    }
-    
-    async_std::task::sleep(std::time::Duration::from_millis(delay*100)).await;
+    async_std::task::sleep(std::time::Duration::from_millis(delay)).await;
 
-    if caller.contains("SYM") {
-        println!(">>> SLEEP: end -> {}: {}",
-                 caller,
-                 delay,
-        );
-    }
-    
     if debug {
         println!("  [{delay}] {caller}");
     }
@@ -390,9 +360,9 @@ async fn blocks(closes: &Vec<f64>,
 }
 
 
-#[async_std::main]
+#[tokio::main(flavor = "multi_thread")] // for_each_concurrent
 async fn main() {
-
+    
     let opts = Opts::parse();
     
     let from: DateTime<Utc> = opts.from.parse().expect("Couldn't parse 'from' date");
@@ -408,91 +378,24 @@ async fn main() {
         .collect::<Vec<_>>();
         
     let len = all_symbols.len() as u64;
-    println!("LEN: {}", len);
-
-    // ASYNC ITER
-    // /*
-    /*
-    async_std::stream::from_iter(all_symbols)
-        //async_std::stream::stream::for_each::ForEachFuture
-        .for_each(move |symbol| async move {
-            let mut rng = rand::thread_rng();
-            let sleep_ms: u64 = rng.gen_range(0..len*3);
-
-            println!("SYMBOL: {} -> {}", symbol, sleep_ms);
-
-            /*
-            async_std::task::sleep(
-                std::time::Duration::from_millis(
-                    sleep_ms*100)).await;
-            */
-            // /*
-            if verify_flag {
-
-                verify_delay(sleep_ms,
-                             &format!("SYMBOL: {}", symbol),
-                             verify_flag, // DEBUG
-                             
-                ).await;
-            }
-            // */
-
-            /*
-            let closes = futures::executor::block_on(
-                fetch_closing_data(&symbol,
-                                   &from,
-                                   &to,
-                                   verify_flag,//debug,
-                                   sleep_ms,//delay,
-                )
-            );
-
-            parse_closes(&from,
-                         &symbol,
-                         &closes.unwrap(),
-                         verify_flag,//debug,
-            );
-            */
-            
-            /* // SYNC - WORKING but not correct order
-            do_sync_symbol(&symbol,
-                           &from,
-                           &to,
-                           verify_flag,
-                           sleep_ms,
-            );
-            */
-
-            /* // ASYNC
-            do_async_symbol(&symbol,
-                           &from,
-                           &to,
-                           verify_flag,
-                           sleep_ms,
-            ).await;
-            */ 
-
-        }).await;
-
-    */
-        
-    // ASYNC ITER iii
-    /*
+    
+    // ASYNC
     futures::stream::iter(all_symbols)
         .for_each_concurrent(20, |symbol| async move {
-            
+
             let mut rng = rand::thread_rng();
             let sleep_ms: u64 = rng.gen_range(0..len*3);
-
+            
             // SLEEP to verify ASYNC
             if verify_flag {
+
                 
                 verify_delay(sleep_ms,
                              &format!("SYMBOL: {}", symbol),
                              verify_flag, // DEBUG
                 ).await;
             }
-            
+
             // SYMBOL task
             do_sync_symbol(&symbol,
                            &from,
@@ -500,10 +403,9 @@ async fn main() {
                            verify_flag,
                            sleep_ms,
             );
-        }
-        ).await
-    */
+        }).await
         
+    //Ok(())
 }
 
 
