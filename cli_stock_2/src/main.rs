@@ -1,26 +1,28 @@
+use clap::{
+    //Clap,
+    Parser,
+};
+
+use std::io::{
+    Error,
+    ErrorKind,
+};
+
 use chrono::prelude::*;
-use clap::Clap;
-use std::io::{Error, ErrorKind};
+
 use yahoo_finance_api as yahoo;
 
 use async_std::prelude::*;
 use async_trait::async_trait;
 
 
-#[derive(Clap)]
-#[clap(
-    version = "1.2",
-    author = "Pavel SRB <prace@srbpavel.cz>",
-    about = "A Manning LiveProject: async Rust -> originaly from Claus Matzinger"
-)]
-#[derive(Debug)]
+//#[derive(Debug)]
+//#[derive(Clap)]
+#[derive(Parser, Debug)]
+#[clap(version = "1.2", author = "Pavel SRB <prace@srbpavel.cz>", about = "A Manning LiveProject: async Rust -> originaly from Claus Matzinger")]
 struct Opts {
     /// string like AAPL,MSFT,UBER or filename
-    #[clap(
-        short,
-        long,
-        default_value = "AAPL,MSFT,UBER,GOOG",
-    )]
+    #[clap(short, long, default_value = "AAPL,MSFT,UBER,GOOG")]
     symbols: String,
 
     /// format 2020-12-20T00:00:00Z

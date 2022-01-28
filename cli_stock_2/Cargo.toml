@@ -1,6 +1,6 @@
 [package]
-#authors = ["Pavel SRB <prace@srbpavel.cz>"] 
-authors = ["Claus Matzinger <claus.matzinger+kb@gmail.com>"] 
+authors = ["Pavel SRB <prace@srbpavel.cz>"] 
+#authors = ["Claus Matzinger <claus.matzinger+kb@gmail.com>"] 
 
 edition = "2018"
 
@@ -9,7 +9,11 @@ version = "0.1.1"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-clap = "3.0.0-beta.2"
+
+#clap = "3.0.0-beta.2"
+#clap = { version = "3.0.9", features = ["derive"] } # cmd args parser
+#clap = "3.0.13"
+clap = { version = "3.0.13", features = ["derive"] } # cmd args parser
 
 # SYNC
 #yahoo_finance_api = { version = "1.1", features = ["blocking"] }
@@ -18,10 +22,9 @@ yahoo_finance_api = { version = "1.1" }
 
 futures = "0.3"
 rand = "0.8"
-
 async-trait = "0.1"
 
-tokio = { version = "1", features = ["full"] }
+#tokio = { version = "1", features = ["full"] }
 
 #async-std = { version = "1.9", features = ["unstable", "attributes"] }
 [dependencies.async-std]
