@@ -1,7 +1,4 @@
-use clap::{
-    //Clap,
-    Parser,
-};
+use clap::{Parser};
 
 use std::io::{
     Error,
@@ -15,23 +12,31 @@ use yahoo_finance_api as yahoo;
 use async_std::prelude::*;
 use async_trait::async_trait;
 
-
-//#[derive(Debug)]
-//#[derive(Clap)]
 #[derive(Parser, Debug)]
-#[clap(version = "1.2", author = "Pavel SRB <prace@srbpavel.cz>", about = "A Manning LiveProject: async Rust -> originaly from Claus Matzinger")]
+#[clap(version = "1.2",
+       author = "Pavel SRB <prace@srbpavel.cz>",
+       about = "A Manning LiveProject: async Rust -> created by Claus Matzinger",
+)]
 struct Opts {
-    /// string like AAPL,MSFT,UBER or filename
-    #[clap(short, long, default_value = "AAPL,MSFT,UBER,GOOG")]
+    /// symbols as string like AAPL,MSFT,UBER or filename
+    #[clap(short,
+           long,
+           default_value = "AAPL,MSFT,UBER,GOOG",
+    )]
     symbols: String,
 
-    /// format 2020-12-20T00:00:00Z
-    #[clap(short, long)]
+    /// datetime format 2020-12-20T00:00:00Z
+    #[clap(short,
+           long,
+    )]
     from: String,
 
-    /// debug info
+    /// display debug info
     #[clap(parse(try_from_str))]
-    #[clap(short, long, default_value = "false")]
+    #[clap(short,
+           long,
+           default_value = "false",
+    )]
     verify: bool,
 }
 
@@ -67,9 +72,9 @@ impl Signal {
 trait AsyncStockSignal {
     type SignalType;
 
-    async fn a_min(&self, series: &[f64]) -> Option<Self::SignalType>;
-    async fn a_max(&self, series: &[f64]) -> Option<Self::SignalType>;
-    async fn a_last(&self, series: &[f64]) -> Option<Self::SignalType>;
+    async fn min(&self, series: &[f64]) -> Option<Self::SignalType>;
+    async fn max(&self, series: &[f64]) -> Option<Self::SignalType>;
+    async fn last(&self, series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for simple f64 result's
@@ -77,8 +82,8 @@ trait AsyncStockSignal {
 impl AsyncStockSignal for Signal {
     type SignalType = f64;
 
-    async fn a_min(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
+    async fn min(&self,
+                 series: &[f64]) -> Option<Self::SignalType> {
 
         if series.is_empty() {
             None
@@ -87,8 +92,8 @@ impl AsyncStockSignal for Signal {
         }
     }
             
-    async fn a_max(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
+    async fn max(&self,
+                 series: &[f64]) -> Option<Self::SignalType> {
 
         if series.is_empty() {
             None
@@ -97,8 +102,8 @@ impl AsyncStockSignal for Signal {
         }
     }
 
-    async fn a_last(&self,
-                    series: &[f64]) -> Option<Self::SignalType> {
+    async fn last(&self,
+                  series: &[f64]) -> Option<Self::SignalType> {
 
         match series.last() {
             Some(l) => Some(*l),
@@ -111,8 +116,8 @@ impl AsyncStockSignal for Signal {
 trait PriceDifference {
     type SignalType;
 
-    async fn a_diff(&self,
-                    series: &[f64]) -> Option<Self::SignalType>;
+    async fn diff(&self,
+                  series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for tuple (f64, f64) <- (ABS, REL)
@@ -121,8 +126,8 @@ trait PriceDifference {
 impl PriceDifference for Signal {
     type SignalType = (f64, f64);
 
-    async fn a_diff(&self,
-                    series: &[f64]) -> Option<Self::SignalType> {
+    async fn diff(&self,
+                  series: &[f64]) -> Option<Self::SignalType> {
 
         if !series.is_empty() {
             // unwrap is safe here even if first == last
@@ -144,8 +149,8 @@ impl PriceDifference for Signal {
 trait WindowedSMA {
     type SignalType;
 
-    async fn a_sma(&self,
-                   series: &[f64]) -> Option<Self::SignalType>;
+    async fn sma(&self,
+                 series: &[f64]) -> Option<Self::SignalType>;
 }
 
 /// for Vec<f64>
@@ -153,8 +158,8 @@ trait WindowedSMA {
 impl WindowedSMA for Signal {
     type SignalType = Vec<f64>;
 
-    async fn a_sma(&self,
-                   series: &[f64]) -> Option<Self::SignalType> {
+    async fn sma(&self,
+                 series: &[f64]) -> Option<Self::SignalType> {
 
         if !series.is_empty() && self.window_size > 1 {
             Some(
@@ -171,6 +176,8 @@ impl WindowedSMA for Signal {
     }
 }
 
+
+/// download yahoo stock data
 async fn fetch_closing_data(
     symbol: &str,
     beginning: &DateTime<Utc>,
@@ -287,7 +294,7 @@ async fn fetch_closing_data(
 }
 
 /// computed all value and store in Record
-/// traits are ASYNC
+/// Signal traits are ASYNC
 async fn a_blocks(closes: &Vec<f64>,
                   _debug: bool) -> Option<Record> {
 
@@ -295,17 +302,17 @@ async fn a_blocks(closes: &Vec<f64>,
 
         let signal = &Signal { window_size: 30 };
 
-        let max = signal.a_max(&closes).await.unwrap();
-        let min = signal.a_min(&closes).await.unwrap();
+        let max = signal.max(&closes).await.unwrap();
+        let min = signal.min(&closes).await.unwrap();
         
-        let last = match signal.a_last(&closes).await {
+        let last = match signal.last(&closes).await {
             Some(l) => l,
             None => 0.0,
         };
         
-        let diff = signal.a_diff(&closes).await.unwrap_or((0.0, 0.0));
+        let diff = signal.diff(&closes).await.unwrap_or((0.0, 0.0));
         
-        let sma = signal.a_sma(&closes).await.unwrap_or_default();
+        let sma = signal.sma(&closes).await.unwrap_or_default();
 
         let record = Record { max: max,
                               min: min,
@@ -342,9 +349,9 @@ fn display_record(record_block: &Option<Record>,
             };
             
             println!(
-                "{:100}{}",
+                "{csv:100}{debug}",
                      
-                format!(
+                csv=format!(
                     "{f},{symbol},${last:.2},{diff:.2}%,${min:.2},${max:.2},${sma:.2} ",
                     f=from.to_rfc3339(),
                     last=record.last,
@@ -354,7 +361,7 @@ fn display_record(record_block: &Option<Record>,
                     sma=record.sma.last().unwrap_or(&0.0),
                 ),
 
-                debug_info,
+                debug=debug_info,
             );
             
         },
@@ -366,6 +373,7 @@ fn display_record(record_block: &Option<Record>,
 }
 
 /// command arg symbols as string or filename
+/// we exit if path exist but read permission denied
 fn choose_symbols(symbols: &str,
                   verify_flag: bool) -> String {
 
@@ -375,16 +383,23 @@ fn choose_symbols(symbols: &str,
 
         true => {
 
-            let content = std::fs::read_to_string(symbols_path)
-                .expect(
-                    &format!(
-                        "error reading file: {:?}",
-                        symbols_path,
-                    )
-                );
+            let content = match std::fs::read_to_string(symbols_path) {
+
+                Ok(data) => String::from(data.trim()),
+
+                Err(error) => {
+
+                    eprintln!("ERROR: in reading file: {:?}\n>>> REASON: {}",
+                              symbols_path,
+                              error,
+                    );
+
+                    std::process::exit(1)
+                },
+            };
 
             if verify_flag {
-                println!("FILE_SYMBOLS: <{}>", content.trim());
+                println!("FILE_SYMBOLS: <{}>", content);
             }
 
             content
@@ -442,7 +457,7 @@ async fn parse_symbol(symbol: &str,
         },
         
         Err(why) => {
-            eprintln!("ERROR: in CLOSE for SYMBOL: <{}>\n>>> REASON: {}",
+            eprintln!("ERROR: in FETCH CLOSES for SYMBOL: <{}>\n>>> REASON: {}",
                       symbol,
                       why,
             );
@@ -503,7 +518,9 @@ async fn main() {
         let queries: Vec<_> = all_symbols
             .iter()
             
-            .filter(|&s| !"".eq(*s)) // filter invalid SYMBOL
+            // filter invalid SYMBOL
+            //.filter(|&s| !["", "\n", "\r\n"].contains(s))
+            .filter(|&s| !"".eq(*s))
             
             .map(|&symbol| parse_symbol(&symbol,
                                         &from,
@@ -525,109 +542,120 @@ mod tests {
     #![allow(non_snake_case)]
     use super::*;
 
-    #[test]
-    fn test_PriceDifference_calculate() {
+    #[async_std::test]
+    async fn test_PriceDifference_calculate() {
         let signal = &Signal {..Signal::default()};
         
-        assert_eq!(signal.diff(&[]), None);
+        assert_eq!(signal.diff(&[]).await,
+                   None);
 
-        assert_eq!(signal.diff(&[1.0]), Some((0.0, 0.0)));
+        assert_eq!(signal.diff(&[1.0]).await,
+                   Some((0.0, 0.0)));
 
-        assert_eq!(signal.diff(&[1.0, 0.0]), Some((-1.0, -1.0)));
+        assert_eq!(signal.diff(&[1.0, 0.0]).await,
+                   Some((-1.0, -1.0)));
 
         assert_eq!(
-            signal.diff(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]),
+            signal.diff(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]).await,
             Some((8.0, 4.0))
         );
 
         assert_eq!(
-            signal.diff(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]),
+            signal.diff(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]).await,
             Some((1.0, 1.0))
         );
     }
 
-
-    #[test]
-    fn test_MinPrice_calculate() {
+    #[async_std::test]
+    async fn test_MinPrice_calculate() {
         let signal = &Signal {..Signal::default()};
 
-        assert_eq!(signal.min(&[]), None);
+        assert_eq!(signal.min(&[]).await,
+                   None);
 
-        assert_eq!(signal.min(&[1.0]), Some(1.0));
+        assert_eq!(signal.min(&[1.0]).await,
+                   Some(1.0));
 
-        assert_eq!(signal.min(&[1.0, 0.0]), Some(0.0));
+        assert_eq!(signal.min(&[1.0, 0.0]).await,
+                   Some(0.0));
 
         assert_eq!(
-            signal.min(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]),
+            signal.min(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]).await,
             Some(1.0)
         );
 
         assert_eq!(
-            signal.min(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]),
+            signal.min(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]).await,
             Some(0.0)
         );
     }
 
-    
-    #[test]
-    fn test_MaxPrice_calculate() {
+    #[async_std::test]
+    async fn test_MaxPrice_calculate() {
         let signal = &Signal {..Signal::default()};
         
-        assert_eq!(signal.max(&[]), None);
+        assert_eq!(signal.max(&[]).await,
+                   None);
 
-        assert_eq!(signal.max(&[1.0]), Some(1.0));
+        assert_eq!(signal.max(&[1.0]).await,
+                   Some(1.0));
 
-        assert_eq!(signal.max(&[1.0, 0.0]), Some(1.0));
+        assert_eq!(signal.max(&[1.0, 0.0]).await,
+                   Some(1.0));
 
         assert_eq!(
-            signal.max(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]),
+            signal.max(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]).await,
             Some(10.0)
         );
 
         assert_eq!(
-            signal.max(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]),
+            signal.max(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]).await,
             Some(6.0)
         );
     }
 
-    
-    #[test]
-    fn test_WindowedSMA_calculate() {
+    #[async_std::test]
+    async fn test_WindowedSMA_calculate() {
         let series = vec![2.0, 4.5, 5.3, 6.5, 4.7];
 
         let mut signal = &Signal { window_size: 3 };
 
         assert_eq!(
-            signal.sma(&series),
+            signal.sma(&series).await,
             Some(vec![3.9333333333333336, 5.433333333333334, 5.5])
         );
 
         signal = &Signal { window_size: 5 };
 
-        assert_eq!(signal.sma(&series), Some(vec![4.6]));
+        assert_eq!(signal.sma(&series).await,
+                   Some(vec![4.6]));
 
         signal = &Signal { window_size: 10 };
 
-        assert_eq!(signal.sma(&series), Some(vec![]));
+        assert_eq!(signal.sma(&series).await,
+                   Some(vec![]));
     }
 
-    #[test]
-    fn test_Last() {
+    #[async_std::test]
+    async fn test_Last() {
         let signal = &Signal {..Signal::default()};
         
-        assert_eq!(signal.last(&[]), None);
+        assert_eq!(signal.last(&[]).await,
+                   None);
 
-        assert_eq!(signal.last(&[1.0]), Some(1.0));
+        assert_eq!(signal.last(&[1.0]).await,
+                   Some(1.0));
 
-        assert_eq!(signal.last(&[1.0, 0.0]), Some(0.0));
+        assert_eq!(signal.last(&[1.0, 0.0]).await,
+                   Some(0.0));
 
         assert_eq!(
-            signal.last(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]),
+            signal.last(&[2.0, 3.0, 5.0, 6.0, 1.0, 2.0, 10.0]).await,
             Some(10.0)
         );
 
         assert_eq!(
-            signal.last(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]),
+            signal.last(&[0.0, 3.0, 5.0, 6.0, 1.0, 2.0, 1.0]).await,
             Some(1.0)
         );
     }
