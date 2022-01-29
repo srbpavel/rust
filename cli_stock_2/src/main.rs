@@ -21,7 +21,7 @@ struct Opts {
     /// symbols as string like AAPL,MSFT,UBER or filename
     #[clap(short,
            long,
-           default_value = "AAPL,MSFT,UBER,GOOG",
+           default_value = "AAPL,MSFT,UBER",
     )]
     symbols: String,
 
@@ -298,6 +298,24 @@ async fn fetch_closing_data(
 async fn a_blocks(closes: &Vec<f64>,
                   _debug: bool) -> Option<Record> {
 
+    /* previous:
+
+    let sma = async {
+
+        if test {
+            verify_delay(2,
+                         &format!(" {}", "sma"),
+                         test).await;
+        }
+            
+        signal.sma(&closes).unwrap_or_default()
+    };
+
+    futures::join!(max, min, last, diff, sma);
+
+    https://docs.rs/futures/latest/futures/macro.join.html
+    */
+    
     if !closes.is_empty() {
 
         let signal = &Signal { window_size: 30 };
@@ -330,7 +348,6 @@ async fn a_blocks(closes: &Vec<f64>,
 }
 
 /// show computed values is CSV format
-//async fn display_record(record_block: &Option<Record>,
 fn display_record(record_block: &Option<Record>,
                   symbol: &str,
                   from: &DateTime<Utc>,
@@ -366,9 +383,7 @@ fn display_record(record_block: &Option<Record>,
             
         },
         
-        None => {
-            
-        },
+        None => {},
     }
 }
 
@@ -394,6 +409,7 @@ fn choose_symbols(symbols: &str,
                               error,
                     );
 
+                    // we do not want to fetch default arg symbols
                     std::process::exit(1)
                 },
             };
@@ -425,9 +441,6 @@ async fn parse_symbol(symbol: &str,
                       tick_counter: &u64,
                       debug: bool) -> Option<Record> {
 
-    // INTERVAT ts
-    let time_stamp = Utc::now();
-    
     // DATA download
     let data = fetch_closing_data(&symbol,
                                   &from,
@@ -443,6 +456,9 @@ async fn parse_symbol(symbol: &str,
             let record_block = a_blocks(&closes,
                                         debug,
             ).await;
+
+            // INTERVAT ts
+            let time_stamp = Utc::now();
             
             // display line CSV format
             display_record(&record_block, // -> Option not Future
@@ -532,6 +548,12 @@ async fn main() {
             .collect();
 
         // JOIN all symbols FUTURE
+        /* 
+        https://docs.rs/futures/latest/futures/future/fn.join_all.html
+        
+        collection of the outputs of future
+        
+         */
         let _ = futures::future::join_all(queries).await;
     }
 }
