@@ -21,7 +21,7 @@ rand = "0.8"
 
 async-trait = "0.1"
 
-tokio = { version = "1", features = ["full"] }
+#tokio = { version = "1", features = ["full"] }
 
 #async-std = { version = "1.9", features = ["unstable", "attributes"] }
 [dependencies.async-std]

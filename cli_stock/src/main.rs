@@ -4,8 +4,8 @@ use std::io::{Error, ErrorKind};
 use yahoo_finance_api as yahoo;
 
 use futures::StreamExt;
-use rand::Rng;
 
+use rand::Rng;
 
 #[derive(Clap)]
 #[clap(
@@ -164,64 +164,127 @@ fn min(series: &[f64]) -> Option<f64> {
     }
 }
 
-// ASYNC
 async fn fetch_closing_data(
     symbol: &str,
     beginning: &DateTime<Utc>,
     end: &DateTime<Utc>,
-    debug: bool,
-    delay: u64) -> std::io::Result<Vec<f64>> {
+    _debug: bool,
+    _delay: u64) -> std::io::Result<Vec<f64>> {
 
-    if debug {
-        verify_delay(delay,
-                     &format!(" fetch: {}", symbol),
-                     debug,
-        ).await;
-    }
+    //println!("FETCH: {} -> {}", symbol, _delay);
     
     let provider = yahoo::YahooConnector::new();
 
+    /*
+    pub struct YResponse {
+        pub chart: YChart,
+    }
+
+    pub struct YChart {
+        pub result: Vec<YQuoteBlock>,
+        pub error: Option<String>,
+    }
+    */
+    
     let response = provider
         .get_quote_history(symbol, *beginning, *end)
         .await
-        .map_err(|_| Error::from(ErrorKind::InvalidData))
-        ?
-        //.unwrap()
-        ;
+        .map_err(|_| Error::from(ErrorKind::InvalidData))?;
+
+    /*
+    println!("RESPONSE: {:?}",
+             response
+             .chart
+             .result
+             .last() //.len()
+             .unwrap()
+             //.meta
+             // .timestamp // 1608561000 len() 10 -> sec
+             .indicators // QuoteBlock
+             ,
+    );
+
+    Result<Vec<Quote>, YahooError>
+
+    pub struct Quote {
+        pub timestamp: u64,
+        pub open: f64,
+        pub high: f64,
+        pub low: f64,
+        pub volume: u64,
+        pub close: f64,
+        pub adjclose: f64,
+    }
+
+    Quote { timestamp: 1642775400,
+            open: 314.80999755859375,
+            high: 318.30999755859375,
+            low: 303.0400085449219,
+            volume: 28661700,
+            close: 303.1700134277344,
+            adjclose: 303.1700134277344
+    }
+    */
     
     let mut quotes = response
         .quotes()
-        .map_err(|_| Error::from(ErrorKind::InvalidData))
-        ?
-        //.unwrap()
-        ;
+        .map_err(|_| Error::from(ErrorKind::InvalidData))?;
+
+    /* // DEBUG
+    println!("\nLAST: {:?}",
+             quotes
+             .last()
+             .unwrap()
+             //.adjclose // this is what we get for our Result Vec<f64>
+             ,
+    );
+    */
     
     if !quotes.is_empty() {
         quotes
+            // sort slice with key extraction
             .sort_by_cached_key(|k| k.timestamp);
+
+        /*
+        println!("QUOTES SORTED: {:?}",
+                 &quotes
+                 .last()
+                 .unwrap(),
+        );
+        */
+
+        /* 
+        Ok(quotes
+           .iter()
+           .map(|q| q.adjclose as f64).collect())
+         */
         
         let adj = quotes
             .iter()
+            // filter adjclose + type conversion
             .map(|q| q.adjclose as f64)
             .collect::<Vec<_>>();
+
+        /*
+        println!("QUOTES MAP: {:?}",
+                 &adj
+                 .last(),
+        );
+        */
         
         Ok(adj)
             
-    } else { Ok(vec![]) }
+    } else {
+
+        Ok(vec![])
+    }
 }
 
-fn do_sync_symbol(symbol: &str,
-                  from: &DateTime<Utc>,
-                  to: &DateTime<Utc>,
-                  debug: bool,
-                  delay: u64) {
-    
-    /*
-    let closes = fetch_closing_data(&symbol,
-                                    &from,
-                                    &to,
-    ).unwrap();
-    */
+fn _do_sync_symbol(symbol: &str,
+                   from: &DateTime<Utc>,
+                   to: &DateTime<Utc>,
+                   debug: bool,
+                   delay: u64) {
 
     let closes = futures::executor::block_on(
         fetch_closing_data(&symbol,
@@ -230,9 +293,8 @@ fn do_sync_symbol(symbol: &str,
                            debug,
                            delay,
         )
-        //.unwrap()
     );
-    
+
     parse_closes(&from,
                  &symbol,
                  &closes.unwrap(),
@@ -241,22 +303,47 @@ fn do_sync_symbol(symbol: &str,
 }
 
 
+async fn _do_async_symbol(symbol: &str,
+                          from: &DateTime<Utc>,
+                          to: &DateTime<Utc>,
+                          debug: bool,
+                          delay: u64) {
+
+    let closes = async { 
+        fetch_closing_data(&symbol,
+                           &from,
+                           &to,
+                           debug,
+                           delay,
+        ).await
+    };
+
+    //async { // unused
+        parse_closes(&from,
+                     &symbol,
+                     &closes.await.unwrap(),
+                     debug,
+        );
+    //};
+}
+
+
 fn parse_closes(from: &DateTime<Utc>,
-                symbol: &str,
-                closes: &Vec<f64>,
-                debug: bool) {
+                      symbol: &str,
+                      closes: &Vec<f64>,
+                      debug: bool) {
 
     if !closes.is_empty() {
 
         let signal = &Signal { window_size: 30,
         };
-
+        
         let record: Record = futures::executor::block_on(blocks(
             &closes,
             &signal,
             debug,
         ));
-
+        
         // CSV data
         println!(
             "{f},{sy},${l:.2},{p:.2}%,${mi:.2},${ma:.2},${s:.2}",
@@ -275,8 +362,22 @@ async fn verify_delay(delay: u64,
                       caller: &str,
                       debug: bool) {
 
-    async_std::task::sleep(std::time::Duration::from_millis(delay)).await;
+    if caller.contains("SYMBOL") {
+        println!(">>> SLEEP: start -> {}: {}",
+                 caller,
+                 delay,
+        );
+    }
+    
+    async_std::task::sleep(std::time::Duration::from_millis(delay*100)).await;
 
+    if caller.contains("SYMBOL") {
+        println!(">>> SLEEP: end -> {}: {}",
+                 caller,
+                 delay,
+        );
+    }
+    
     if debug {
         println!("  [{delay}] {caller}");
     }
@@ -360,9 +461,9 @@ async fn blocks(closes: &Vec<f64>,
 }
 
 
-#[tokio::main(flavor = "multi_thread")] // for_each_concurrent
+#[async_std::main]
 async fn main() {
-    
+
     let opts = Opts::parse();
     
     let from: DateTime<Utc> = opts.from.parse().expect("Couldn't parse 'from' date");
@@ -378,34 +479,45 @@ async fn main() {
         .collect::<Vec<_>>();
         
     let len = all_symbols.len() as u64;
-    
-    // ASYNC
+    println!("LEN: {}", len);
+
+    // ASYNC ITER
+    // /*
     futures::stream::iter(all_symbols)
         .for_each_concurrent(20, |symbol| async move {
-
+            
             let mut rng = rand::thread_rng();
             let sleep_ms: u64 = rng.gen_range(0..len*3);
-            
+
             // SLEEP to verify ASYNC
             if verify_flag {
-
                 
                 verify_delay(sleep_ms,
                              &format!("SYMBOL: {}", symbol),
                              verify_flag, // DEBUG
                 ).await;
             }
-
+            
             // SYMBOL task
-            do_sync_symbol(&symbol,
-                           &from,
-                           &to,
-                           verify_flag,
-                           sleep_ms,
+            // /* // SYNC
+            _do_sync_symbol(&symbol,
+                            &from,
+                            &to,
+                            verify_flag,
+                            sleep_ms,
             );
+            // */
+
+            /* // ASYNC
+            _do_async_symbol(&symbol,
+                             &from,
+                             &to,
+                             verify_flag,
+                             sleep_ms,
+            ).await
+            */
         }).await
-        
-    //Ok(())
+    // */
 }
 
 
