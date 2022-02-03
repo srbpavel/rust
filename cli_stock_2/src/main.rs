@@ -5,12 +5,18 @@ use std::io::{
     ErrorKind,
 };
 
-use chrono::prelude::*;
+//use chrono::prelude::*;
+use chrono::prelude::{Utc,
+                      DateTime,
+};
 
 use yahoo_finance_api as yahoo;
 
-use async_std::prelude::*;
+//use async_std::prelude::*;
+use async_std::stream::StreamExt;
+
 use async_trait::async_trait;
+
 
 #[derive(Parser, Debug)]
 #[clap(version = "1.2",
@@ -521,7 +527,7 @@ async fn main() {
     let mut tick_counter:u64 = 0;
 
     while let Some(_) = interval.next().await {
-
+        
         tick_counter += 1;
 
         if verify_flag {

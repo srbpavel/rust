@@ -10,7 +10,9 @@ use std::{fs::{self,
 };
 
 mod command_args;
-use command_args::{Args};
+use command_args::{
+    Settings,
+};
 
 
 /*
@@ -62,7 +64,7 @@ pub trait SfTrait {
     fn print(&self);
 
     fn parse(& mut self,
-             args: &Args);
+             args: &Settings);
     
     fn char_duplicity(& mut self,
                       substitute_char: char);
@@ -70,7 +72,7 @@ pub trait SfTrait {
     fn update_rename_status(& mut self);
 
     fn rename(&self,
-              args: &Args) -> Result<(), Error>;
+              args: &Settings) -> Result<(), Error>;
 }
 
 
@@ -88,10 +90,10 @@ impl SfTrait for SingleFile<'_> {
     }
 
     fn parse(& mut self,
-             args: &Args) {
+             args: &Settings) {
 
         self.output = parse_file(&self.path,
-                                 args.substitute_char,
+                                 args.substitute,
         );
     }
     
@@ -123,7 +125,7 @@ impl SfTrait for SingleFile<'_> {
     }
     
     fn rename(&self,
-              args: &Args) -> Result<(), Error> {
+              args: &Settings) -> Result<(), Error> {
 
         match create_output_path_buf(&self) {
             Some(output) => {
@@ -191,7 +193,7 @@ fn create_output_path_buf(file: &SingleFile) -> Option<PathBuf> {
 }
 
 
-fn verify_path_buf(args: &Args,
+fn verify_path_buf(args: &Settings,
                    path: &Path) -> Option<PathBuf> {
 
     if !path.exists() {
@@ -242,7 +244,7 @@ fn verify_path_buf(args: &Args,
 
 fn rename_file(input: PathBuf,
                output: PathBuf,
-               args: &Args) -> Result<(), Error> {
+               args: &Settings) -> Result<(), Error> {
 
     let debug_data = format!("{:?} -> {:?}",
                            input,
@@ -269,7 +271,6 @@ fn rename_file(input: PathBuf,
                 Error::new(
                     ErrorKind::Other,
                     format!("# INFO: simulate {:?}",
-                            //output,
                             input,
                     )
                 )
@@ -421,7 +422,7 @@ fn parse_file(path: &Path,
 
 
 fn normalize_chars<'f>(entry: &'f Path,
-                       args: &'f Args) -> SingleFile<'f > {
+                       args: &'f Settings) -> SingleFile<'f > {
 
     // FULL_PATH
     let mut single_file = SingleFile {path: &entry,
@@ -432,7 +433,7 @@ fn normalize_chars<'f>(entry: &'f Path,
     single_file.parse(&args);
 
     // TEST FOR substitute_char duplicity and replace if any
-    single_file.char_duplicity(args.substitute_char);
+    single_file.char_duplicity(args.substitute);
     
     // if RENAME is needed
     single_file.update_rename_status();
@@ -443,7 +444,7 @@ fn normalize_chars<'f>(entry: &'f Path,
 
 fn match_element(n: &str,
                  element: Result<DirEntry, Error>,
-                 args: &Args) {
+                 args: &Settings) {
 
     match n {
         // FILE
@@ -522,7 +523,7 @@ fn match_element(n: &str,
 
 
 fn parse_dir(dir: ReadDir,
-             args: &Args) {
+             args: &Settings) {
     
     for element in dir {
         match element // DirEntry
@@ -580,7 +581,7 @@ fn list_dir(path: &Path) -> Option<ReadDir> {
 }
 
 
-fn prepare_parse_dir(args: &Args,
+fn prepare_parse_dir(args: &Settings,
                      path: &Path) {
     
     match verify_path_buf(&args,
@@ -615,17 +616,17 @@ fn prepare_parse_dir(args: &Args,
 
 
 fn main() {
-    //CMD ARGS
-    let args = command_args::read();
-
+    //CMD ARGS as Settings
+    let settings = command_args::get_settings();
+    
     // DEBUG CMD
-    if args.verbose {
-        println!("\n#CMD: {:#?}", args);
+    if settings.verbose {
+        println!("\n#CMD: {:#?}", settings);
     };
 
-    // START WITH ARG DIR 
-    prepare_parse_dir(&args,
-                      &args.path,
+    // START WITH ARG DIR
+    prepare_parse_dir(&settings,
+                      &settings.path,
     );
 
     // ENUM 
@@ -670,13 +671,15 @@ mod tests {
         let _create_result = File::create(name_in);
         let path_in = Path::new(name_in);
 
-        let args = Args {
+        let args = Settings {
             verbose: false,
             // DEBUG
             //verbose: true,
-            ..Args::default()
+            ..Settings::default()
         };
 
+        //println!("SETTINGS: {args:#?}");
+        
         let normalized_file: SingleFile = normalize_chars(path_in,
                                                           &args,
         );
@@ -724,12 +727,12 @@ mod tests {
     #[test]
     fn relative_path_to_absolute() {
 
-        let args = Args {
+        let args = Settings {
             path: Path::new(".").to_path_buf(),
             simulate: true,
             recursive: false,
             verbose: false,
-            ..Args::default()
+            ..Settings::default()
         };
 
         // TRY TO SIMULATE ERROR !!!
