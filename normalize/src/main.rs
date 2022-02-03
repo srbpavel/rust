@@ -15,41 +15,6 @@ use command_args::{
 };
 
 
-/*
-use std::fmt;
-
-#[allow(dead_code)]
-#[derive(Debug)]
-enum Letters {
-    A,
-    B,
-    C,
-    D
-}
-
-
-impl fmt::Display for Letters {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // /*
-        let printable = match *self {
-            Letters::A => "aaa",
-            Letters::B => "bbb",
-            Letters::C => "ccc",
-            Letters::D => "ddd",
-        };
-
-        write!(f, "{}", printable)
-        // */
-
-        /*
-        write!(f, "{:?}", self) // this call's Debug::fmt
-        write!(f, "{}", self) // call's Display    
-        */
-    }
-}
-*/
-
-
 #[derive(Debug)]
 pub struct SingleFile<'p> {
     pub path: &'p Path,
@@ -628,31 +593,6 @@ fn main() {
     prepare_parse_dir(&settings,
                       &settings.path,
     );
-
-    // ENUM 
-    /*
-    println!("\n#ENUM: {a:?} / {a} // {c:?} / {ci}",
-             a=Letters::A,
-             c=Letters::C,
-             ci=Letters::C as u8,
-    );
-
-    let pozdrav = || "zdar a silu";
-    let ahoooj = |name: &str| { format!("ahoooj {}", name) };
-    println!("pozdrav: {} / {}",
-             pozdrav(),
-             ahoooj("vole"),
-             );
-    
-    let low = "fookume";
-    let high = "PaVeL sRb";
-    let velka = |t: &str| String::from(t).to_uppercase();
-    let mala = |t: &str| String::from(t).to_lowercase();
-    println!("nahoru: {} / dolu: {}",
-             velka(low),
-             mala(high),
-    );
-    */
 }
 
 
