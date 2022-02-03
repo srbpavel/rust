@@ -284,6 +284,11 @@ fn remove_diacritics(text: &str) -> String {
 
     text
         .chars()
+        /*
+        .inspect(|ch| {
+            println!("dia_char: {ch}");
+        })
+        */
         .map(|ch| String::from(ch))
         .collect::<Vec<_>>()
         .iter()
@@ -618,8 +623,6 @@ mod tests {
             ..Settings::default()
         };
 
-        //println!("SETTINGS: {args:#?}");
-        
         let normalized_file: SingleFile = normalize_chars(path_in,
                                                           &args,
         );
@@ -627,10 +630,6 @@ mod tests {
         // RENAME
         // NOT TESTING STATUS as "name_in" is created to be renamed
         let rename_result = normalized_file.rename(&args);
-
-        //OBSOLETE
-        // DELETE ORIGINAL
-        // let remove_result = remove_file(path_in);
 
         // DELETE NORMALIZED
         let remove_result = match remove_file(&normalized_file.output) {

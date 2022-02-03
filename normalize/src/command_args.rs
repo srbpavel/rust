@@ -9,9 +9,19 @@ use std::path::{Path,
 };
 
 
-const ABOUT: &str = "\nRename FILES [not DIRS] with non alpha-numeric characters + remove diacritics + lowercase in given path or current directory and descendant directories";
+const NAME: &str = "NORMALIZE";
+const ABOUT: &str = "\n\
+                     Rename FILES [not DIRS] with non alpha-numeric characters \
+                     + remove diacritics + lowercase in given path \
+                     or current directory and descendant directories\
+                     ";
 
-const USAGE: &str = "\nnormalize DIR [OPTION].. \n\nnormalize /temp/ -s -v -r -c=# [dry-run + verbose + recursive rename files in /temp/ with usage of # substitute]";
+const USAGE: &str = "\n\
+                     normalize DIR [OPTION].. \n\n\
+                     normalize /temp/ -s -v -r -c=#\n\
+                     [dry-run + verbose + recursive rename files in /temp/ with \
+                     usage of # substitute]\
+                     ";
 
 
 // `pwd`
@@ -39,11 +49,11 @@ pub struct Settings {
 
 
 impl Settings {
-    // need's to be PUB for TESTS
+    /// default values
     pub fn default() -> Settings {
         Settings {
             path: Path::new(&DEFAULT_PATH)
-                .canonicalize()
+                .canonicalize() // relative -> full_path
                 .unwrap()
                 .to_path_buf(),
             
@@ -54,31 +64,31 @@ impl Settings {
         }
     }
 
-    
+    /// fill with values from cmd args
     fn new(matches: ArgMatches) -> Settings {
-        // start with DEFAULT
+        // start with DEFAULT and update as it go
         let mut settings = Settings { ..Settings::default() };
 
         // ALL bool FLAG's
         settings.simulate = matches.is_present(options::SIMULATE);
         settings.recursive = matches.is_present(options::RECURSIVE);
         settings.verbose = matches.is_present(options::VERBOSE);
-        
+
         // PATH
-        let path = Path::new(matches.value_of(options::PATH)
-                             .unwrap()
-        );
+        if let Some(p) = matches.value_of(options::PATH) {
+            let path = Path::new(p);
 
-        settings.path = if path.exists() { path
-                                           .canonicalize() // relative -> full_path
-                                           .unwrap()
-                                           .to_path_buf()
-        } else {
-            eprintln!("\nERROR: ARG path: <{path:?}> not valid -> we will stop");
-
-            std::process::exit(1)
-        };
-
+            if path.exists() { settings.path = path
+                               .canonicalize() // relative -> full_path
+                               .unwrap()
+                               .to_path_buf()
+            } else {
+                eprintln!("\nERROR: ARG path: <{path:?}> not valid -> we will stop");
+                
+                std::process::exit(1)
+            };
+        }
+        
         // SUBSTITUTE_CHAR
         settings.substitute = parse_substitute_char(
             matches.value_of(options::SUBSTITUTE),
@@ -108,10 +118,11 @@ fn parse_substitute_char(sub: Option<&str>,
                 println!("substitute_char value: <{value}>");
             }
             
+            // slice &[u8]
             let bytes = value.as_bytes();
             
             match bytes.len() {
-                // CORRECT
+                // CORRECT len
                 1 => { 
                     let substitute = bytes[0] as char;
                     
@@ -124,20 +135,14 @@ fn parse_substitute_char(sub: Option<&str>,
                 
                 // PROVIDED but EMPTY
                 0 => {
-                    println!("EXIT: empty char: '{}'",
-                             
-                             value,
-                    );
+                    println!("EXIT: empty char: '{}'", value);
                     
                     std::process::exit(1);
                 },
 
                 // TO MANY CHARS
                 _ => {
-                    println!("EXIT: too many chars: '{:}'",
-                             
-                             value,
-                    );
+                    println!("EXIT: too many chars: '{:}'", value);
                     
                     std::process::exit(1);
                 },
@@ -153,10 +158,10 @@ fn parse_substitute_char(sub: Option<&str>,
 }
 
 
-/// clap App param's
+/// clap App properties
 fn new_clap_app<'a>() -> App<'a> {
 
-    App::new("NORMALIZE")
+    App::new(NAME)
         .about(ABOUT)
         .override_usage(USAGE)
         .setting(AppSettings::InferLongArgs)
@@ -191,7 +196,7 @@ fn new_clap_app<'a>() -> App<'a> {
                 .short('c')
                 .long(options::SUBSTITUTE)
                 .takes_value(true)
-                // BECAUSE char's as: -c # or --substitute * BREAKS IT
+                // BECAUSE char's as: -c # or -c * BREAKS IT
                 // -c=* or -c="*" works's OK
                 .require_equals(true)
                 // SET IN Settings::default()
@@ -203,25 +208,9 @@ fn new_clap_app<'a>() -> App<'a> {
 
 /// main call to get Settings from cmd_args
 pub fn get_settings() -> Settings {
-    // CREATE App
+    // CLAP App + ArgMatches
     let app = new_clap_app();
-
-    // GET_MATCHES
     let matches = app.get_matches();
-
-    /* // DEBUG
-    println!("MATCHES: {matches:#?}\n\nMATCH_TEST: {:?} / {:?} / {:?}",
-
-             // value of supplied arg at runtime 
-             matches.value_of(options::SUBSTITUTE),
-             
-             // presence of arg
-             matches.is_present(options::SUBSTITUTE),
-             
-             // if any args present
-             matches.args_present(),
-    );
-    */
 
     // CMD ARGS to Struct
     Settings::new(matches)
