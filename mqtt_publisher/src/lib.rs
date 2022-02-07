@@ -90,7 +90,6 @@ impl BrokerTrait for Broker<'_> {
                         publish_all_msg(&client,
                                         &self,
                                         &data,
-                                        //self.debug,
                         );
                         
                         // CLOSE session
@@ -141,8 +140,7 @@ pub struct MsgData<'d> {
 
 pub trait MsgDataTrait {
     fn build_msg(&self,
-                 broker: &Broker,
-                 /* debug: bool */) -> Message;
+                 broker: &Broker) -> Message;
 
 }
 
@@ -150,8 +148,7 @@ pub trait MsgDataTrait {
 impl MsgDataTrait for MsgData<'_> {
     /// construct message with topic 
     fn build_msg(&self,
-                 broker: &Broker,
-                 /* debug: bool */) -> Message {
+                 broker: &Broker) -> Message {
 
         // JSON sample payload
         let msg = format!("{{\"data\": \"{body}\", \
@@ -183,8 +180,7 @@ impl MsgDataTrait for MsgData<'_> {
 /// transmit all messages
 fn publish_all_msg(client: &Client,
                    broker: &Broker,
-                   data: &Vec<MsgData>,
-                   /* debug: bool */) {
+                   data: &Vec<MsgData>) {
 
     // PUB MSG to TOPIC
     let pub_info = data
@@ -196,9 +192,7 @@ fn publish_all_msg(client: &Client,
         })
         .map(|single_data| {
 
-            let msg = single_data.build_msg(broker,
-                                            //debug,
-            );
+            let msg = single_data.build_msg(broker);
 
             /* // DEBUG payload
             if debug {
