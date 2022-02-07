@@ -1,17 +1,19 @@
 use std::process;
 
 // Struct for TOML config
-use crate::toml_config_struct::{TomlConfig};
+//use crate::toml_config_struct::{TomlConfig};
+use crate::toml_mqtt_config_struct::{TomlConfig};
 
 // local crate
 use easy_config::{read_toml_config};
 
 
-pub fn sample() {
+pub fn sample() -> TomlConfig{
     println!("#SAMPLE <EASY_CONFIG>\n");
 
     // FILE_NAME -> here from code / later via CmdArg or ...
-    let config_filename = "/home/conan/soft/rust/lib_test/src/config.toml";
+    //let config_filename = "/home/conan/soft/rust/lib_test/src/config.toml";
+    let config_filename = "/home/conan/soft/rust/lib_test/src/mqtt_config.toml";
     
     /* DEBUG
     println!("#FILE_NAME: {}",
@@ -59,7 +61,7 @@ pub fn sample() {
     );
     */
     
-    // /*
+    /*
     // string join by format!
     println!("\n#CONFIG:\n name + host: {} at {}\n user + workdir: {}{}{}{}",
              config.name,
@@ -70,5 +72,7 @@ pub fn sample() {
              config.work_dir,
              "$",
     );
-    // */
+    */
+
+    config
 }

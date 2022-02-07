@@ -66,7 +66,7 @@ fn connect_options(broker: &Broker) -> ConnectOptions {
 fn build_msg(data: &MsgData,
              debug: bool) -> Message {
 
-    let msg = format!("{{\"data\": \"{body}\" \"datatime\": \"{now}\"}}",
+    let msg = format!("{{\"data\": \"{body}\" \"datetime\": \"{now}\"}}",
                       now = chrono::Local::now(),
                       body = data.body,
     );    

@@ -1,23 +1,24 @@
-// local crate
+use crate::toml_mqtt_config_struct::{TomlConfig};
+
 use mqtt_publisher::{Broker,
                      MsgData,
                      
                      send_msg_to_topic,
 };
 
-pub fn sample() {
+
+pub fn sample(config: TomlConfig) {
 
     // BUILD broker
     let broker_l = Broker {
-        machine: "tcp://jozefina:1883",
-        client_id: "SPONGEBOB_RUST_L",
-        interval: 20,
+        machine: &config.broker.machine,
+        client_id: &config.broker.client_id,
+        interval: config.broker.interval,
 
-        username: "lord",
-        password: "lord",
+        username: &config.broker.username,
+        password: &config.broker.password,
 
-        //debug: true,
-        debug: false,
+        debug: config.broker.debug,
     };
 
     // BUILD some topics with messages
