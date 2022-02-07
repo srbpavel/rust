@@ -1,3 +1,3 @@
 # mqtt_publisher
 
-- publish msg to mqtt brokerb
+- publish msg to mqtt broker
