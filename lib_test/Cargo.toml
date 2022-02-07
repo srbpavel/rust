@@ -9,3 +9,8 @@ serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates
 
 # unpublish local crate
 easy_config = { version = "^0", path = "/home/conan/soft/rust/easy_config/" } # path to project base dir
+
+# unpublish local crate
+[dependencies.mqtt_publisher]
+version = "^0"
+path = "/home/conan/soft/rust/mqtt_publisher" # path to project base dir

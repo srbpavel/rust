@@ -14,7 +14,6 @@ use command_args::{
     Settings,
 };
 
-
 #[derive(Debug)]
 pub struct SingleFile<'p> {
     pub path: &'p Path,
@@ -586,6 +585,50 @@ fn prepare_parse_dir(args: &Settings,
 
 
 fn main() {
+    //TIMEOUT
+    let (send, recv) = std::sync::mpsc::channel();
+    let delay = 2;
+    let duration = std::time::Instant::now();
+    
+    std::thread::spawn(move || {
+        send.send(
+            format!("before: {:?}",
+                    chrono::Utc::now(),
+            )
+        ).unwrap();
+        
+        std::thread::sleep(std::time::Duration::from_millis(delay*1000));
+
+        //let (cmd, hostname) = ("ping", "jozefina");
+        //let (cmd, hostname) = ("ping", "ruth");
+        let (cmd, hostname) = ("ping", "rpi401");
+        
+        let ping = std::process::Command::new(cmd)
+            .args(["-c4", hostname])
+            .output()
+            .expect("failed to PING JOZEFINA");
+
+        println!("STDOUT: {ping:#?}");
+
+            
+        send.send(
+            format!("after: {:?}",
+                     chrono::Utc::now(),
+            )
+        ).unwrap();
+    });
+
+    println!("receiver[now]: {}", recv.recv().unwrap()); // Received immediately
+    println!("Waiting...");
+    println!("receiver[later]: {}\nduration: {:?}",
+             recv.recv().unwrap(),
+             duration.elapsed(),
+    );
+
+    std::process::exit(1);
+    
+    //_
+
     //CMD ARGS as Settings
     let settings = command_args::get_settings();
     
