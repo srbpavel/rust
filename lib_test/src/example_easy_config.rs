@@ -1,7 +1,6 @@
 use std::process;
 
 // Struct for TOML config
-//use crate::toml_config_struct::{TomlConfig};
 use crate::toml_mqtt_config_struct::{TomlConfig};
 
 // local crate
@@ -12,7 +11,6 @@ pub fn sample() -> TomlConfig{
     println!("#SAMPLE <EASY_CONFIG>\n");
 
     // FILE_NAME -> here from code / later via CmdArg or ...
-    //let config_filename = "/home/conan/soft/rust/lib_test/src/config.toml";
     let config_filename = "/home/conan/soft/rust/lib_test/src/mqtt_config.toml";
     
     /* DEBUG
@@ -47,32 +45,6 @@ pub fn sample() -> TomlConfig{
                  config,
         );
     };
-
-    // just PLAYING with format! + String || str
-    /*
-    // string join by +  
-    println!("\n#CONFIG:\n name + host: {:#?}\n user + workdir: {:#?}",
-             /* str */ config.name.to_string() + " at " + &config.host.to_string(),
-    
-             /* String */ config.user // this should fail for -> typeMyStr = <Box>str
-             + &String::from("@:")
-             + &config.work_dir
-             + &String::from("$"),
-    );
-    */
-    
-    /*
-    // string join by format!
-    println!("\n#CONFIG:\n name + host: {} at {}\n user + workdir: {}{}{}{}",
-             config.name,
-             config.host,
-             
-             config.user,
-             "@:",
-             config.work_dir,
-             "$",
-    );
-    */
 
     config
 }

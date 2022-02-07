@@ -1,11 +1,10 @@
 // EASY_CONFIG
 mod example_easy_config;
-//mod toml_config_struct;
 mod toml_mqtt_config_struct;
-
 
 // MQTT_PUBLISHER
 mod example_mqtt_publisher;
+
 
 fn main() {
     // EXAMPLE >>> EASY_CONFIG
