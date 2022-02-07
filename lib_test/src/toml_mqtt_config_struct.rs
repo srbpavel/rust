@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-
+use std::collections::HashMap;
 
 type MyStr = Box<str>; 
 
@@ -13,8 +13,11 @@ pub struct TomlConfig {
     pub work_dir: MyStr,
     
     // STRUCT
-    pub broker: Broker,
+    //pub broker: Broker,
     pub flag: Flag,
+
+    //iter via HASH key
+    pub broker: HashMap<MyStr, Broker>,
 }
 
 

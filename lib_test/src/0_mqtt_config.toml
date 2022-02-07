@@ -5,6 +5,18 @@ host =
 work_dir = 
 
 [broker]
+[broker.lord]
+machine = 
+client_id = 
+interval = 
+
+username = 
+password = 
+
+#debug = true #false
+debug = false
+
+[broker.metynka]
 machine = 
 client_id = 
 interval = 
