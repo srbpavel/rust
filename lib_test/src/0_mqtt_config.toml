@@ -1,0 +1,20 @@
+user = 
+
+name = 
+host = 
+work_dir = 
+
+[broker]
+machine = 
+client_id = 
+interval = 
+
+username = 
+password = 
+
+#debug = true #false
+debug = false
+
+[flag]
+# display this config file
+debug_config = false
