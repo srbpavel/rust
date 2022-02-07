@@ -3,7 +3,7 @@ use crate::toml_mqtt_config_struct::{TomlConfig};
 use mqtt_publisher::{Broker,
                      MsgData,
 
-                     BrokerTrait,
+                     //BrokerTrait,
 };
 
 pub fn sample(config: TomlConfig) {
@@ -38,7 +38,7 @@ pub fn sample(config: TomlConfig) {
     /* LORD */
     // DEBUG input
     if broker_l.debug {
-        println!("BROKER: {broker_l:?}\nDATA: {:?}", data_batch);
+        println!("\nBROKER: {broker_l:?}\nDATA: {:?}", data_batch);
     }
 
     // SEND L

@@ -28,7 +28,7 @@ pub struct Broker<'b> {
     pub debug: bool,
 }
 
-
+/*
 pub trait BrokerTrait {
     fn send_msg_to_topic(&self,
                          data: &Vec<MsgData>) -> Result<ServerResponse, Error>;
@@ -39,8 +39,9 @@ pub trait BrokerTrait {
 
 }
 
-
 impl BrokerTrait for Broker<'_> {
+*/
+impl Broker<'_> {
 
     /// user credentials + interval
     fn connect_options(&self) -> ConnectOptions {
@@ -57,14 +58,14 @@ impl BrokerTrait for Broker<'_> {
     /// broker_machine + client_id
     fn create_options(&self) -> CreateOptions {
         mqtt::CreateOptionsBuilder::new()
-            .server_uri(String::from(self.machine))
+            .server_uri(String::from(self.machine)) // protocol://host:port
             .client_id(String::from(self.client_id))
             .finalize()
     }
 
     /// broker connection + transmit all messages
-    fn send_msg_to_topic(&self,
-                         data: &Vec<MsgData>) -> Result<ServerResponse, Error> {
+    pub fn send_msg_to_topic(&self,
+                             data: &Vec<MsgData>) -> Result<ServerResponse, Error> {
         
         // USER 
         let options = self.connect_options();
@@ -138,19 +139,22 @@ pub struct MsgData<'d> {
 }
 
 
+/*
 pub trait MsgDataTrait {
     fn build_msg(&self,
                  broker: &Broker) -> Message;
 
 }
 
-
 impl MsgDataTrait for MsgData<'_> {
+*/
+impl MsgData<'_> {
     /// construct message with topic 
     fn build_msg(&self,
                  broker: &Broker) -> Message {
 
-        // JSON sample payload
+        // JSON sample payload -> FUTURE USE
+        // fix -> template formater or via hash map
         let msg = format!("{{\"data\": \"{body}\", \
                            \"datetime\": \"{now}\", \
                            \"user\": \"{user}\" \
