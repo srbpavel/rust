@@ -2,10 +2,9 @@ use crate::toml_mqtt_config_struct::{TomlConfig};
 
 use mqtt_publisher::{Broker,
                      MsgData,
-                     
-                     send_msg_to_topic,
-};
 
+                     BrokerTrait,
+};
 
 pub fn sample(config: TomlConfig) {
 
@@ -43,7 +42,8 @@ pub fn sample(config: TomlConfig) {
     }
 
     // SEND L
-    match send_msg_to_topic(&broker_l, &data_batch) {
+    //match send_msg_to_topic(&broker_l, &data_batch) {
+    match broker_l.send_msg_to_topic(&data_batch) {
         Ok(_) => {},
         Err(transmit_error) => {
             eprintln!("\nERROR send_msg_to_topic: {transmit_error:?}");
