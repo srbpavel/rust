@@ -1,31 +1,47 @@
-user = 
-
-name = 
-host = 
-work_dir = 
+user = "lib_test_sonya"
+name = "easy_laptop"
+host = "spongebob"
+work_dir = ""
 
 [broker]
 [broker.lord]
-machine = 
-client_id = 
-interval = 
+machine = "tcp://jozefina:1883"
+client_id = "SPONGEBOB_RUST_LORD"
+interval = 20
 
-username = 
-password = 
+# MQTT MOSQUITTO acl_file settings
+# topics available for user: lord -> semici + vcely
+username = "lord"
+password = ""
 
-#debug = true #false
-debug = false
+debug = true #false
+#debug = false
 
 [broker.metynka]
-machine = 
-client_id = 
-interval = 
+machine = "tcp://jozefina:1883"
+client_id = "SPONGEBOB_RUST_METYNKA"
+interval = 20
 
-username = 
-password = 
+# MQTT MOSQUITTO acl_file settings
+# topics available for user: metynka -> vcely
+username = "metynka"
+password = ""
 
-#debug = true #false
-debug = false
+debug = true #false
+#debug = false
+
+[topics]
+debug = true #false
+
+#status: on/off
+#name: topic
+#body: dummy sample here insted of sensor value or what ever
+#qos: qos
+values = [
+       {status=true, name="semici", body="foOoKuMe is KiNg na SEMIKOVI", qos=0},
+       {status=true, name="vcely", body="da Ma is QuuEn na TRUBCOVI", qos=0},
+       {status=false, name="heart_beat", body="is alive", qos=0},
+       ]
 
 [flag]
 # display this config file

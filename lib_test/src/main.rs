@@ -1,6 +1,6 @@
 // EASY_CONFIG
 mod example_easy_config;
-mod toml_mqtt_config_struct;
+mod mqtt_toml_config_struct;
 
 // MQTT_PUBLISHER
 mod example_mqtt_publisher;

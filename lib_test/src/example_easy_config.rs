@@ -1,7 +1,7 @@
 use std::process;
 
 // Struct for TOML config
-use crate::toml_mqtt_config_struct::{TomlConfig};
+use crate::mqtt_toml_config_struct::{TomlConfig};
 
 // local crate
 use easy_config::{read_toml_config};

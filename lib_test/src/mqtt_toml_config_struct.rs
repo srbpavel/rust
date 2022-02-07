@@ -14,10 +14,25 @@ pub struct TomlConfig {
     
     // STRUCT
     //pub broker: Broker,
+    pub topics: Topics,
     pub flag: Flag,
 
     //iter via HASH key
     pub broker: HashMap<MyStr, Broker>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Topics {
+    pub debug: bool,
+    pub values: Vec<Topic>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Topic {
+    pub status: bool,
+    pub name: MyStr,
+    pub body: MyStr,
+    pub qos: i32,
 }
 
 
