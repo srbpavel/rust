@@ -157,9 +157,15 @@ impl Broker<'_> {
 
     /// SUB call
     pub fn subscribe(&self,
-                     topics: &[&str],
-                     qos: &[i32]) {
-        
+                     //topics: &[&str],
+                     //qos: &[i32]) {
+                     data: &Vec<MsgData>) {
+
+
+        let (topics_list, qos_list) = topics_batch_to_list(data);
+    
+        //_
+                         
         let client_result = self.connect();
         
         match client_result {
@@ -168,12 +174,18 @@ impl Broker<'_> {
 
                 let listener = &client.start_consuming();
 
+                /*
                 self.subscribe_topics(&client,
                                       topics,
                                       qos,
                 );
+                */
+                self.subscribe_topics(&client,
+                                      &topics_list,
+                                      &qos_list,
+                );
                 
-                println!("TOPICS: {topics:?} QOS: {qos:?} -> waiting for incomming data... <- {now:?}",
+                println!("TOPICS: {topics_list:?} QOS: {qos_list:?} -> waiting for incomming data... <- {now:?}",
                          now = Local::now(),
                 );
 
@@ -193,9 +205,15 @@ impl Broker<'_> {
                         if self.try_reconnect(&client) {
                             println!("repeat subscribe topics...");
 
+                            /*
                             self.subscribe_topics(&client,
                                                   topics,
                                                   qos,
+                            );
+                            */
+                            self.subscribe_topics(&client,
+                                                  &topics_list,
+                                                  &qos_list,
                             );
                             
                         } else { break; }
@@ -351,4 +369,24 @@ fn parse_msg(msg: Message) {
             );
         },
     }
+}
+
+
+/// transform topic + qos into slices for subscriber
+fn topics_batch_to_list<'d >(data: &'d Vec<MsgData>) -> (Vec<&'d str>, Vec<i32>) {
+
+    let mut qos_list: Vec<i32> = vec![];   
+    
+    let topics_list = data
+        .iter()
+        .map(|t| {
+            qos_list.push(t.qos);          
+            
+            t.topic
+        })   
+        .collect::<Vec<_>>();
+    
+    println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
+    
+    (topics_list, qos_list)
 }
