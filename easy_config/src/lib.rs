@@ -27,11 +27,13 @@ fn string_to_path(filename: &String) -> Option<&Path> {
     let path_status = path.exists();
     
     if path_status {
+        /* // DEBUG
         println!("#PATH [{}]: {:#?}",
                  path_status,
                  path.display(),
         );
-        
+        */
+
         Some(path)
             
     } else {

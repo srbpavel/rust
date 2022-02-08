@@ -7,8 +7,10 @@ use crate::mqtt_toml_config_struct::{TomlConfig};
 use easy_config::{read_toml_config};
 
 
-pub fn sample() -> TomlConfig{
+pub fn sample() -> TomlConfig {
+    /* // DEBUG
     println!("#SAMPLE <EASY_CONFIG>\n");
+    */
 
     // FILE_NAME -> here from code / later via CmdArg or ...
     let config_filename = "/home/conan/soft/rust/lib_test/src/mqtt_config.toml";

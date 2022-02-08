@@ -82,7 +82,7 @@ impl Broker<'_> {
                     Ok(response) => {
                         
                         if self.debug {
-                            println!("RESPONSE: {response:?}\nUSER: {}",
+                            println!("\nRESPONSE: {response:?}\nUSER: {}",
                                      &self.username,
                             );
                         }
