@@ -1,4 +1,4 @@
-M//#[macro_use]
+//#[macro_use]
 //extern crate paho_mqtt as mqtt;
 
 use paho_mqtt::{
