@@ -10,16 +10,29 @@ use mqtt_publisher::{Broker,
 pub fn sample_subscribe(config: TomlConfig) {
 
     // TOPICS
+    let mut qos_list: Vec<i32> = vec![];
+    let mut topics_list = vec![];
+
     let _topics_batch = &config.topics.values
         .iter()
         .filter(|t| t.status)
-        .map(|t| MsgData {
-            topic: &t.name,
-            body: &t.body,
-            qos: t.qos,
-        },)
+        .map(|t| {
+
+            qos_list.push(t.qos);
+            topics_list.push(&*t.name);
+            
+            MsgData {
+                topic: &t.name,
+                body: &t.body,
+                qos: t.qos,
+            }
+        })
         .collect::<Vec<_>>();
 
+    // + topic
+    topics_list.push("hrebecek");
+    qos_list.push(1);
+    
     let b = &config.broker["lord"];
     
     let broker = Broker {
@@ -34,16 +47,20 @@ pub fn sample_subscribe(config: TomlConfig) {
         
         debug: b.debug,
     };
-    
-    broker.subscribe(&["semici", "vcely", "hrebecek"],
-                     &[1, 1, 1],
-    );
 
     /*
-    broker.subscribe_topics(&["lord", "metynka"],
-                            &[0, 0],
+    println!("topics: {:?}\nqos: {:?}",
+             topics_list,
+             qos_list,
     );
     */
+
+    // SUBSCRIBE
+    broker.subscribe(&topics_list,
+                     &qos_list,
+    );
+
+        
 }
 
 

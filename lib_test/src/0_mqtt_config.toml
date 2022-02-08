@@ -3,6 +3,9 @@ name = "easy_laptop"
 host = "spongebob"
 work_dir = ""
 
+#service_type = "sub"
+service_type = "pub"
+
 [broker]
 [broker.lord]
 machine = "tcp://jozefina:1883"

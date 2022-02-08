@@ -1,6 +1,6 @@
 use paho_mqtt::{
-    self as mqtt,
-
+    ConnectOptionsBuilder,
+    CreateOptionsBuilder,
     Client,
     Error,
     Message,
@@ -12,6 +12,8 @@ use paho_mqtt::{
         ConnectOptions,
     },
 };
+
+use chrono::Local;
 
 
 /// settings for broker
@@ -31,7 +33,7 @@ pub struct Broker<'b> {
 impl Broker<'_> {
     /// user credentials + interval
     fn connect_options(&self) -> ConnectOptions {
-        mqtt::ConnectOptionsBuilder::new()
+        ConnectOptionsBuilder::new()
             .keep_alive_interval(
                 std::time::Duration::from_secs(self.interval)
             )
@@ -43,7 +45,7 @@ impl Broker<'_> {
 
     /// broker_machine + client_id
     fn create_options(&self) -> CreateOptions {
-        mqtt::CreateOptionsBuilder::new()
+        CreateOptionsBuilder::new()
             .server_uri(String::from(self.machine)) // protocol://host:port
             .client_id(String::from(self.client_id))
             .finalize()
@@ -56,7 +58,7 @@ impl Broker<'_> {
         let options = self.connect_options();
         
         // BROKER
-        match mqtt::Client::new(self.create_options()) {
+        match Client::new(self.create_options()) {
             
             // CLIENT options valid
             Ok(client) => {
@@ -99,27 +101,37 @@ impl Broker<'_> {
         }
     }
 
-    /// reconnect 
+    /// reconnect
+    ///
+    /// if in systemctl service it will restart after error as per config
+    ///
+    /// otherwise change here to infinite wait
     fn try_reconnect(&self,
                      client: &Client) -> bool {
 
-        let delay = 5000;
+        let delay = 5; // SEC
         let cycles = 10;
         
-        println!("connection lost: waiting to retry connection");
+        println!("connection lost: waiting to retry connection: {cycles}x times with {delay}s delay <- {now:?}",
+                 now = Local::now(),
+        );
 
-        for _ in 0..=cycles {
+        for _ in 0..cycles {
             std::thread::sleep(
-                std::time::Duration::from_millis(delay));
+                std::time::Duration::from_millis(delay * 1000));
 
             if client.reconnect().is_ok() {
-                println!("successfully reconnected");
+                println!("successfully reconnected <- {now:?}",
+                         now = Local::now(),
+                );
 
                 return true;
             }
         }
 
-        println!("unable to reconnect");
+        println!("unable to reconnect <- {now:?}",
+                 now = Local::now(),
+        );
 
         false
     }
@@ -129,7 +141,11 @@ impl Broker<'_> {
                         client: &Client,
                         topics: &[&str],
                         qos: &[i32]) {
-        
+        /*
+        ERROR: not enough QOS args -> PahoDescr(-9, "Bad QoS")
+        &["semici", "vcely"],
+        &[1],
+        */
         if let Err(why) = &client.subscribe_many(topics,
                                                  qos,
         ) {
@@ -142,7 +158,6 @@ impl Broker<'_> {
     /// SUB call
     pub fn subscribe(&self,
                      topics: &[&str],
-                     //qos: &[i32]) -> Result<ServerResponse, Error> {
                      qos: &[i32]) {
         
         let client_result = self.connect();
@@ -151,33 +166,23 @@ impl Broker<'_> {
             // CONNECTED + SUB need's to be mutable
             Ok(mut client) => {
 
-                let rx = &client.start_consuming();
+                let listener = &client.start_consuming();
 
-                // ERROR: not enough QOS args -> PahoDescr(-9, "Bad QoS")
-                // &["semici", "vcely"],
-                // &[1],
-                /*
-                if let Err(why) = &client.subscribe_many(topics,
-                                                       qos,
-                ) {
-                    println!("ERROR subscribes topics: {topics:?}\nREASON >>> {:?}", why);
-
-                    std::process::exit(1);
-                };
-                */
                 self.subscribe_topics(&client,
                                       topics,
                                       qos,
                 );
                 
-                println!("TOPICS: {topics:?} -> waiting for RX...");
+                println!("TOPICS: {topics:?} QOS: {qos:?} -> waiting for incomming data... <- {now:?}",
+                         now = Local::now(),
+                );
 
-                for msg in rx.iter() {
+                // LISTENER
+                for msg_in in listener.iter() {
 
-                    // MSG
-                    if let Some(msg) = msg {
-
-                        parse_msg(msg)
+                    if let Some(msg_to_parse) = msg_in {
+                        // MSG PARSER via topics
+                        parse_msg(msg_to_parse)
 
                     // ALIVE 
                     } else if !client.is_connected() {
@@ -225,7 +230,7 @@ impl Broker<'_> {
                                                    &self,
                                                    &data,
                 );
-                // FUTURE USE
+                // FUTURE USE -> Err MSG alarma
                 /*
                     .iter()
                     .inspect(|m| {
@@ -236,7 +241,7 @@ impl Broker<'_> {
                     .collect::<Vec<_>>();
                 */
                 
-                // CLOSE session -> Result
+                // CLOSE session
                 client.disconnect(None)
             },
             
@@ -272,7 +277,7 @@ impl MsgData<'_> {
                            \"user\": \"{user}\" \
                            }}",
 
-                          now = chrono::Local::now(),
+                          now = Local::now(),
                           body = self.body,
                           user = broker.username,
         );    
@@ -284,7 +289,7 @@ impl MsgData<'_> {
             );
         }
         
-        mqtt::Message::new(
+        Message::new(
             self.topic,
             msg,
             self.qos,
@@ -319,26 +324,28 @@ fn publish_all_msg(client: &Client,
 /// parse incommint msg
 fn parse_msg(msg: Message) {
 
+    let now = Local::now();
+    
     // FUTURE USE - parse topic 
     match msg.topic() {
 
         "vcely" => {
 
-            println!("\nINCOMMING <vcely> :\n topic: {}\n payload[str]: {:?}",
+            println!("\nINCOMMING <vcely> {now}\n topic: {}\n payload[str]: {:?}",
                      msg.topic(),
                      msg.payload_str(), // as string
             );
         },
         
         "semici" => {
-            println!("\nINCOMMING <semici> :\n topic: {}\n payload[raw]: {:?}",
+            println!("\nINCOMMING <semici> {now}\n topic: {}\n payload[raw]: {:?}",
                      msg.topic(),
                      msg.payload(), // RAW 
             );
         },
         
         _ => {
-            println!("\nINCOMMING <...> :\n topic: {}\n msg: {:?}",
+            println!("\nINCOMMING <...> {now}\n topic: {}\n msg: {:?}",
                      msg.topic(),
                      msg, // full msg
             );

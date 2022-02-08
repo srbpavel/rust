@@ -10,9 +10,21 @@ fn main() {
     // EXAMPLE >>> EASY_CONFIG
     let config = example_easy_config::sample();
 
-    // EXAMPLE >>> MQTT_PUBLISH
-    //example_mqtt_publisher::sample_publish(config);
+    match &*config.service_type {
 
-    // EXAMPLE >>> MQTT_SUBSCRIBE
-    example_mqtt_publisher::sample_subscribe(config);
+        // EXAMPLE >>> MQTT_PUBLISH
+        "pub" => {    
+            
+            example_mqtt_publisher::sample_publish(config);
+        },
+        
+        // EXAMPLE >>> MQTT_SUBSCRIBE
+        "sub" => {
+            example_mqtt_publisher::sample_subscribe(config);
+        },
+        
+        other => {
+            eprint!("INVALID mqtt type: {other:?}");
+        }
+    }
 }

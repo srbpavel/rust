@@ -11,6 +11,8 @@ pub struct TomlConfig {
     pub name: MyStr,
     pub host: MyStr,
     pub work_dir: MyStr,
+
+    pub service_type: MyStr,
     
     // STRUCT
     //pub broker: Broker,
