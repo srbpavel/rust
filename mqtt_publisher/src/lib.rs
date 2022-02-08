@@ -4,7 +4,6 @@ use paho_mqtt::{
     Client,
     Error,
     Message,
-    //ServerResponse,
 
     create_options::{
         CreateOptions,
@@ -30,23 +29,27 @@ pub struct Broker<'b> {
 
 
 impl Broker<'_> {
-    /// reconnect 
-    fn try_reconnect(&self,
-                     client: &Client) -> bool
-    {
-        println!("Connection lost. Waiting to retry connection");
-        for _ in 0..12 {
-            std::thread::sleep(std::time::Duration::from_millis(5000));
-            if client.reconnect().is_ok() {
-                println!("Successfully reconnected");
-                return true;
-            }
-        }
-        println!("Unable to reconnect after several attempts.");
-        false
+    /// user credentials + interval
+    fn connect_options(&self) -> ConnectOptions {
+        mqtt::ConnectOptionsBuilder::new()
+            .keep_alive_interval(
+                std::time::Duration::from_secs(self.interval)
+            )
+            .clean_session(true)
+            .user_name(self.username)
+            .password(self.password)
+            .finalize()
     }
 
-    /// initial connection
+    /// broker_machine + client_id
+    fn create_options(&self) -> CreateOptions {
+        mqtt::CreateOptionsBuilder::new()
+            .server_uri(String::from(self.machine)) // protocol://host:port
+            .client_id(String::from(self.client_id))
+            .finalize()
+    }
+
+    /// initial client connection
     fn connect(&self) -> Result<Client, Error> {
 
         // USER 
@@ -56,7 +59,6 @@ impl Broker<'_> {
         match mqtt::Client::new(self.create_options()) {
             
             // CLIENT options valid
-            //Ok(mut client) => {
             Ok(client) => {
 
                 match client.connect(options) {
@@ -70,7 +72,6 @@ impl Broker<'_> {
                         }
                             
                         Ok(client)
-                        //Ok(&mut client)
                     },
                     
                     /*
@@ -97,45 +98,100 @@ impl Broker<'_> {
             },
         }
     }
-    
-    pub fn subscribe_topics(&self,
-                            topics: &[&str],
-                            //qos: &[i32]) -> Result<ServerResponse, Error> {
-                            qos: &[i32]) {
+
+    /// reconnect 
+    fn try_reconnect(&self,
+                     client: &Client) -> bool {
+
+        let delay = 5000;
+        let cycles = 10;
         
-        let c = self.connect();
+        println!("connection lost: waiting to retry connection");
+
+        for _ in 0..=cycles {
+            std::thread::sleep(
+                std::time::Duration::from_millis(delay));
+
+            if client.reconnect().is_ok() {
+                println!("successfully reconnected");
+
+                return true;
+            }
+        }
+
+        println!("unable to reconnect");
+
+        false
+    }
+
+    /// sub to all topics
+    fn subscribe_topics(&self,
+                        client: &Client,
+                        topics: &[&str],
+                        qos: &[i32]) {
         
-        match c {
-            // SUB need's to be mutable
+        if let Err(why) = &client.subscribe_many(topics,
+                                                 qos,
+        ) {
+            println!("EXIT subscribes topics: {topics:?}\nREASON >>> {:?}", why);
+            
+            std::process::exit(1);
+        };
+    }
+
+    /// SUB call
+    pub fn subscribe(&self,
+                     topics: &[&str],
+                     //qos: &[i32]) -> Result<ServerResponse, Error> {
+                     qos: &[i32]) {
+        
+        let client_result = self.connect();
+        
+        match client_result {
+            // CONNECTED + SUB need's to be mutable
             Ok(mut client) => {
 
                 let rx = &client.start_consuming();
-                
-                if let Err(e) = &client.subscribe_many(topics,
+
+                // ERROR: not enough QOS args -> PahoDescr(-9, "Bad QoS")
+                // &["semici", "vcely"],
+                // &[1],
+                /*
+                if let Err(why) = &client.subscribe_many(topics,
                                                        qos,
                 ) {
-                    println!("Error subscribes topics: {:?}", e);
+                    println!("ERROR subscribes topics: {topics:?}\nREASON >>> {:?}", why);
+
                     std::process::exit(1);
                 };
+                */
+                self.subscribe_topics(&client,
+                                      topics,
+                                      qos,
+                );
                 
-                println!("Processing requests...");
+                println!("TOPICS: {topics:?} -> waiting for RX...");
+
                 for msg in rx.iter() {
+
+                    // MSG
                     if let Some(msg) = msg {
-                        println!("{}", msg);
+
+                        parse_msg(msg)
+
+                    // ALIVE 
                     } else if !client.is_connected() {
 
                         println!("not connected...");
-                        
+
+                        // RECONNECT
                         if self.try_reconnect(&client) {
-                            println!("Resubscribe topics...");
-                            
-                            if let Err(e) = &client.subscribe_many(topics,
-                                                                   qos,
-                            ) {
-                                
-                                println!("Error subscribes topics: {:?}", e);
-                                std::process::exit(1);
-                            };
+                            println!("repeat subscribe topics...");
+
+                            self.subscribe_topics(&client,
+                                                  topics,
+                                                  qos,
+                            );
                             
                         } else { break; }
                     }
@@ -147,26 +203,6 @@ impl Broker<'_> {
             },
         };
     }
-    
-    /// user credentials + interval
-    fn connect_options(&self) -> ConnectOptions {
-        mqtt::ConnectOptionsBuilder::new()
-            .keep_alive_interval(
-                std::time::Duration::from_secs(self.interval)
-            )
-            .clean_session(true)
-            .user_name(self.username)
-            .password(self.password)
-            .finalize()
-    }
-
-    /// broker_machine + client_id
-    fn create_options(&self) -> CreateOptions {
-        mqtt::CreateOptionsBuilder::new()
-            .server_uri(String::from(self.machine)) // protocol://host:port
-            .client_id(String::from(self.client_id))
-            .finalize()
-    }
 
     /// broker connection + transmit all messages
     pub fn send_msg_to_topic(&self,
@@ -175,7 +211,7 @@ impl Broker<'_> {
         let c = self.connect();
         
         match c {
-            // PUB not mutable
+            // CONNECTED + PUB not mutable
             Ok(client) => {
                 
                 if self.debug {
@@ -200,96 +236,15 @@ impl Broker<'_> {
                     .collect::<Vec<_>>();
                 */
                 
-                // CLOSE session
-                /*
-                if let Err(r) = client.disconnect(None) {
-                    return Err(r)
-                };
-                */
-
+                // CLOSE session -> Result
                 client.disconnect(None)
             },
             
             Err(why) => {
-                //std::process::exit(1)
                 Err(why)
-            },
-        }//;
-    }
-    
-    /*
-    pub fn send_msg_to_topic(&self,
-                             data: &Vec<MsgData>) -> Result<ServerResponse, Error> {
-        
-        // USER 
-        let options = self.connect_options();
-        
-        // BROKER
-        match mqtt::Client::new(self.create_options()) {
-            
-            // CLIENT options valid
-            Ok(client) => {
-                
-                match client.connect(options) {
-                    
-                    // CLIENT connected
-                    Ok(response) => {
-                        
-                        if self.debug {
-                            println!("\nRESPONSE: {response:?}\nUSER: {}",
-                                     &self.username,
-                            );
-                        }
-                        
-                        // TRANSIMT msg
-                        let _msg_results = publish_all_msg(&client,
-                                                           &self,
-                                                           &data,
-                        );
-                            // FUTURE USE
-                            /*
-                            .iter()
-                            .inspect(|m| {
-                                if self.debug {
-                                    println!("msg_result: {:?}", m);
-                                }
-                            })
-                            .collect::<Vec<_>>();
-                            */
-                        
-                        // CLOSE session
-                        if let Err(r) = client.disconnect(None) {
-                            return Err(r)
-                        };
-                        
-                        Ok(response)
-                    },
-                    
-                    /*
-                    ERROR user/pass -> PahoDescr(5, "CONNACK return code")
-                    ERROR broker PORT -> PahoDescr(-1, "TCP/TLS connect failure")
-                    ERROR broker HOST/IP -> Paho(-1)
-                     */
-                    Err(response_error) => {
-                        eprintln!("\nSERVER RESPONSE: ERROR: Unable to connect\nREASON >>> {response_error:?}");
-                        
-                        Err(response_error)
-                    }
-                }
-                
-            },
-            
-            /*
-            ERROR broker wrong protocol -> Paho(-14)
-             */
-            Err(client_error) => {
-                eprintln!("\nCLIENT build: Error\nREASON >>> {client_error:?}");
-                
-                Err(client_error)
             },
         }
     }
-    */
 }
 
 
@@ -358,4 +313,35 @@ fn publish_all_msg(client: &Client,
             client.publish(msg)
         })
         .collect::<Vec<_>>()
+}
+
+
+/// parse incommint msg
+fn parse_msg(msg: Message) {
+
+    // FUTURE USE - parse topic 
+    match msg.topic() {
+
+        "vcely" => {
+
+            println!("\nINCOMMING <vcely> :\n topic: {}\n payload[str]: {:?}",
+                     msg.topic(),
+                     msg.payload_str(), // as string
+            );
+        },
+        
+        "semici" => {
+            println!("\nINCOMMING <semici> :\n topic: {}\n payload[raw]: {:?}",
+                     msg.topic(),
+                     msg.payload(), // RAW 
+            );
+        },
+        
+        _ => {
+            println!("\nINCOMMING <...> :\n topic: {}\n msg: {:?}",
+                     msg.topic(),
+                     msg, // full msg
+            );
+        },
+    }
 }

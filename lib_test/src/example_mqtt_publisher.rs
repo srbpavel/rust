@@ -35,8 +35,8 @@ pub fn sample_subscribe(config: TomlConfig) {
         debug: b.debug,
     };
     
-    broker.subscribe_topics(&["semici", "vcely"],
-                            &[1, 1],
+    broker.subscribe(&["semici", "vcely", "hrebecek"],
+                     &[1, 1, 1],
     );
 
     /*
