@@ -1,9 +1,13 @@
+M//#[macro_use]
+//extern crate paho_mqtt as mqtt;
+
 use paho_mqtt::{
     ConnectOptionsBuilder,
     CreateOptionsBuilder,
     Client,
     Error,
     Message,
+    MessageBuilder,
 
     create_options::{
         CreateOptions,
@@ -14,6 +18,9 @@ use paho_mqtt::{
 };
 
 use chrono::Local;
+
+
+const MQTTV5: u32 = 5;
 
 
 /// settings for broker
@@ -36,22 +43,45 @@ pub struct Broker<'b> {
 impl Broker<'_> {
     /// user credentials + interval
     fn connect_options(&self) -> ConnectOptions {
+
+        /*
+        const QOS: i32 = 1;
+        const TOPIC: &str = "LAST_WILL";
+        
+        let props = paho_mqtt::properties! { paho_mqtt::PropertyCode::SessionExpiryInterval => 60,};
+
+        let lwt_props = mqtt::properties! { mqtt::PropertyCode::WillDelayInterval => 10, };
+        
+        let lwt = paho_mqtt::MessageBuilder::new()
+            .topic(TOPIC)
+            .payload(format!("<<< last_will >>>"))
+            .qos(QOS)
+            .properties(lwt_props)
+            .finalize();
+        */
+
         ConnectOptionsBuilder::new()
-            .keep_alive_interval(
-                std::time::Duration::from_secs(self.interval)
-            )
+            //.keep_alive_interval(std::time::Duration::from_secs(self.interval))
             .clean_session(true)
             .user_name(self.username)
             .password(self.password)
+            .mqtt_version(MQTTV5)
+            //.keep_alive_interval(std::time::Duration::from_secs(20))
+            //.properties(props)
+            //.will_message(lwt)
             .finalize()
     }
 
     
     /// broker_machine + client_id
     fn create_options(&self) -> CreateOptions {
+
         CreateOptionsBuilder::new()
-            .server_uri(String::from(self.machine)) // protocol://host:port
+            // protocol://host:port
+            // tcp:// ssl://
+            .server_uri(String::from(self.machine))
             .client_id(String::from(self.client_id))
+            .mqtt_version(MQTTV5)
             .finalize()
     }
 
@@ -73,8 +103,10 @@ impl Broker<'_> {
                     // CLIENT connected
                     Ok(response) => {
                         if self.debug {
-                            println!("\nRESPONSE: {response:?}\nUSER: {}",
-                                     &self.username,
+                            println!("\nServerResponse: {response:?}\n{:?}\n{:?}\n{:?}",
+                                     response.request_response(),
+                                     response.connect_response(),
+                                     response.properties(),
                             );
                         }
                             
@@ -106,7 +138,7 @@ impl Broker<'_> {
         }
     }
 
-    /// reconnect
+    /// SUB reconnect
     ///
     /// if in systemctl service it will restart after error as per config
     ///
@@ -114,9 +146,6 @@ impl Broker<'_> {
     fn try_reconnect(&self,
                      client: &Client) -> bool {
 
-        //let delay = 5; // SEC
-        //let cycles = 10;
-        
         println!("connection lost: waiting to retry connection: {cycles}x times with {delay}s delay <- {now:?}",
                  cycles = &self.lifetime,
                  delay = &self.reconnect_delay,
@@ -125,21 +154,14 @@ impl Broker<'_> {
 
         let mut reconnect_counter = 0;
 
-        // LIMITED lifetime
-        //for _ in 0..cycles {
-        // FOREVER
-        //for _ in 0.. {
         loop {
             if self.lifetime != -1 {
                 reconnect_counter += 1;
+                println!("reconnect counter: {reconnect_counter}");
             }
-         
-            println!("reconnect counter: {reconnect_counter}");
 
-            //if reconnect_counter != 0 && reconnect_counter > self.lifetime {
             if self.lifetime != -1 && reconnect_counter > self.lifetime {
                 break
-                    
             }
             
             std::thread::sleep(
@@ -162,7 +184,7 @@ impl Broker<'_> {
     }
 
     
-    /// sub to all topics
+    /// SUB to all topics
     fn subscribe_topics(&self,
                         client: &Client,
                         topics: &[&str],
@@ -182,7 +204,7 @@ impl Broker<'_> {
         };
     }
 
-    /// SUB call
+    /// SUB main call
     pub fn subscribe(&self,
                      data: &Vec<MsgData>) {
 
@@ -245,7 +267,7 @@ impl Broker<'_> {
     }
 
     
-    /// broker connection + transmit all messages
+    /// PUB broker connection + transmit all messages
     pub fn send_msg_to_topic(&self,
                              data: &Vec<MsgData>) -> Result<(), Error> {
 
@@ -265,9 +287,7 @@ impl Broker<'_> {
                 let _msg_results = publish_all_msg(&client,
                                                    &self,
                                                    &data,
-                );
-                // FUTURE USE -> Err MSG alarma
-                /*
+                )
                     .iter()
                     .inspect(|m| {
                         if self.debug {
@@ -275,10 +295,16 @@ impl Broker<'_> {
                         }
                     })
                     .collect::<Vec<_>>();
-                */
                 
                 // CLOSE session
                 client.disconnect(None)
+                /* // + last_will
+                let opts = paho_mqtt::DisconnectOptionsBuilder::new()
+                    .publish_will_message()
+                    .finalize();
+                
+                client.disconnect(opts)
+                */
             },
             
             Err(why) => {
@@ -302,7 +328,7 @@ pub struct MsgData<'d> {
 
 
 impl MsgData<'_> {
-    /// construct message with topic 
+    /// PUB construct message with topic 
     fn build_msg(&self,
                  broker: &Broker) -> Message {
 
@@ -325,16 +351,29 @@ impl MsgData<'_> {
             );
         }
         
+        /*
         Message::new(
             self.topic,
             msg_body,
             self.qos,
         )
+        */
+
+        // BROKEN
+        //let lwt_props = paho_mqtt::properties! { paho_mqtt::PropertyCode::WillDelayInterval => 10,};
+        
+        MessageBuilder::new()
+            .topic(self.topic)
+            .qos(self.qos)
+            .payload(msg_body)
+            //.retained(true)
+            //.properties(lwt_props)
+            .finalize()
     }
 }
 
 
-/// transmit all messages
+/// PUB transmit all messages
 fn publish_all_msg(client: &Client,
                    broker: &Broker,
                    data: &Vec<MsgData>) -> Vec<Result<(), Error>> {
@@ -350,14 +389,22 @@ fn publish_all_msg(client: &Client,
         .map(|single_data| {
 
             let msg = single_data.build_msg(broker);
+
+            if broker.debug {
+                println!("\nMSG: {:?}",
+                         msg,
+                );
+            }
             
+            // PUB CALL
             client.publish(msg)
+            
         })
         .collect::<Vec<_>>()
 }
 
 
-/// parse incommint msg
+/// SUB parse incommint msg
 fn parse_msg(msg: Message) {
 
     let now = Local::now();
@@ -390,7 +437,7 @@ fn parse_msg(msg: Message) {
 }
 
 
-/// transform topic + qos into slices for subscriber
+/// SUB transform topic + qos into slices for subscriber
 fn topics_batch_to_list<'d >(data: &'d Vec<MsgData>) -> (Vec<&'d str>, Vec<i32>) {
 
     let mut qos_list: Vec<i32> = vec![];   

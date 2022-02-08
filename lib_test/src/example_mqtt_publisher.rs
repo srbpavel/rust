@@ -24,13 +24,15 @@ pub fn sample_subscribe(config: TomlConfig) {
         .collect::<Vec<_>>();
 
     // + one more tester
+    /*
     topics_batch.push(
         MsgData {
             topic: "hrebecek",
             body: "ja mam peerko",
-            qos: 0,
+            qos: 1,
         }
     );
+    */
 
     // BROKER
     let b = &config.broker["lord"];
