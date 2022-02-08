@@ -4,7 +4,9 @@
 * [metynka](metynka) - start lesson 
   - learn syntax
   - parse config
-  - 
+  - read json sensor data
+  - push it to influx
+  - backup to CSV
 
 * [easy_config](easy_config) - separate toml config parser to lib 
   - toml: vec + hashmap
@@ -15,8 +17,10 @@
   - more Option + Result usage
   - implement
 
-* [cli_stock](cli_stock) + [cli_stock_2](cli_stock_2) - received broken code -> fix it and learn async
-  - async
-
+* [cli_stock](cli_stock) + [cli_stock_2](cli_stock_2) 
+  - received broken code 
+  - fix it 
+  - learn async
+  
 * [mqtt_publisher](mqtt_publisher)
-  - small test msg to my mosquitto broker
+  - send test msg to my mosquitto broker
