@@ -5,7 +5,8 @@
   - learn syntax
   - parse config
   - read json sensor data
-  - push it to influx
+  - push it to influxdb
+  - query via flux if data in db
   - backup to CSV
 
 * [easy_config](easy_config) - separate toml config parser to lib 
