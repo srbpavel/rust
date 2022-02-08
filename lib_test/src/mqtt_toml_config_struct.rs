@@ -48,6 +48,9 @@ pub struct Broker {
     pub password: MyStr,
         
     pub debug: bool,
+
+    pub sub_lifetime: i8,
+    pub sub_reconnect_delay: u64, 
 }
 
 #[derive(Serialize, Deserialize, Debug)]

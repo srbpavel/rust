@@ -27,6 +27,9 @@ pub struct Broker<'b> {
     pub password: &'b str,
 
     pub debug: bool,
+
+    pub lifetime: i8,
+    pub reconnect_delay: u64,
 }
 
 
@@ -43,6 +46,7 @@ impl Broker<'_> {
             .finalize()
     }
 
+    
     /// broker_machine + client_id
     fn create_options(&self) -> CreateOptions {
         CreateOptionsBuilder::new()
@@ -51,6 +55,7 @@ impl Broker<'_> {
             .finalize()
     }
 
+    
     /// initial client connection
     fn connect(&self) -> Result<Client, Error> {
 
@@ -109,16 +114,36 @@ impl Broker<'_> {
     fn try_reconnect(&self,
                      client: &Client) -> bool {
 
-        let delay = 5; // SEC
-        let cycles = 10;
+        //let delay = 5; // SEC
+        //let cycles = 10;
         
         println!("connection lost: waiting to retry connection: {cycles}x times with {delay}s delay <- {now:?}",
+                 cycles = &self.lifetime,
+                 delay = &self.reconnect_delay,
                  now = Local::now(),
         );
 
-        for _ in 0..cycles {
+        let mut reconnect_counter = 0;
+
+        // LIMITED lifetime
+        //for _ in 0..cycles {
+        // FOREVER
+        //for _ in 0.. {
+        loop {
+            if self.lifetime != -1 {
+                reconnect_counter += 1;
+            }
+         
+            println!("reconnect counter: {reconnect_counter}");
+
+            //if reconnect_counter != 0 && reconnect_counter > self.lifetime {
+            if self.lifetime != -1 && reconnect_counter > self.lifetime {
+                break
+                    
+            }
+            
             std::thread::sleep(
-                std::time::Duration::from_millis(delay * 1000));
+                std::time::Duration::from_millis(&self.reconnect_delay * 1000));
 
             if client.reconnect().is_ok() {
                 println!("successfully reconnected <- {now:?}",
@@ -136,11 +161,13 @@ impl Broker<'_> {
         false
     }
 
+    
     /// sub to all topics
     fn subscribe_topics(&self,
                         client: &Client,
                         topics: &[&str],
                         qos: &[i32]) {
+
         /*
         ERROR: not enough QOS args -> PahoDescr(-9, "Bad QoS")
         &["semici", "vcely"],
@@ -157,14 +184,12 @@ impl Broker<'_> {
 
     /// SUB call
     pub fn subscribe(&self,
-                     //topics: &[&str],
-                     //qos: &[i32]) {
                      data: &Vec<MsgData>) {
 
 
         let (topics_list, qos_list) = topics_batch_to_list(data);
-    
-        //_
+
+        println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
                          
         let client_result = self.connect();
         
@@ -174,12 +199,6 @@ impl Broker<'_> {
 
                 let listener = &client.start_consuming();
 
-                /*
-                self.subscribe_topics(&client,
-                                      topics,
-                                      qos,
-                );
-                */
                 self.subscribe_topics(&client,
                                       &topics_list,
                                       &qos_list,
@@ -205,12 +224,6 @@ impl Broker<'_> {
                         if self.try_reconnect(&client) {
                             println!("repeat subscribe topics...");
 
-                            /*
-                            self.subscribe_topics(&client,
-                                                  topics,
-                                                  qos,
-                            );
-                            */
                             self.subscribe_topics(&client,
                                                   &topics_list,
                                                   &qos_list,
@@ -221,12 +234,17 @@ impl Broker<'_> {
                 }
             },
 
-            Err(_) => {
+            // CLIENT connection ERROR
+            Err(why) => {
+
+                eprint!("EXIT: client\nREASON >>> {why}");
+                
                 std::process::exit(1)
             },
         };
     }
 
+    
     /// broker connection + transmit all messages
     pub fn send_msg_to_topic(&self,
                              data: &Vec<MsgData>) -> Result<(), Error> {
@@ -290,26 +308,26 @@ impl MsgData<'_> {
 
         // JSON sample payload -> FUTURE USE
         // fix -> template formater or via hash map
-        let msg = format!("{{\"data\": \"{body}\", \
-                           \"datetime\": \"{now}\", \
-                           \"user\": \"{user}\" \
-                           }}",
-
-                          now = Local::now(),
-                          body = self.body,
-                          user = broker.username,
+        let msg_body = format!("{{\"data\": \"{body}\", \
+                                \"datetime\": \"{now}\", \
+                                \"user\": \"{user}\" \
+                                }}",
+                               
+                               now = Local::now(),
+                               body = self.body,
+                               user = broker.username,
         );    
         
         if broker.debug {
             println!("TRANSMIT:\n topic: {:?}\n msg: {:?}",
                      self.topic,
-                     msg,
+                     msg_body,
             );
         }
         
         Message::new(
             self.topic,
-            msg,
+            msg_body,
             self.qos,
         )
     }
@@ -351,7 +369,7 @@ fn parse_msg(msg: Message) {
 
             println!("\nINCOMMING <vcely> {now}\n topic: {}\n payload[str]: {:?}",
                      msg.topic(),
-                     msg.payload_str(), // as string
+                     msg.payload_str(), // STRING
             );
         },
         
@@ -365,7 +383,7 @@ fn parse_msg(msg: Message) {
         _ => {
             println!("\nINCOMMING <...> {now}\n topic: {}\n msg: {:?}",
                      msg.topic(),
-                     msg, // full msg
+                     msg, // FULL MSG
             );
         },
     }
@@ -385,8 +403,6 @@ fn topics_batch_to_list<'d >(data: &'d Vec<MsgData>) -> (Vec<&'d str>, Vec<i32>)
             t.topic
         })   
         .collect::<Vec<_>>();
-    
-    println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
     
     (topics_list, qos_list)
 }

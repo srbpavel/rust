@@ -10,17 +10,11 @@ use mqtt_publisher::{Broker,
 pub fn sample_subscribe(config: TomlConfig) {
 
     // TOPICS
-    //let mut qos_list: Vec<i32> = vec![];
-    //let mut topics_list = vec![];
-
     let mut topics_batch = config.topics.values
         .iter()
         .filter(|t| t.status)
         .map(|t| {
 
-            //qos_list.push(t.qos);
-            //topics_list.push(&*t.name);
-            
             MsgData {
                 topic: &t.name,
                 body: &t.body,
@@ -29,17 +23,16 @@ pub fn sample_subscribe(config: TomlConfig) {
         })
         .collect::<Vec<_>>();
 
-    // + topic
-    //topics_list.push("hrebecek");
-    //qos_list.push(1);
+    // + one more tester
     topics_batch.push(
         MsgData {
             topic: "hrebecek",
             body: "ja mam peerko",
-            qos: 1,
+            qos: 0,
         }
     );
-    
+
+    // BROKER
     let b = &config.broker["lord"];
     
     let broker = Broker {
@@ -53,6 +46,9 @@ pub fn sample_subscribe(config: TomlConfig) {
         password: &b.password,
         
         debug: b.debug,
+
+        lifetime: b.sub_lifetime,
+        reconnect_delay: b.sub_reconnect_delay,
     };
 
     /*
@@ -133,6 +129,9 @@ pub fn sample_publish(config: TomlConfig) {
                 password: &b.password,
                 
                 debug: b.debug,
+
+                lifetime: b.sub_lifetime,
+                reconnect_delay: b.sub_reconnect_delay,
             };
 
             match broker.send_msg_to_topic(&topics_batch) {
