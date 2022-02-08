@@ -4,7 +4,7 @@ use paho_mqtt::{
     Client,
     Error,
     Message,
-    ServerResponse,
+    //ServerResponse,
 
     create_options::{
         CreateOptions,
@@ -30,7 +30,124 @@ pub struct Broker<'b> {
 
 
 impl Broker<'_> {
+    /// reconnect 
+    fn try_reconnect(&self,
+                     client: &Client) -> bool
+    {
+        println!("Connection lost. Waiting to retry connection");
+        for _ in 0..12 {
+            std::thread::sleep(std::time::Duration::from_millis(5000));
+            if client.reconnect().is_ok() {
+                println!("Successfully reconnected");
+                return true;
+            }
+        }
+        println!("Unable to reconnect after several attempts.");
+        false
+    }
 
+    /// initial connection
+    fn connect(&self) -> Result<Client, Error> {
+
+        // USER 
+        let options = self.connect_options();
+        
+        // BROKER
+        match mqtt::Client::new(self.create_options()) {
+            
+            // CLIENT options valid
+            //Ok(mut client) => {
+            Ok(client) => {
+
+                match client.connect(options) {
+                    
+                    // CLIENT connected
+                    Ok(response) => {
+                        if self.debug {
+                            println!("\nRESPONSE: {response:?}\nUSER: {}",
+                                     &self.username,
+                            );
+                        }
+                            
+                        Ok(client)
+                        //Ok(&mut client)
+                    },
+                    
+                    /*
+                    ERROR user/pass -> PahoDescr(5, "CONNACK return code")
+                    ERROR broker PORT -> PahoDescr(-1, "TCP/TLS connect failure")
+                    ERROR broker HOST/IP -> Paho(-1)
+                     */
+                    Err(response_error) => {
+                        eprintln!("\nSERVER RESPONSE: ERROR: Unable to connect\nREASON >>> {response_error:?}");
+                        
+                        Err(response_error)
+                    }
+                }
+                
+            },
+            
+            /*
+            ERROR broker wrong protocol -> Paho(-14)
+             */
+            Err(client_error) => {
+                eprintln!("\nCLIENT build: Error\nREASON >>> {client_error:?}");
+                
+                Err(client_error)
+            },
+        }
+    }
+    
+    pub fn subscribe_topics(&self,
+                            topics: &[&str],
+                            //qos: &[i32]) -> Result<ServerResponse, Error> {
+                            qos: &[i32]) {
+        
+        let c = self.connect();
+        
+        match c {
+            // SUB need's to be mutable
+            Ok(mut client) => {
+
+                let rx = &client.start_consuming();
+                
+                if let Err(e) = &client.subscribe_many(topics,
+                                                       qos,
+                ) {
+                    println!("Error subscribes topics: {:?}", e);
+                    std::process::exit(1);
+                };
+                
+                println!("Processing requests...");
+                for msg in rx.iter() {
+                    if let Some(msg) = msg {
+                        println!("{}", msg);
+                    } else if !client.is_connected() {
+
+                        println!("not connected...");
+                        
+                        if self.try_reconnect(&client) {
+                            println!("Resubscribe topics...");
+                            
+                            if let Err(e) = &client.subscribe_many(topics,
+                                                                   qos,
+                            ) {
+                                
+                                println!("Error subscribes topics: {:?}", e);
+                                std::process::exit(1);
+                            };
+                            
+                        } else { break; }
+                    }
+                }
+            },
+
+            Err(_) => {
+                std::process::exit(1)
+            },
+        };
+    }
+    
     /// user credentials + interval
     fn connect_options(&self) -> ConnectOptions {
         mqtt::ConnectOptionsBuilder::new()
@@ -52,6 +169,55 @@ impl Broker<'_> {
     }
 
     /// broker connection + transmit all messages
+    pub fn send_msg_to_topic(&self,
+                             data: &Vec<MsgData>) -> Result<(), Error> {
+
+        let c = self.connect();
+        
+        match c {
+            // PUB not mutable
+            Ok(client) => {
+                
+                if self.debug {
+                    println!("\nUSER: {}",
+                             &self.username,
+                    );
+                }
+                
+                // TRANSIMT msg
+                let _msg_results = publish_all_msg(&client,
+                                                   &self,
+                                                   &data,
+                );
+                // FUTURE USE
+                /*
+                    .iter()
+                    .inspect(|m| {
+                        if self.debug {
+                            println!("msg_result: {:?}", m);
+                        }
+                    })
+                    .collect::<Vec<_>>();
+                */
+                
+                // CLOSE session
+                /*
+                if let Err(r) = client.disconnect(None) {
+                    return Err(r)
+                };
+                */
+
+                client.disconnect(None)
+            },
+            
+            Err(why) => {
+                //std::process::exit(1)
+                Err(why)
+            },
+        }//;
+    }
+    
+    /*
     pub fn send_msg_to_topic(&self,
                              data: &Vec<MsgData>) -> Result<ServerResponse, Error> {
         
@@ -123,12 +289,14 @@ impl Broker<'_> {
             },
         }
     }
+    */
 }
 
 
 /// msg_data
 ///
-/// do not forget MQTT TOPIC read|write USER permission is set in BROKER config
+/// do not forget !!!
+/// TOPIC read|write USER permission is set in BROKER [mosquitto/...] config
 #[derive(Debug)]
 pub struct MsgData<'d> {
     pub topic: &'d str,

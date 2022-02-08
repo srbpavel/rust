@@ -11,5 +11,8 @@ fn main() {
     let config = example_easy_config::sample();
 
     // EXAMPLE >>> MQTT_PUBLISH
-    example_mqtt_publisher::sample(config);
+    //example_mqtt_publisher::sample_publish(config);
+
+    // EXAMPLE >>> MQTT_SUBSCRIBE
+    example_mqtt_publisher::sample_subscribe(config);
 }

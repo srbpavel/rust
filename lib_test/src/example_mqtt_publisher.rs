@@ -6,7 +6,49 @@ use mqtt_publisher::{Broker,
 };
 
 
-pub fn sample(config: TomlConfig) {
+#[allow(dead_code)]
+pub fn sample_subscribe(config: TomlConfig) {
+
+    // TOPICS
+    let _topics_batch = &config.topics.values
+        .iter()
+        .filter(|t| t.status)
+        .map(|t| MsgData {
+            topic: &t.name,
+            body: &t.body,
+            qos: t.qos,
+        },)
+        .collect::<Vec<_>>();
+
+    let b = &config.broker["lord"];
+    
+    let broker = Broker {
+        machine: &b.machine,
+        
+        client_id: &b.client_id,
+
+        interval: b.interval,
+        
+        username: &b.username,
+        password: &b.password,
+        
+        debug: b.debug,
+    };
+    
+    broker.subscribe_topics(&["semici", "vcely"],
+                            &[1, 1],
+    );
+
+    /*
+    broker.subscribe_topics(&["lord", "metynka"],
+                            &[0, 0],
+    );
+    */
+}
+
+
+#[allow(dead_code)]
+pub fn sample_publish(config: TomlConfig) {
 
     // TOPICS
     let topics_batch = &config.topics.values
