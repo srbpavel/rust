@@ -35,7 +35,7 @@ pub fn sample(config: TomlConfig) {
              &config.broker["metynka"],
         ]
         .into_iter()
-        /*
+        /* // FUTURE USE
         .inspect(|b| {
             println!("\nCLIENT via config: {}",
                      &format!("{}_rust_{}",

@@ -176,7 +176,7 @@ fn publish_all_msg(client: &Client,
                    data: &Vec<MsgData>) -> Vec<Result<(), Error>> {
 
     // PUB MSG to TOPIC
-    let pub_info = data
+    data
         .into_iter()
         .inspect(|d| {
             if broker.debug {
@@ -186,28 +186,8 @@ fn publish_all_msg(client: &Client,
         .map(|single_data| {
 
             let msg = single_data.build_msg(broker);
-
-            /* // DEBUG payload
-            if debug {
-                println!("MSG: {msg:?}");
-            }
-            */
             
             client.publish(msg)
         })
-        /*
-        .filter(|r| match r {
-            Ok(()) => false,
-            Err(_) => true,
-        })
-        */
-        .collect::<Vec<_>>();
-
-    /*
-    if broker.debug {
-        println!("\nPUB_INFO: {pub_info:?}");
-    }
-    */
-
-    pub_info
+        .collect::<Vec<_>>()
 }
