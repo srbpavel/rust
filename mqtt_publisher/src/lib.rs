@@ -28,19 +28,7 @@ pub struct Broker<'b> {
     pub debug: bool,
 }
 
-/*
-pub trait BrokerTrait {
-    fn send_msg_to_topic(&self,
-                         data: &Vec<MsgData>) -> Result<ServerResponse, Error>;
 
-    fn create_options(&self) -> CreateOptions;
-
-    fn connect_options(&self) -> ConnectOptions;
-
-}
-
-impl BrokerTrait for Broker<'_> {
-*/
 impl Broker<'_> {
 
     /// user credentials + interval
@@ -88,10 +76,20 @@ impl Broker<'_> {
                         }
                         
                         // TRANSIMT msg
-                        publish_all_msg(&client,
-                                        &self,
-                                        &data,
+                        let _msg_results = publish_all_msg(&client,
+                                                           &self,
+                                                           &data,
                         );
+                            // FUTURE USE
+                            /*
+                            .iter()
+                            .inspect(|m| {
+                                if self.debug {
+                                    println!("msg_result: {:?}", m);
+                                }
+                            })
+                            .collect::<Vec<_>>();
+                            */
                         
                         // CLOSE session
                         if let Err(r) = client.disconnect(None) {
@@ -139,15 +137,6 @@ pub struct MsgData<'d> {
 }
 
 
-/*
-pub trait MsgDataTrait {
-    fn build_msg(&self,
-                 broker: &Broker) -> Message;
-
-}
-
-impl MsgDataTrait for MsgData<'_> {
-*/
 impl MsgData<'_> {
     /// construct message with topic 
     fn build_msg(&self,
@@ -184,7 +173,7 @@ impl MsgData<'_> {
 /// transmit all messages
 fn publish_all_msg(client: &Client,
                    broker: &Broker,
-                   data: &Vec<MsgData>) {
+                   data: &Vec<MsgData>) -> Vec<Result<(), Error>> {
 
     // PUB MSG to TOPIC
     let pub_info = data
@@ -206,9 +195,19 @@ fn publish_all_msg(client: &Client,
             
             client.publish(msg)
         })
+        /*
+        .filter(|r| match r {
+            Ok(()) => false,
+            Err(_) => true,
+        })
+        */
         .collect::<Vec<_>>();
-    
+
+    /*
     if broker.debug {
         println!("\nPUB_INFO: {pub_info:?}");
     }
+    */
+
+    pub_info
 }
