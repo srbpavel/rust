@@ -1,7 +1,16 @@
+/*
+#[macro_use]
+extern crate paho_mqtt as mqtt;
+*/
+
+
 use paho_mqtt::{
     ConnectOptionsBuilder,
     CreateOptionsBuilder,
+
+    //AsyncClient, // cannot reconnect for now :o(
     Client,
+
     Error,
     Message,
     MessageBuilder,
@@ -40,15 +49,25 @@ impl Broker<'_> {
     /// user credentials + interval
     fn connect_options(&self) -> ConnectOptions {
 
+        /*
+        let props = mqtt::properties! { 
+            mqtt::PropertyCode::SessionExpiryInterval => 60,
+        };
+        */
+
         ConnectOptionsBuilder::new()
             .keep_alive_interval(
                 std::time::Duration::from_secs(
                     self.interval)
             )
-            .clean_session(true)
+            // only for mqtt_v: 3
+            //.clean_session(true)
+            // for mqtt_v: 5
+            .clean_start(true)
             .user_name(self.username)
             .password(self.password)
             .mqtt_version(self.mqtt_v)
+            //.properties(props)
             .finalize()
     }
 
@@ -114,6 +133,45 @@ impl Broker<'_> {
         }
     }
 
+    /*
+    /// initial client connection
+    fn async_connect(&self) -> Result<AsyncClient, Error> {
+
+        // USER 
+        let options = self.connect_options();
+        
+        // BROKER
+        // SYNC
+        //match Client::new(self.create_options()) {
+        // ASYNC
+        match AsyncClient::new(self.create_options()) {
+            
+            // CLIENT options valid
+            Ok(client) => {
+            // mut when update client as client.set_connection_lost_callback
+            //Ok(mut client) => {
+
+                if let Err(err) = client.connect(options).wait() {
+                    eprintln!("Unable to connect: {}", err);
+                    std::process::exit(1);
+                };
+
+                Ok(client)
+            },
+            
+            /*
+            ERROR broker wrong protocol -> Paho(-14)
+             */
+            Err(client_error) => {
+                eprintln!("\nCLIENT build: Error\nREASON >>> {client_error:?}");
+                
+                Err(client_error)
+            },
+        }
+    }
+    */
+
+    //#[allow(dead_code)]
     /// SUB reconnect
     ///
     /// if in systemctl service it will restart after error as per config
@@ -162,7 +220,69 @@ impl Broker<'_> {
         false
     }
 
+
+    /*
+    /// ASYNC reconnect
+    fn async_try_reconnect(&self,
+                           client: &AsyncClient) -> bool {
+
+        println!("connection lost: waiting to retry connection: {cycles}x times with {delay}s delay <- {now:?}",
+                 cycles = &self.lifetime,
+                 delay = &self.reconnect_delay,
+                 now = Local::now(),
+        );
+
+        let mut reconnect_counter = 0;
+
+        loop {
+
+            // -1 INFINITE lifetime
+            if self.lifetime != -1 {
+                reconnect_counter += 1;
+                println!("reconnect counter: {reconnect_counter}");
+
+                if reconnect_counter > self.lifetime {
+                    break
+                }
+            }
+
+            /*
+            std::thread::sleep(
+                std::time::Duration::from_millis(
+                    &self.reconnect_delay * 1000));
+            */
+
+            // not able to reconnect in async !!!
+            // ERROR: [-1] TCP/TLS connect failure
+            // same error as for wrong PORT
+            match client.reconnect().wait() {
+                Ok(r) => {
+                    println!("OK: reconnect ->  {r:?} <- {now:?}",
+                             now = Local::now(),
+                    );
+                    
+                    return true;
+                },
+
+                Err(why) => {
+
+                    println!("ERROR: not reconnected\nREASON >>> {why}");
+
+                    break
+                },
+            }
+        }
+
+        println!("unable to reconnect <- {now:?}",
+                 now = Local::now(),
+        );
+
+        false
+    }
+    */
     
+    
+    //#[allow(dead_code)]
     /// SUB to all topics
     fn subscribe_topics(&self,
                         client: &Client,
@@ -183,6 +303,48 @@ impl Broker<'_> {
         };
     }
 
+
+    /*
+    /// ASYNC SUB to all topics
+    fn async_subscribe_topics(&self,
+                              client: &AsyncClient,
+                              topics: &[&str],
+                              qos: &[i32],
+                              topics_batch: &Vec<MsgData>) {
+
+        client.subscribe_many(topics,
+                              qos,
+        );
+
+        for top in topics_batch.iter() {
+
+            let topic = paho_mqtt::Topic::new(&client,
+                                              top.topic,
+                                              top.qos);
+
+            /* // does not catch the join in iter, maybe time out ?
+            let _ = topic
+                .subscribe_with_options(true, None)
+                .wait();
+            */
+
+            /*
+            let _ = topic
+                .publish(format!("<<< ###{}### joined the group >>>", top.topic))
+                .wait();
+            */
+
+            topic
+                .publish(
+                    format!("###{}### joined the topics",
+                            top.topic,
+                    )
+                );
+        }
+    }
+    */
+    
+
     /// SUB main sub call to all topics
     pub fn subscribe(&self,
                      data: &Vec<MsgData>) {
@@ -190,19 +352,32 @@ impl Broker<'_> {
         let (topics_list, qos_list) = topics_batch_to_list(data);
 
         println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
-                         
+
+        // SYNC
         let client_result = self.connect();
+        // ASYNC
+        //let client_result = self.async_connect();
         
         match client_result {
             // CONNECTED + SUB need's to be mutable
             Ok(mut client) => {
-
+                
                 let listener = &client.start_consuming();
 
+                // /* // SYNC
                 self.subscribe_topics(&client,
                                       &topics_list,
                                       &qos_list,
                 );
+                // */
+
+                /* // ASYNC
+                self.async_subscribe_topics(&client,
+                                            &topics_list,
+                                            &qos_list,
+                                            data,
+                );
+                */
                 
                 println!("TOPICS: {topics_list:?} QOS: {qos_list:?} -> waiting for incomming data... <- {now:?}",
                          now = Local::now(),
@@ -210,7 +385,7 @@ impl Broker<'_> {
 
                 // LISTENER
                 for msg_in in listener.iter() {
-
+                    
                     if let Some(msg_to_parse) = msg_in {
 
                         // MSG PARSER via topics
@@ -222,13 +397,26 @@ impl Broker<'_> {
                         println!("not connected...");
 
                         // RECONNECT
+                        // SYNC
                         if self.try_reconnect(&client) {
-                            println!("repeat subscribe topics...");
+                        // ASYNC
+                        //if self.async_try_reconnect(&client) {
+                            println!("async repeat subscribe topics...");
 
+                            // /* // SYNC
                             self.subscribe_topics(&client,
                                                   &topics_list,
                                                   &qos_list,
                             );
+                            // */
+                            
+                            /* // ASYNC
+                            self.async_subscribe_topics(&client,
+                                                        &topics_list,
+                                                        &qos_list,
+                                                        data,
+                            );
+                            */
 
                         // STOP 
                         } else { break; }
@@ -264,9 +452,9 @@ impl Broker<'_> {
                 }
                 
                 // TRANSIMT msg
-                let _msg_results = publish_all_msg(&client,
-                                                   &self,
-                                                   &data,
+                let _ = publish_all_msg(&client,
+                                        &self,
+                                        &data,
                 )
                     .iter()
                     .inspect(|m| {
