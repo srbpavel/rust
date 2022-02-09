@@ -29,6 +29,6 @@
   - learn async
   - **nice practice to fix broken**
   
-* [mqtt_publisher](mqtt_publisher)
+* [mqtt_client](mqtt_client)
   - send test msg to my mosquitto broker
   - **just started**
