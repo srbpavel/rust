@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate paho_mqtt as mqtt;
-
 use paho_mqtt::{
     ConnectOptionsBuilder,
     CreateOptionsBuilder,
@@ -42,26 +39,7 @@ pub struct Broker<'b> {
 
 impl Broker<'_> {
     /// user credentials + interval
-    fn connect_options(&self,
-                       /* data: &Vec<MsgData> */) -> ConnectOptions {
-
-        // /*
-        const QOS: i32 = 1;
-        const TOPIC: &str = "semici";
-        
-        //let props = paho_mqtt::properties! { paho_mqtt::PropertyCode::SessionExpiryInterval => 60,};
-
-        let lwt_props = mqtt::properties! { mqtt::PropertyCode::WillDelayInterval => 10, };
-        
-        let lwt = paho_mqtt::MessageBuilder::new()
-            //.topic(TOPIC)
-            .topic(TOPIC)
-            .payload(format!("<<< last_will >>>"))
-            //.qos(QOS)
-            .qos(QOS)
-            .properties(lwt_props)
-            .finalize();
-        // */
+    fn connect_options(&self) -> ConnectOptions {
 
         ConnectOptionsBuilder::new()
             //.keep_alive_interval(std::time::Duration::from_secs(self.interval))
@@ -69,9 +47,6 @@ impl Broker<'_> {
             .user_name(self.username)
             .password(self.password)
             .mqtt_version(MQTTV5)
-            //.keep_alive_interval(std::time::Duration::from_secs(20))
-            //.properties(props)
-            .will_message(lwt)
             .finalize()
     }
 
@@ -81,7 +56,7 @@ impl Broker<'_> {
 
         CreateOptionsBuilder::new()
             // protocol://host:port
-            // tcp:// ssl://
+            // protocol -> tcp:// ssl://
             .server_uri(String::from(self.machine))
             .client_id(String::from(self.client_id))
             .mqtt_version(MQTTV5)
@@ -90,11 +65,10 @@ impl Broker<'_> {
 
     
     /// initial client connection
-    fn connect(&self,
-               /* data: &Vec<MsgData> */) -> Result<Client, Error> {
+    fn connect(&self) -> Result<Client, Error> {
 
         // USER 
-        let options = self.connect_options(/* data*/);
+        let options = self.connect_options();
         
         // BROKER
         match Client::new(self.create_options()) {
@@ -107,11 +81,7 @@ impl Broker<'_> {
                     // CLIENT connected
                     Ok(response) => {
                         if self.debug {
-                            println!("\nServerResponse: {response:?}\n{:?}\n{:?}\n{:?}",
-                                     response.request_response(),
-                                     response.connect_response(),
-                                     response.properties(),
-                            );
+                            println!("\nServerResponse: {response:?}");
                         }
                             
                         Ok(client)
@@ -162,14 +132,15 @@ impl Broker<'_> {
             if self.lifetime != -1 {
                 reconnect_counter += 1;
                 println!("reconnect counter: {reconnect_counter}");
+
+                if reconnect_counter > self.lifetime {
+                    break
+                }
             }
 
-            if self.lifetime != -1 && reconnect_counter > self.lifetime {
-                break
-            }
-            
             std::thread::sleep(
-                std::time::Duration::from_millis(&self.reconnect_delay * 1000));
+                std::time::Duration::from_millis(
+                    &self.reconnect_delay * 1000));
 
             if client.reconnect().is_ok() {
                 println!("successfully reconnected <- {now:?}",
@@ -212,12 +183,11 @@ impl Broker<'_> {
     pub fn subscribe(&self,
                      data: &Vec<MsgData>) {
 
-
         let (topics_list, qos_list) = topics_batch_to_list(data);
 
         println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
                          
-        let client_result = self.connect(/* data */);
+        let client_result = self.connect();
         
         match client_result {
             // CONNECTED + SUB need's to be mutable
@@ -238,9 +208,10 @@ impl Broker<'_> {
                 for msg_in in listener.iter() {
 
                     if let Some(msg_to_parse) = msg_in {
-                        // MSG PARSER via topics
-                        parse_msg(msg_to_parse)
 
+                        // MSG PARSER via topics
+                        parse_msg(msg_to_parse);
+                        
                     // ALIVE 
                     } else if !client.is_connected() {
 
@@ -254,7 +225,8 @@ impl Broker<'_> {
                                                   &topics_list,
                                                   &qos_list,
                             );
-                            
+
+                        // STOP 
                         } else { break; }
                     }
                 }
@@ -275,7 +247,7 @@ impl Broker<'_> {
     pub fn send_msg_to_topic(&self,
                              data: &Vec<MsgData>) -> Result<(), Error> {
 
-        let c = self.connect(/* data */);
+        let c = self.connect();
         
         match c {
             // CONNECTED + PUB not mutable
@@ -301,14 +273,7 @@ impl Broker<'_> {
                     .collect::<Vec<_>>();
                 
                 // CLOSE session
-                //client.disconnect(None)
-                // /* + last_will
-                let opts = paho_mqtt::DisconnectOptionsBuilder::new()
-                    .publish_will_message()
-                    .finalize();
-                
-                client.disconnect(opts)
-                // */
+                client.disconnect(None)
             },
             
             Err(why) => {
@@ -355,23 +320,10 @@ impl MsgData<'_> {
             );
         }
         
-        /*
-        Message::new(
-            self.topic,
-            msg_body,
-            self.qos,
-        )
-        */
-
-        // BROKEN
-        //let lwt_props = paho_mqtt::properties! { paho_mqtt::PropertyCode::WillDelayInterval => 10,};
-        
         MessageBuilder::new()
             .topic(self.topic)
             .qos(self.qos)
             .payload(msg_body)
-            //.retained(true)
-            //.properties(lwt_props)
             .finalize()
     }
 }
