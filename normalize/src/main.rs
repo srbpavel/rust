@@ -585,6 +585,7 @@ fn prepare_parse_dir(args: &Settings,
 
 
 fn main() {
+    /*
     //TIMEOUT
     let (send, recv) = std::sync::mpsc::channel();
     let delay = 2;
@@ -628,6 +629,7 @@ fn main() {
     std::process::exit(1);
     
     //_
+    */
 
     //CMD ARGS as Settings
     let settings = command_args::get_settings();

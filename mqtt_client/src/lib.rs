@@ -131,6 +131,8 @@ impl Broker<'_> {
         let mut reconnect_counter = 0;
 
         loop {
+
+            // -1 INFINITE lifetime
             if self.lifetime != -1 {
                 reconnect_counter += 1;
                 println!("reconnect counter: {reconnect_counter}");
