@@ -3,7 +3,7 @@ mod example_easy_config;
 mod mqtt_toml_config_struct;
 
 // MQTT_PUBLISHER
-mod example_mqtt_publisher;
+mod example_mqtt_client;
 
 
 fn main() {
@@ -15,12 +15,12 @@ fn main() {
         // EXAMPLE >>> MQTT_PUBLISH
         "pub" => {    
             
-            example_mqtt_publisher::sample_publish(config);
+            example_mqtt_client::sample_publish(config);
         },
         
         // EXAMPLE >>> MQTT_SUBSCRIBE
         "sub" => {
-            example_mqtt_publisher::sample_subscribe(config);
+            example_mqtt_client::sample_subscribe(config);
         },
         
         other => {

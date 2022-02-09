@@ -1,8 +1,8 @@
 // dummy settings and data for broker/topic/msg
 use crate::mqtt_toml_config_struct::{TomlConfig};
 
-use mqtt_publisher::{Broker,
-                     MsgData,
+use mqtt_client::{Broker,
+                  MsgData,
 };
 
 

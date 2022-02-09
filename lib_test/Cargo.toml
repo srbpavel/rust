@@ -3,14 +3,23 @@ name = "lib_test"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
+
+
 # for TOML Serialize, Deserialize 
-serde = { version = "1.0.70", features = ["derive"] } # https://crates.io/crates/serde # https://serde.rs/derive.html
+[dependencies.serde]
+version = "1.0.70"
+features = ["derive"] # https://crates.io/crates/serde # https://serde.rs/derive.html
+
 
 # unpublish local crate
-easy_config = { version = "^0", path = "/home/conan/soft/rust/easy_config/" } # path to project base dir
-
-# unpublish local crate
-[dependencies.mqtt_publisher]
+[dependencies.easy_config]
 version = "^0"
-path = "/home/conan/soft/rust/mqtt_publisher" # path to project base dir
+path = "/home/conan/soft/rust/easy_config/"
+
+
+# unpublish local crate
+[dependencies.mqtt_client]
+version = "^0"
+path = "/home/conan/soft/rust/mqtt_client"
