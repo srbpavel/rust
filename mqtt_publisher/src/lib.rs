@@ -1,5 +1,5 @@
-//#[macro_use]
-//extern crate paho_mqtt as mqtt;
+#[macro_use]
+extern crate paho_mqtt as mqtt;
 
 use paho_mqtt::{
     ConnectOptionsBuilder,
@@ -42,23 +42,26 @@ pub struct Broker<'b> {
 
 impl Broker<'_> {
     /// user credentials + interval
-    fn connect_options(&self) -> ConnectOptions {
+    fn connect_options(&self,
+                       /* data: &Vec<MsgData> */) -> ConnectOptions {
 
-        /*
+        // /*
         const QOS: i32 = 1;
-        const TOPIC: &str = "LAST_WILL";
+        const TOPIC: &str = "semici";
         
-        let props = paho_mqtt::properties! { paho_mqtt::PropertyCode::SessionExpiryInterval => 60,};
+        //let props = paho_mqtt::properties! { paho_mqtt::PropertyCode::SessionExpiryInterval => 60,};
 
         let lwt_props = mqtt::properties! { mqtt::PropertyCode::WillDelayInterval => 10, };
         
         let lwt = paho_mqtt::MessageBuilder::new()
+            //.topic(TOPIC)
             .topic(TOPIC)
             .payload(format!("<<< last_will >>>"))
+            //.qos(QOS)
             .qos(QOS)
             .properties(lwt_props)
             .finalize();
-        */
+        // */
 
         ConnectOptionsBuilder::new()
             //.keep_alive_interval(std::time::Duration::from_secs(self.interval))
@@ -68,7 +71,7 @@ impl Broker<'_> {
             .mqtt_version(MQTTV5)
             //.keep_alive_interval(std::time::Duration::from_secs(20))
             //.properties(props)
-            //.will_message(lwt)
+            .will_message(lwt)
             .finalize()
     }
 
@@ -87,10 +90,11 @@ impl Broker<'_> {
 
     
     /// initial client connection
-    fn connect(&self) -> Result<Client, Error> {
+    fn connect(&self,
+               /* data: &Vec<MsgData> */) -> Result<Client, Error> {
 
         // USER 
-        let options = self.connect_options();
+        let options = self.connect_options(/* data*/);
         
         // BROKER
         match Client::new(self.create_options()) {
@@ -213,7 +217,7 @@ impl Broker<'_> {
 
         println!("topics_list: {topics_list:?}\nqos_list: {qos_list:?}");
                          
-        let client_result = self.connect();
+        let client_result = self.connect(/* data */);
         
         match client_result {
             // CONNECTED + SUB need's to be mutable
@@ -271,7 +275,7 @@ impl Broker<'_> {
     pub fn send_msg_to_topic(&self,
                              data: &Vec<MsgData>) -> Result<(), Error> {
 
-        let c = self.connect();
+        let c = self.connect(/* data */);
         
         match c {
             // CONNECTED + PUB not mutable
@@ -297,14 +301,14 @@ impl Broker<'_> {
                     .collect::<Vec<_>>();
                 
                 // CLOSE session
-                client.disconnect(None)
-                /* // + last_will
+                //client.disconnect(None)
+                // /* + last_will
                 let opts = paho_mqtt::DisconnectOptionsBuilder::new()
                     .publish_will_message()
                     .finalize();
                 
                 client.disconnect(opts)
-                */
+                // */
             },
             
             Err(why) => {
