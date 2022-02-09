@@ -3,11 +3,21 @@ name = "easy_laptop"
 host = "spongebob"
 work_dir = ""
 
-#service_type = "sub"
+mqtt_version = 5 # 3 || 4 || 5
+
+# run as PUB or SUB
 service_type = "pub"
+#service_type = "sub"
+
 
 [broker]
 [broker.lord]
+debug = true #false
+
+#sub_lifetime = 10 # limit 
+sub_lifetime = -1 # unlimited
+sub_reconnect_delay = 5 # SEC 
+
 machine = "tcp://jozefina:1883"
 client_id = "SPONGEBOB_RUST_LORD"
 interval = 20
@@ -17,10 +27,14 @@ interval = 20
 username = "lord"
 password = ""
 
-debug = true #false
-#debug = false
 
 [broker.metynka]
+debug = true #false
+
+#sub_lifetime = 10 # limit 
+sub_lifetime = -1 # unlimited
+sub_reconnect_delay = 5 # SEC 
+
 machine = "tcp://jozefina:1883"
 client_id = "SPONGEBOB_RUST_METYNKA"
 interval = 20
@@ -30,8 +44,6 @@ interval = 20
 username = "metynka"
 password = ""
 
-debug = true #false
-#debug = false
 
 [topics]
 debug = true #false

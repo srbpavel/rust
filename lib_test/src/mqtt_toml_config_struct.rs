@@ -12,10 +12,11 @@ pub struct TomlConfig {
     pub host: MyStr,
     pub work_dir: MyStr,
 
+    pub mqtt_version: u32,
+    
     pub service_type: MyStr,
     
     // STRUCT
-    //pub broker: Broker,
     pub topics: Topics,
     pub flag: Flag,
 

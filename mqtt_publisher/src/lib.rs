@@ -17,9 +17,6 @@ use paho_mqtt::{
 use chrono::Local;
 
 
-const MQTTV5: u32 = 5;
-
-
 /// settings for broker
 #[derive(Debug)]
 pub struct Broker<'b> {
@@ -34,6 +31,8 @@ pub struct Broker<'b> {
 
     pub lifetime: i8,
     pub reconnect_delay: u64,
+
+    pub mqtt_v: u32,
 }
 
 
@@ -42,11 +41,14 @@ impl Broker<'_> {
     fn connect_options(&self) -> ConnectOptions {
 
         ConnectOptionsBuilder::new()
-            //.keep_alive_interval(std::time::Duration::from_secs(self.interval))
+            .keep_alive_interval(
+                std::time::Duration::from_secs(
+                    self.interval)
+            )
             .clean_session(true)
             .user_name(self.username)
             .password(self.password)
-            .mqtt_version(MQTTV5)
+            .mqtt_version(self.mqtt_v)
             .finalize()
     }
 
@@ -59,7 +61,7 @@ impl Broker<'_> {
             // protocol -> tcp:// ssl://
             .server_uri(String::from(self.machine))
             .client_id(String::from(self.client_id))
-            .mqtt_version(MQTTV5)
+            .mqtt_version(self.mqtt_v)
             .finalize()
     }
 
@@ -168,7 +170,7 @@ impl Broker<'_> {
         /*
         ERROR: not enough QOS args -> PahoDescr(-9, "Bad QoS")
         &["semici", "vcely"],
-        &[1],
+        &[1], // QOS missing for TOPIC vcely -> &[1, 1]
         */
         if let Err(why) = &client.subscribe_many(topics,
                                                  qos,
@@ -179,7 +181,7 @@ impl Broker<'_> {
         };
     }
 
-    /// SUB main call
+    /// SUB main sub call to all topics
     pub fn subscribe(&self,
                      data: &Vec<MsgData>) {
 

@@ -23,8 +23,8 @@ pub fn sample_subscribe(config: TomlConfig) {
         })
         .collect::<Vec<_>>();
 
-    // + one more tester
-    /*
+    // + one more tester topic
+    // /*
     topics_batch.push(
         MsgData {
             topic: "hrebecek",
@@ -32,7 +32,7 @@ pub fn sample_subscribe(config: TomlConfig) {
             qos: 1,
         }
     );
-    */
+    // */
 
     // BROKER
     let b = &config.broker["lord"];
@@ -51,23 +51,11 @@ pub fn sample_subscribe(config: TomlConfig) {
 
         lifetime: b.sub_lifetime,
         reconnect_delay: b.sub_reconnect_delay,
+
+        mqtt_v: config.mqtt_version,
     };
 
-    /*
-    println!("topics: {:?}\nqos: {:?}",
-             topics_list,
-             qos_list,
-    );
-    */
-
-    // SUBSCRIBE
-    /*
-    broker.subscribe(&topics_list,
-                     &qos_list,
-    );
-    */
     broker.subscribe(&topics_batch);
-        
 }
 
 
@@ -101,29 +89,19 @@ pub fn sample_publish(config: TomlConfig) {
              &config.broker["metynka"],
         ]
         .into_iter()
-        /* // FUTURE USE
-        .inspect(|b| {
-            println!("\nCLIENT via config: {}",
-                     &format!("{}_rust_{}",
-                              config.host,
-                              //config.name,
-                              &b.username,
-                     )
-                     .to_uppercase(),
-            );
-        })
-        */
         .map(|b| {
 
             let broker = Broker {
                 machine: &b.machine,
-
-                //client_id: &b.client_id,
+                
+                client_id: &b.client_id,
+                /* FUTURE USE
                 client_id: &format!("{}_rust__{}",
                                     config.host,
                                     &b.username,
                 )
                     .to_uppercase(),
+                */
                 
                 interval: b.interval,
                 
@@ -134,6 +112,8 @@ pub fn sample_publish(config: TomlConfig) {
 
                 lifetime: b.sub_lifetime,
                 reconnect_delay: b.sub_reconnect_delay,
+
+                mqtt_v: config.mqtt_version,
             };
 
             match broker.send_msg_to_topic(&topics_batch) {
