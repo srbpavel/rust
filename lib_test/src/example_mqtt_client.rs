@@ -27,9 +27,9 @@ pub fn sample_subscribe(config: TomlConfig) {
     // /*
     topics_batch.push(
         MsgData {
-            topic: "hrebecek",
+            topic: "chat/jack",
             body: "metik ma peeerko",
-            qos: 1,
+            qos: 2,
         }
     );
     // */
