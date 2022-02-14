@@ -47,21 +47,11 @@ fn main() {
         }
     };
 
-    let _queries: Vec<_> = BufReader::new(wordlist_file)
+    BufReader::new(wordlist_file)
         .lines()
-
-        /*
-        .filter(|line| match line {
-            Ok(_) => true,
-            Err(_) => false,
-        })
-        */
-
-        .map(|line| match line {
+        .for_each(|line| match line {
 
             Ok(common_password) => {
-            
-                //let common_password = line.unwrap();
             
                 if hash.to_lowercase()
                     == hex::encode(
@@ -75,6 +65,5 @@ fn main() {
             },
 
             Err(_) => {},
-        })
-        .collect();
+        });
 }
