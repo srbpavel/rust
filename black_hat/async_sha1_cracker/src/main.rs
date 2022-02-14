@@ -67,7 +67,8 @@ async fn main() {
     
     ///////////////////////////////////////////////////////////////////////////
 
-    /* // IF COMMENTED -> BUG_PANIC_START
+    // /* // IF COMMENTED -> BUG_PANIC_START: rustc 1.58.1 
+    // SOLVED with: rustc 1.60.0-nightly
     // SYNC FILE -> lines // no need for this to be async
     let lines = std::io::BufReader::new(wordlist_file)
         .lines()
@@ -88,7 +89,7 @@ async fn main() {
 
     // LET IT ROOL
     let _ = futures::future::join_all(queries).await;
-    */ // BUG_PANIC_END
+    // */ // BUG_PANIC_END
 
     // PLAYGROUND
     /*
