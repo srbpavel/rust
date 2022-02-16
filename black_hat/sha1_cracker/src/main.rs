@@ -46,7 +46,8 @@ fn main() {
             std::process::exit(1)
         }
     };
-
+    
+    // SEARCH
     BufReader::new(wordlist_file)
         .lines()
         .for_each(|line| match line {
@@ -56,7 +57,9 @@ fn main() {
                 if hash.to_lowercase()
                     == hex::encode(
                         sha1::Sha1::digest(
-                            common_password.trim().as_bytes()
+                            common_password
+                                .trim()
+                                .as_bytes()
                         )
                     )
                 {

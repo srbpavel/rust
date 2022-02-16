@@ -1,12 +1,22 @@
+/*
 // EASY_CONFIG
 mod example_easy_config;
 mod mqtt_toml_config_struct;
 
 // MQTT_PUBLISHER
 mod example_mqtt_client;
+*/
 
+// INFLUXDB_CLIENT
+mod example_influxdb_client;
+    
 
 fn main() {
+    let err_msg = example_influxdb_client::start();
+
+    println!("\nMAIN: {err_msg:?}");
+
+    /*
     // EXAMPLE >>> EASY_CONFIG
     let config = example_easy_config::sample();
 
@@ -27,4 +37,5 @@ fn main() {
             eprint!("INVALID mqtt type: {other:?}");
         }
     }
+    */
 }

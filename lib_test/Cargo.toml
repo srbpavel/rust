@@ -5,6 +5,9 @@ edition = "2021"
 
 
 [dependencies]
+#serde_json = "1.0"
+csv = "1.1"
+chrono = "0.4.19"
 
 
 # for TOML Serialize, Deserialize 
@@ -23,3 +26,13 @@ path = "/home/conan/soft/rust/easy_config/"
 [dependencies.mqtt_client]
 version = "^0"
 path = "/home/conan/soft/rust/mqtt_client"
+
+
+# unpublish local crate
+[dependencies.influxdb_client]
+version = "^0"
+path = "/home/conan/soft/rust/influxdb_client"
+
+[dependencies.reqwest]          
+version = "0.11.9"              
+features = ["blocking", "json"] 
