@@ -1,5 +1,5 @@
-// dummy settings and data vis config
-//use crate::mqtt_toml_config_struct::{TomlConfig};
+// dummy settings and data via config
+use crate::influxdb_toml_config_struct::{TomlConfig};
 
 use influxdb_client;
 
@@ -60,6 +60,7 @@ pub struct Record<'h> {
     memory_valid: bool,
     */
 
+    // /*
     #[serde(rename = "DsCarrier")]
     ds_carrier: &'h str,
     #[serde(rename = "DsId")]
@@ -68,7 +69,8 @@ pub struct Record<'h> {
     ds_pin: &'h str,
     #[serde(rename = "DsValid")]
     ds_valid: bool,
-    
+    // */
+
     #[serde(rename = "_field")]
     field: &'h str,
     #[serde(rename = "_measurement")]
@@ -216,14 +218,17 @@ pub fn parse_csv(response: &str) -> Result<(), csv::Error> {
 
 
 // START
-pub fn start() -> Result<(), reqwest::Error> {
+pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
+    /* // via CONFIG
     // /* // JOZEFINA
     const TOKEN: &str = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==";
     const SECURE: &str = "http";
     const HOST: &str = "jozefina";
     //const BUCKET: &str = "backup_test_rust"; // MEMORY SENSORS
     const BUCKET: &str = "backup_ds_test";
-    
+
+    const MEASUREMENT: &str = "memory_float";
+    const RANGE_START: &str = "-12h";    
     // */
 
     /* // RUTH
@@ -231,19 +236,46 @@ pub fn start() -> Result<(), reqwest::Error> {
     const SECURE: &str = "https";
     const HOST: &str = "ruth";
     const BUCKET: &str = "test_rust";
-    */
-
-    //const MEASUREMENT: &str = "memory_float";
-    //const RANGE_START: &str = "-12h";
 
     const MEASUREMENT: &str = "dallas";
     const RANGE_START: &str = "-7d";
+    */
 
     const PORT: &str = "8086";
-    const PATH: &str = "api/v2/query?org=foookin_paavel"; // +ORG
-    //let uri = format!("{SECURE}://{HOST}/{PATH}:{PORT}"); // Error -> port
-    let uri = format!("{SECURE}://{HOST}:{PORT}/{PATH}");                                        
-    let flux_query = format!("from(bucket:\"{BUCKET}\") |> range(start:{RANGE_START}) |> filter(fn:(r) => r._measurement == \"{MEASUREMENT}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)");
+    */ //_
+
+   
+    // FOR TEST still in Vec
+    /* // RUTH
+    let active_config = &config.all_influx.values[0];
+    const MEASUREMENT: &str = "memory_float";
+    */
+
+    // /* // JOZEFINA
+    let active_config = &config.all_influx.values[1];
+    const MEASUREMENT: &str = "dallas";
+    // */
+
+    //const PATH: &str = "api/v2/query?org=foookin_paavel"; // +ORG
+    let path = &format!("api/v2/query?org={org}",
+                        org=&active_config.org,
+    );
+
+    // let uri = format!("{SECURE}://{HOST}/{PATH}:{PORT}"); // Error -> port
+    //let uri = format!("{SECURE}://{HOST}:{PORT}/{PATH}");
+    let uri = format!("{secure}://{host}:{port}/{path}",
+                      secure=&active_config.secure,
+                      host=&active_config.server,//host,
+                      port=&active_config.port,
+    );                                        
+    
+    let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
+                             bucket=&active_config.bucket,
+                             measurement=MEASUREMENT,
+                             //range_start=RANGE_START,
+                             range_start=&config.template.flux.query_verify_record_range_start,
+                             
+    );
 
     println!("FLUX_QUERY: {flux_query}");
     
@@ -255,7 +287,8 @@ pub fn start() -> Result<(), reqwest::Error> {
         = influxdb_client::post_query(&uri,
                                       //FLUX_QUERY,
                                       flux_query,
-                                      TOKEN,
+                                      //TOKEN,
+                                      &active_config.token
         );
 
     println!("\nREQUEST: {request:?}");

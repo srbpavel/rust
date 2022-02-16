@@ -1,25 +1,27 @@
-/*
 // EASY_CONFIG
 mod example_easy_config;
-mod mqtt_toml_config_struct;
 
-// MQTT_PUBLISHER
+/* // MQTT_PUBLISHER
+mod mqtt_toml_config_struct;
 mod example_mqtt_client;
 */
 
 // INFLUXDB_CLIENT
 mod example_influxdb_client;
-    
+mod influxdb_toml_config_struct;
 
 fn main() {
-    let err_msg = example_influxdb_client::start();
-
-    println!("\nMAIN: {err_msg:?}");
-
-    /*
     // EXAMPLE >>> EASY_CONFIG
     let config = example_easy_config::sample();
+    //println!("\nCONFIG: {config:#?}");
 
+    // INFLUXDB_CLIENT
+    let influxdb_status_msg = example_influxdb_client::start(config);
+
+    println!("\nLIB_TEST: {influxdb_status_msg:?}");
+
+    
+    /* MQTT
     match &*config.service_type {
 
         // EXAMPLE >>> MQTT_PUBLISH

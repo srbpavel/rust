@@ -1,10 +1,16 @@
 use std::process;
 
-// Struct for TOML config
-use crate::mqtt_toml_config_struct::{TomlConfig};
+// MQTT Struct for TOML config
+//use crate::mqtt_toml_config_struct::{TomlConfig};
+
+// INFLUXDB Struct for TOML config
+use crate::influxdb_toml_config_struct::{TomlConfig};
 
 // local crate
 use easy_config::{read_toml_config};
+
+
+const CONFIG_FILENAME: &str = "/home/conan/soft/rust/lib_test/src/influxdb_config.toml";
 
 
 pub fn sample() -> TomlConfig {
@@ -13,7 +19,7 @@ pub fn sample() -> TomlConfig {
     */
 
     // FILE_NAME -> here from code / later via CmdArg or ...
-    let config_filename = "/home/conan/soft/rust/lib_test/src/mqtt_config.toml";
+    //let config_filename = "/home/conan/soft/rust/lib_test/src/influxdb_config.toml";
     
     /* DEBUG
     println!("#FILE_NAME: {}",
@@ -22,9 +28,9 @@ pub fn sample() -> TomlConfig {
     */
 
     // TOML_VALUE
-    let toml_value = read_toml_config(&String::from(config_filename)).unwrap_or_else(|err| {
+    let toml_value = read_toml_config(&String::from(CONFIG_FILENAME)).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",
-                  c=config_filename,
+                  c=CONFIG_FILENAME,
                   e=err);
         
         process::exit(1);
