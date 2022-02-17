@@ -244,9 +244,10 @@ influx_uri_api = "{secure}://{server}:{port}/api/v2/"
 influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
 influx_uri_query = "query?org={org}"
 
-influx_auth = "Authorization: Token {token}"
-influx_accept = "Accept: application/csv"
-influx_content = "Content-type: application/vnd.flux"
+# for REQWEST as Vec
+influx_auth = ["Authorization", "Token {token}"]
+influx_accept = ["Accept", "application/csv"]
+influx_content = ["Content-type", "application/vnd.flux"]
 
 
 # influx query verification to see if data were written and available -> warning msg not implemented yet

@@ -1,3 +1,6 @@
+pub mod connect; // reqwest
+
+/*
 use reqwest::blocking::{
     ClientBuilder,
     Response,
@@ -50,3 +53,4 @@ pub fn get(uri: &str) -> Result<Response, Box<dyn Error>> {
 
     Ok(resp)
 }
+*/

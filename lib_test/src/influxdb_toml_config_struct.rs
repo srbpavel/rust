@@ -186,9 +186,10 @@ pub struct TemplateCurl {
     pub influx_uri_write: MyStr,
     pub influx_uri_query: MyStr,
 
-    pub influx_auth: MyStr,
-    pub influx_accept: MyStr,
-    pub influx_content: MyStr,
+    //pub influx_auth: MyStr,
+    pub influx_auth: Vec<MyStr>,
+    pub influx_accept: Vec<MyStr>,
+    pub influx_content: Vec<MyStr>,
 }
 
 

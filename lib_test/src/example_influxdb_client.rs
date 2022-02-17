@@ -114,8 +114,6 @@ pub fn parse_time(data: &str) -> Option<DateTime<Utc>> {
 pub fn record_via_hash<'r>(rec: &'r StringRecord,
                            headers: &StringRecord) -> Result<HashRecord, csv::Error> {
 
-    //println!("\nHash");
-    
     rec.deserialize(Some(headers))
 }
 
@@ -124,23 +122,9 @@ pub fn record_via_hash<'r>(rec: &'r StringRecord,
 pub fn record_via_struct<'r>(rec: &'r StringRecord,
                              headers: &'r StringRecord) -> Result<Record<'r>, csv::Error> {
 
-    //println!("\nStruct");
-    
     let record: Record = rec.deserialize(Some(headers))?;
 
     Ok(record)
-    
-    /*
-    let record: Record = match rec.deserialize(Some(headers)) {
-        
-        Ok(r) => r,
-        Err(why) => {
-            eprintln!("ERROR: csv -> Struct\n{rec:?}\nREASON >>>: {why:?}");
-            
-            std::process::exit(1);
-        },
-    };
-    */
 }
 
 
@@ -264,62 +248,43 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     const MEASUREMENT: &str = "memory_float";
     */
 
+    println!("\n@Influx: {:#?}", &config.all_influx.values[1]);
+    
     // /* // JOZEFINA
     let active_config = &config.all_influx.values[1];
     const MEASUREMENT: &str = "dallas";
     // */
 
-    //const PATH: &str = "api/v2/query?org=foookin_paavel"; // +ORG
-    /*
-    let path = &format!("api/v2/query?org={org}",
-                        org=&active_config.org,
-    );
-    */
+    let uri_write = tuple_formater(&format!("{}{}",
+                                            &config.template.curl.influx_uri_api,
+                                            &config.template.curl.influx_uri_write),
+                                   &vec![
+                                       ("secure", &active_config.secure),
+                                       ("server", &active_config.server),
+                                       ("port", &active_config.port.to_string()),
 
-    /*
-    let uri_query = tuple_formater(
-        &config.template.curl.influx_uri_query,
-        &vec![
-            ("org", &active_config.org),
-        ],
-        false, // DEBUG flag
-    );
-    
-    let uri_api = tuple_formater(
-        &config.template.curl.influx_uri_api,
-        &vec![
-            ("secure", &active_config.secure),
-            ("server", &active_config.server),
-            ("port", &active_config.port.to_string()),
-        ],
-        false, // DEBUG flag
-    );
+                                       ("org", &active_config.org),
+                                       ("bucket", &active_config.bucket),
+                                       ("precision", &active_config.precision),
 
-    let uri = format!("{uri_api}{uri_query}");
-    */
-    let uri = tuple_formater(&format!("{}{}",
-                                      &config.template.curl.influx_uri_api,
-                                      &config.template.curl.influx_uri_query),
-                                      &vec![
-                                          ("org", &active_config.org),
-                                          ("secure", &active_config.secure),
-                                          ("server", &active_config.server),
-                                          ("port", &active_config.port.to_string()),
-                                      ],
-                             true, // DEBUG flag
+                                   ],
+                                   false, // DEBUG flag via config
     );
     
-    println!("URI: {uri:?}");
-    
-    // let uri = format!("{SECURE}://{HOST}/{PATH}:{PORT}"); // Error -> port
-    //let uri = format!("{SECURE}://{HOST}:{PORT}/{PATH}");
-    /*
-    let uri = format!("{secure}://{host}:{port}/{path}",
-                      secure=&active_config.secure,
-                      host=&active_config.server,//host,
-                      port=&active_config.port,
+    let uri_query = tuple_formater(&format!("{}{}",
+                                            &config.template.curl.influx_uri_api,
+                                            &config.template.curl.influx_uri_query),
+                                   &vec![
+                                       ("secure", &active_config.secure),
+                                       ("server", &active_config.server),
+                                       ("port", &active_config.port.to_string()),
+
+                                       ("org", &active_config.org),
+                                   ],
+                                   false, // DEBUG flag via config
     );
-    */
+    
+    //println!("URI: {uri_query:?}");
     
     let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
                              bucket=&active_config.bucket,
@@ -329,22 +294,73 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
                              
     );
 
-    println!("FLUX_QUERY: {flux_query}");
+    //println!("FLUX_QUERY: {flux_query}");
+
+    let token = tuple_formater(&config.template.curl.influx_auth[1],
+                               &vec![
+                                   ("token", &active_config.token),
+                               ],
+                               false,
+    );
+
+    /* 
+    let influx_call = influxdb_client::connect::InfluxCall {
+        uri_write: &uri_write,
+        uri_query: &uri_query,
+
+        auth: vec![&config.template.curl.influx_auth[0],
+                   &token,
+        ],
+
+        accept: vec![&config.template.curl.influx_accept[0],
+                     &config.template.curl.influx_accept[1],
+        ],
+
+        content: vec![&config.template.curl.influx_content[0],
+                      &config.template.curl.influx_content[1],
+        ],
+    };
+    */
+
+    let influx_call = influxdb_client::connect::InfluxCall::new(
+        &uri_write,
+        &uri_query,
+        
+        vec![&config.template.curl.influx_auth[0],
+             &token,
+        ],
+
+        vec![&config.template.curl.influx_accept[0],
+             &config.template.curl.influx_accept[1],
+        ],
+
+        vec![&config.template.curl.influx_content[0],
+             &config.template.curl.influx_content[1],
+        ],
+    );
+
+    println!("\n@InfluxCall: {influx_call:#?}");
     
     //const FLUX_QUERY: &str = "from(bucket:\"\") |> range(start:-12h) |> filter(fn:(r) => r._measurement == \"memory_float\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)";
 
     // DROP: drop(columns: [\"_start\", \"_stop\", \"_time\", \"\", \"\"])
     // KEEP: keep(columns: [\"_value\", \"_time\", \"_field\", \"_measurement\"]) |>
+
+    // /* FAST
     let request: Result<RequestBuilder, Box< dyn std::error::Error>>
-        = influxdb_client::post_query(&uri,
-                                      //FLUX_QUERY,
-                                      flux_query,
-                                      //TOKEN,
-                                      &active_config.token
+        //= influxdb_client::post_query(&uri,
+        = influxdb_client::connect::read_query(
+            //&uri_query,
+            influx_call,
+            
+            //FLUX_QUERY,
+            flux_query,
+            //TOKEN,
+            //&active_config.token
         );
 
     println!("\nREQUEST: {request:?}");
-    
+
     let response = request
         .unwrap()
         .send()? // reqwest::Error
@@ -358,9 +374,12 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     println!("\nRESPONSE[{len}]: {response:#?}",
              len = response_len,
     );
-
+    // */
+    
+    /* CSV
     let csv_status = parse_csv(&response);
     println!("\nCSV_STATUS: {csv_status:?}");
-    
+    */
+
     Ok(())
 }
