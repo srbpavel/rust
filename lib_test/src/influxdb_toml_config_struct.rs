@@ -49,6 +49,7 @@ pub struct Flag {
     
     pub debug_ts: bool,
 
+    pub debug_reqwest: bool,
     pub debug_tuple_formater: bool,
     
     pub debug_email: bool,

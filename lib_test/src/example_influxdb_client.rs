@@ -1,7 +1,13 @@
 // dummy settings and data via config
 use crate::influxdb_toml_config_struct::{TomlConfig};
 
-use influxdb_client;
+use influxdb_client::{
+    connect::{
+        InfluxConfig,
+        InfluxCall,
+        InfluxData,
+    },
+};
 
 use reqwest::blocking::{RequestBuilder};
 
@@ -15,9 +21,8 @@ use chrono::{DateTime,
              Utc,
 };
 
+use template_formater::tuple_formater;
 
-// TEMPLATE_FORMATER
-//use template_formater::tuple_formater;
 
 /// use Struct or Hash for CSV parsing
 const RECORD_STRUCT: bool = true; // fields has to be exact as flux_output
@@ -130,7 +135,10 @@ pub fn record_via_struct<'r>(rec: &'r StringRecord,
 
 ///CSV
 /// https://docs.influxdata.com/influxdb/v2.1/reference/syntax/annotated-csv/#annotations
-pub fn parse_csv(response: &str) -> Result<(), csv::Error> {
+pub fn parse_csv(config: &TomlConfig,
+                 influx_config: &InfluxConfig,
+                 influx_call: &InfluxCall,
+                 response: &str) -> Result<(), csv::Error> {
 
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -146,12 +154,10 @@ pub fn parse_csv(response: &str) -> Result<(), csv::Error> {
 
     // HEADER clone as needed later for single_record -> CSV StringRecord
     let headers = &reader.headers()?.clone();
-    println!("\nHEADER: {:?}",
-             headers,
-    );
+    //println!("\nHEADER: {headers:?}");
 
     let mut record_counter = 0;
-    
+
     for single_record in reader.records() { // .records() -> iterator
 
         record_counter += 1;
@@ -165,17 +171,12 @@ pub fn parse_csv(response: &str) -> Result<(), csv::Error> {
                                                      &headers,
                     )?;
 
-                    /* DEBUG 
-                    println!("{:?}\n<{}>",
-                             s_record,
-                             s_record.memory_valid,
-                    );
-                    */
-
+                    println!("\nRECORD[{record_counter}]: {s_record:?}");                    
+                    /*
                     let time = parse_time(s_record.time); // .value -> Error 
                     let start = parse_time(s_record.start);
                     let stop = parse_time(s_record.stop);
-                    
+
                     println!("\nRECORD[{record_counter}]: {:?}\ntime: {:?}\nts: {:?}\nstart: {:?}\nstop: {:?}",
                              s_record,
                              time,
@@ -188,6 +189,63 @@ pub fn parse_csv(response: &str) -> Result<(), csv::Error> {
                              start,
                              stop,
                     );
+                    */
+
+                    // METRIC
+                    let metric = &config.metrics["temperature"];
+                    
+                    //println!("\n@METRIC:\ntemplate: {}\nmeasurement: {}\nfield: {}",
+                    let lp = tuple_formater(
+                        &metric.generic_lp,
+
+                        &vec![
+                            ("tag_machine", &metric.tag_machine),
+                            ("tag_carrier", &metric.tag_carrier),
+                            ("tag_valid", &metric.tag_valid),
+                            ("tag_id", &metric.tag_id),
+                            ("field", &metric.field),
+                            
+                            ("measurement", &metric.measurement),
+                            ("host", &config.host),
+                            ("machine_id", &influx_config.machine_id),
+                            
+                            ("carrier", &influx_config.carrier),
+                            ("valid", "true"),
+
+                            // ID -> make it generic
+                            ("id", &s_record.ds_id),
+                            
+                            ("value", &s_record.value),
+                        
+                            ("ts",
+                             &format!("{}",
+                                      parse_time(s_record.time)
+                                      .unwrap()
+                                      .timestamp_millis(),
+                                      ),
+                            ),
+                        ],
+
+                        //true,
+                        false,
+                        
+                    );          
+                    
+                    // format LP + WRITE example
+                    let influx_data = InfluxData {
+                        config: influx_config.clone(),
+                        call: influx_call.clone(),
+                        lp: lp,
+                    };
+
+                    // /*
+                    println!("@INFLUXDATA: {:?}",
+                             //influx_data,
+                             influx_data.lp,
+                    );          
+                    // */
+                    //_
+                    
                     
                 // FUTURE_USE
                 } else {
@@ -247,7 +305,8 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     */
 
     // /* // NEW -> by exact possition
-    let influx_config = influxdb_client::connect::InfluxConfig::new(
+    //let influx_config = influxdb_client::connect::InfluxConfig::new(
+    let influx_config = InfluxConfig::new(
         &active_config.name,
         active_config.status,
 
@@ -310,17 +369,10 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         
         config.flag.debug_tuple_formater,
     );
-    /*
-    let token = tuple_formater(&config.template.curl.influx_auth[1],
-                               &vec![
-                                   ("token", &active_config.token),
-                               ],
-                               false,
-    );
-    */
 
     // CALL
-    let influx_call = influxdb_client::connect::InfluxCall::new(
+    //let influx_call = influxdb_client::connect::InfluxCall::new(
+    let influx_call = InfluxCall::new(
         &uri_write,
         &uri_query,
         
@@ -342,12 +394,14 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     // REQW
     let request: Result<RequestBuilder, Box< dyn std::error::Error>>
         = influxdb_client::connect::read_flux_query(
-            influx_call,
+            &influx_call,
             flux_query,
             config.flag.debug_flux_query,
         );
 
-    println!("\nREQUEST: {request:?}");
+    if config.flag.debug_reqwest {
+        println!("\nREQUEST: {request:?}");
+    }
 
     let response = request
         .unwrap()
@@ -359,14 +413,21 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         .collect::<Vec<_>>()
         .len() - 1; // -HEADER
 
-    println!("\nRESPONSE[{len}]: {response:#?}",
-             len = response_len,
+    if config.flag.debug_reqwest {
+        println!("\nRESPONSE[{len}]: {response:#?}",
+                 len = response_len,
+        );
+    }
+    
+    // /* CSV
+    let csv_status = parse_csv(&config,
+                               &influx_config,
+                               &influx_call,
+                               &response,
     );
     
-    /* CSV
-    let csv_status = parse_csv(&response);
     println!("\nCSV_STATUS: {csv_status:?}");
-    */
+    // */
 
     Ok(())
 }

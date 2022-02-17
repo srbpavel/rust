@@ -15,6 +15,9 @@ debug_config = false
 # display date_time Struct
 debug_ts = false
 
+#display reqwest status/error info
+debug_reqwest = false
+
 # display tuple formater pair
 debug_tuple_formater = false
 
@@ -46,8 +49,10 @@ debug_influx_output = false
 
 # query influx to verify write was successfull
 run_flux_verify_record = true # false
+
 # display flux query
-debug_flux_query = true # false
+debug_flux_query = false
+
 # display flux stdout
 debug_flux_result = false
 # parse flux stdout
