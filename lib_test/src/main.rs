@@ -10,6 +10,10 @@ mod example_mqtt_client;
 mod example_influxdb_client;
 mod influxdb_toml_config_struct;
 
+
+// TEMPLATE_FORMATER
+// ...
+
 fn main() {
     // EXAMPLE >>> EASY_CONFIG
     let config = example_easy_config::sample();

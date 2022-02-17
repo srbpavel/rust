@@ -5,9 +5,9 @@ use influxdb_client;
 
 use reqwest::blocking::{RequestBuilder};
 
-use serde::Deserialize;
-
 use csv::StringRecord;
+
+use serde::Deserialize;
 
 use std::collections::HashMap;
 
@@ -16,13 +16,22 @@ use chrono::{DateTime,
 };
 
 
+// TEMPLATE_FORMATER
+use template_formater::tuple_formater;
+
+
 const RECORD_STRUCT: bool = true; // fields has to be exact as flux_output
 //const RECORD_STRUCT: bool = false; // here you do not need to know field
 
 
 /// this depend on flux query result
 /// we start with &str and parse bool/u64/datetime later
-/// https://blog.burntsushi.net/csv/
+/// very nice tutorial rust csv explained https://blog.burntsushi.net/csv/
+///
+///",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,_result,0,2022-02-16T08:45:43.372462165Z,2022-02-16T20:45:43.372462165Z,2022-02-16T20:45:09.299Z,20.5625,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n
+///
+///Record { annotation: "", result: "_result", table: 0, start: "2022-02-16T08:45:43.372462165Z", stop: "2022-02-16T20:45:43.372462165Z", time: "2022-02-16T20:45:09.299Z", value: "20.5625", machine: "mrazak", ds_carrier: "labjack", ds_id: "1052176647976", ds_pin: "14", ds_valid: true, field: "DsDecimal", measurement: "dallas", host: "ruth" }
+///
 #[allow(dead_code)]
 #[derive(Deserialize, Debug)]
 pub struct Record<'h> {
@@ -79,7 +88,11 @@ pub struct Record<'h> {
 }
 
 
-//#[allow(dead_code)]
+///  
+///",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,_result,0,2022-02-16T18:30:58.441692585Z,2022-02-17T06:30:58.441692585Z,2022-02-17T06:30:09.737Z,19.0625,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n
+///
+///{"": "", "DsPin": "14", "_start": "2022-02-16T18:30:58.441692585Z", "_stop": "2022-02-17T06:30:58.441692585Z", "DsId": "1052176647976", "_time": "2022-02-17T06:30:09.737Z", "DsValid": "true", "Machine": "mrazak", "_field": "DsDecimal", "_value": "19.0625", "table": "0", "_measurement": "dallas", "result": "_result", "host": "ruth", "DsCarrier": "labjack"}
+///
 type HashRecord = HashMap<String, String>;
 
 
@@ -257,17 +270,56 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     // */
 
     //const PATH: &str = "api/v2/query?org=foookin_paavel"; // +ORG
+    /*
     let path = &format!("api/v2/query?org={org}",
                         org=&active_config.org,
     );
+    */
 
+    /*
+    let uri_query = tuple_formater(
+        &config.template.curl.influx_uri_query,
+        &vec![
+            ("org", &active_config.org),
+        ],
+        false, // DEBUG flag
+    );
+    
+    let uri_api = tuple_formater(
+        &config.template.curl.influx_uri_api,
+        &vec![
+            ("secure", &active_config.secure),
+            ("server", &active_config.server),
+            ("port", &active_config.port.to_string()),
+        ],
+        false, // DEBUG flag
+    );
+
+    let uri = format!("{uri_api}{uri_query}");
+    */
+    let uri = tuple_formater(&format!("{}{}",
+                                      &config.template.curl.influx_uri_api,
+                                      &config.template.curl.influx_uri_query),
+                                      &vec![
+                                          ("org", &active_config.org),
+                                          ("secure", &active_config.secure),
+                                          ("server", &active_config.server),
+                                          ("port", &active_config.port.to_string()),
+                                      ],
+                             true, // DEBUG flag
+    );
+    
+    println!("URI: {uri:?}");
+    
     // let uri = format!("{SECURE}://{HOST}/{PATH}:{PORT}"); // Error -> port
     //let uri = format!("{SECURE}://{HOST}:{PORT}/{PATH}");
+    /*
     let uri = format!("{secure}://{host}:{port}/{path}",
                       secure=&active_config.secure,
                       host=&active_config.server,//host,
                       port=&active_config.port,
-    );                                        
+    );
+    */
     
     let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
                              bucket=&active_config.bucket,

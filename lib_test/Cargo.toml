@@ -36,3 +36,9 @@ path = "/home/conan/soft/rust/influxdb_client"
 [dependencies.reqwest]          
 version = "0.11.9"              
 features = ["blocking", "json"] 
+
+
+# unpublish local crate
+[dependencies.template_formater]
+version = "^0"
+path = "/home/conan/soft/rust/template_formater"
