@@ -3,7 +3,7 @@ use template_formater::tuple_formater;
 use crate::connect::InfluxConfig;
 
 
-/// fill WRITE template with config data
+/// prepare api write uri
 pub fn uri_write(template: &str,
                  config: &InfluxConfig,
                  debug: bool) -> String {
@@ -25,7 +25,7 @@ pub fn uri_write(template: &str,
 }
 
 
-/// fill READ template with config data
+/// prepare api read/query uri
 pub fn uri_query(template: &str,
                  config: &InfluxConfig,
                  debug: bool) -> String {
@@ -40,6 +40,21 @@ pub fn uri_query(template: &str,
                        ("org", config.org),                 
                    ],                                               
 
+                   debug,
+    )
+}
+
+/// prepare token header
+pub fn token(template: &str,
+             config: &InfluxConfig,
+             debug: bool) -> String {
+    
+    tuple_formater(template,
+                   
+                   &vec![                              
+                       ("token", config.token),
+                   ],                                  
+                   
                    debug,
     )
 }

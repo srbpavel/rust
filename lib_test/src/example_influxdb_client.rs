@@ -17,9 +17,9 @@ use chrono::{DateTime,
 
 
 // TEMPLATE_FORMATER
-use template_formater::tuple_formater;
+//use template_formater::tuple_formater;
 
-
+/// use Struct or Hash for CSV parsing
 const RECORD_STRUCT: bool = true; // fields has to be exact as flux_output
 //const RECORD_STRUCT: bool = false; // here you do not need to know field
 
@@ -97,9 +97,9 @@ type HashRecord = HashMap<String, String>;
 
 
 /// &str -> DateTime instead Serde parsing
-pub fn parse_time(data: &str) -> Option<DateTime<Utc>> {
+pub fn parse_time(datetime: &str) -> Option<DateTime<Utc>> {
     
-    match data.parse() {
+    match datetime.parse() {
         Ok(t) => Some(t),
         Err(why) => {
             eprintln!("ERROR: conversion &str -> DateTime \nREASON >>>{why}");
@@ -221,7 +221,32 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
     let active_config = &config.all_influx.values[1];
 
-    // initial Config, here copied from TOML but can be from elsewhere
+    // INITIAL CONFIG mirrored from TOML but can be from elsewhere CLAP / ...
+    /* // DEFAULT -> by name, so we can skip some
+    let influx_config = influxdb_client::connect::InfluxConfig {
+        //name: &active_config.name,
+        //status: active_config.status,
+
+        secure: &active_config.secure,
+        
+        //server: &active_config.server,
+        //port: active_config.port,
+        
+        bucket: &active_config.bucket,
+        token: &active_config.token,
+        org: &active_config.org,
+        //precision: &active_config.precision,
+        
+        //machine_id: &active_config.machine_id,
+        //carrier: &active_config.carrier,
+
+        //flag_valid_default: active_config.flag_valid_default,
+
+        ..influxdb_client::connect::InfluxConfig::default()
+    };
+    */
+
+    // /* // NEW -> by exact possition
     let influx_config = influxdb_client::connect::InfluxConfig::new(
         &active_config.name,
         active_config.status,
@@ -241,11 +266,13 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
         active_config.flag_valid_default,
     );
+    // */
 
     println!("\n@LIB InfluxConfig: {influx_config:#?}");
     
     const MEASUREMENT: &str = "dallas";
 
+    // WRITE
     let uri_write = influxdb_client::format::uri_write(
         &format!("{}{}",
                  &config.template.curl.influx_uri_api,
@@ -255,44 +282,8 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         
         config.flag.debug_tuple_formater,
     );
-    
-    /*
-    let uri_write = influxdb_client::format::uri_write(
-        &format!("{}{}",
-                 &config.template.curl.influx_uri_api,
-                 &config.template.curl.influx_uri_write),
-        vec![
-            ("secure", &active_config.secure),
-            ("server", &active_config.server),
-            ("port", &active_config.port.to_string()),
-            
-            ("org", &active_config.org),
-            ("bucket", &active_config.bucket),
-            ("precision", &active_config.precision),
-            
-        ],
-        false, // DEBUG flag via config
-    );
-    */
 
-    /*
-    let uri_write = tuple_formater(&format!("{}{}",
-                                            &config.template.curl.influx_uri_api,
-                                            &config.template.curl.influx_uri_write),
-                                   &vec![
-                                       ("secure", &active_config.secure),
-                                       ("server", &active_config.server),
-                                       ("port", &active_config.port.to_string()),
-
-                                       ("org", &active_config.org),
-                                       ("bucket", &active_config.bucket),
-                                       ("precision", &active_config.precision),
-
-                                   ],
-                                   false, // DEBUG flag via config
-    );
-    */
-
+    // READ
     let uri_query = influxdb_client::format::uri_query(
         &format!("{}{}",
                  &config.template.curl.influx_uri_api,
@@ -303,41 +294,32 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         config.flag.debug_tuple_formater,
     );
     
-    /*
-    let uri_query = tuple_formater(&format!("{}{}",
-                                            &config.template.curl.influx_uri_api,
-                                            &config.template.curl.influx_uri_query),
-                                   &vec![
-                                       ("secure", &active_config.secure),
-                                       ("server", &active_config.server),
-                                       ("port", &active_config.port.to_string()),
-
-                                       ("org", &active_config.org),
-                                   ],
-                                   false, // DEBUG flag via config
-    );
-    */
-
-    //println!("URI: {uri_query:?}");
-    
+    // FLUX
     let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
                              bucket=&active_config.bucket,
                              measurement=MEASUREMENT,
-                             //range_start=RANGE_START,
                              range_start=&config.template.flux.query_verify_record_range_start,
                              
     );
 
-    //println!("FLUX_QUERY: {flux_query}");
+    // TOKEN
+    let token = influxdb_client::format::token(
+        &config.template.curl.influx_auth[1],
 
+        &influx_config,
+        
+        config.flag.debug_tuple_formater,
+    );
+    /*
     let token = tuple_formater(&config.template.curl.influx_auth[1],
                                &vec![
                                    ("token", &active_config.token),
                                ],
                                false,
     );
+    */
 
-    // NEW
+    // CALL
     let influx_call = influxdb_client::connect::InfluxCall::new(
         &uri_write,
         &uri_query,

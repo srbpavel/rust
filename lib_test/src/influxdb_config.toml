@@ -16,7 +16,7 @@ debug_config = false
 debug_ts = false
 
 # display tuple formater pair
-debug_tuple_formater = true # false
+debug_tuple_formater = false
 
 # display email Message Struct -> headers + envelope
 debug_email = true # false

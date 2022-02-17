@@ -1,10 +1,11 @@
 use reqwest::blocking::{
     ClientBuilder,
-    Response,
+    //Response, // GET
     RequestBuilder,
 };
 
 use std::error::Error;
+
 
 /// config properties
 ///
@@ -46,22 +47,44 @@ impl <'c>InfluxConfig<'c> {
                carrier: &'c str,
                flag_valid_default: bool) -> Self {
         
-        Self {name,
-              status,
+        Self {
+            name,
+            status,
+            
+            secure,
+            
+            server,
+            port,
+            
+            bucket,
+            token,
+            org,
+            precision,
+            
+            machine_id,
+            carrier,
+            flag_valid_default,
+        }
+    }
 
-              secure,
-              
-              server,
-              port,
-              
-              bucket,
-              token,
-              org,
-              precision,
-              
-              machine_id,
-              carrier,
-              flag_valid_default,
+    pub fn default() -> Self {
+        Self {
+            name: "NAME",
+            status: false,
+            
+            secure: "http",
+            
+            server: "localhost",
+            port: 8086,
+            
+            bucket: "BUCKET",
+            token: "TOKEN",
+            org: "ORG",
+            precision: "ms", // len()=13 -> 1645110902036
+            
+            machine_id: "MACHINE_ID",
+            carrier: "CARRIER",
+            flag_valid_default: false,
         }
     }
 }
@@ -94,11 +117,12 @@ impl <'i>InfluxCall<'i> {
                accept: Vec<&'i str>,
                content: Vec<&'i str>) -> Self {
         
-        Self {uri_write,
-              uri_query,
-              auth,
-              accept,
-              content,
+        Self {
+            uri_write,
+            uri_query,
+            auth,
+            accept,
+            content,
         }
     }
 }
@@ -137,17 +161,3 @@ pub fn read_flux_query(influx: InfluxCall,
     Ok(request)
 }
 
-
-/*
-/// GET
-pub fn get(uri: &str) -> Result<Response, Box<dyn Error>> {
-
-    println!("get: {uri:?}");
-
-    let resp = reqwest::blocking::get(uri)?;
-
-    println!("response: {:#?}", resp);
-
-    Ok(resp)
-}
-*/
