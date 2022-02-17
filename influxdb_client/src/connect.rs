@@ -6,7 +6,70 @@ use reqwest::blocking::{
 
 use std::error::Error;
 
+/// config properties
+///
+#[derive(Debug)]
+pub struct InfluxConfig<'c> {
+    pub name: &'c str,
+    pub status: bool,
 
+    pub secure: &'c str,
+
+    pub server: &'c str,
+    pub port: u16,
+
+    pub bucket: &'c str,
+    pub token: &'c str,
+    pub org: &'c str,
+    pub precision: &'c str,
+
+    pub machine_id: &'c str,
+    pub carrier: &'c str,
+    pub flag_valid_default: bool,
+}
+
+impl <'c>InfluxConfig<'c> {
+    pub fn new(name: &'c str,
+               status: bool,
+
+               secure: &'c str,
+
+               server: &'c str,
+               port: u16,
+               
+               bucket: &'c str,
+               token: &'c str,
+               org: &'c str,
+               precision: &'c str,
+               
+               machine_id: &'c str,
+               carrier: &'c str,
+               flag_valid_default: bool) -> Self {
+        
+        Self {name,
+              status,
+
+              secure,
+              
+              server,
+              port,
+              
+              bucket,
+              token,
+              org,
+              precision,
+              
+              machine_id,
+              carrier,
+              flag_valid_default,
+        }
+    }
+}
+
+
+///
+/// properties for API call
+///
 ///InfluxCall {
 /// uri_write: "SECURE://SERVER:PORT/api/v2/write?org=ORG&bucket=BUCKET&precision=PRECISION",
 /// uri_query: "SECURE://SERVER:PORT/api/v2/query?org=ORG",
@@ -42,55 +105,35 @@ impl <'i>InfluxCall<'i> {
 
 
 /// POST flux_query
-/*
-pub fn read_query(uri: &str,
-                  data: String,
-                  token: &str) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
- */
-pub fn read_query(call: InfluxCall,
-                  data: String) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
+pub fn read_flux_query(influx: InfluxCall,
+                       query: String,
+                       debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
 
-    println!("READ_QUERY: {:?}", call.uri_query);
+    if debug {
+        println!("\n#READ_FLUX_QUERY: {query}");
+    }
 
     let client = ClientBuilder::new()
         .danger_accept_invalid_certs(true) // HTTPS with no certificate
         .build()?;
 
-    let request = client.post(call.uri_query)
-        .header(call.auth[0],
-                call.auth[1]
+    let request = client.post(influx.uri_query)
+        .header(influx.auth[0],
+                influx.auth[1]
         )
-        .header(call.accept[0],
-                call.accept[1],
+        .header(influx.accept[0],
+                influx.accept[1],
         )
-        .header(call.content[0],
-                call.content[1],
+        .header(influx.content[0],
+                influx.content[1],
         )
         .timeout(
             std::time::Duration::from_secs(
                 10
             )
         )
-        .body(data); // -> RequestBuilder
+        .body(query); // -> RequestBuilder
     
-    /*
-    let request = client.post(uri)
-        .header("Authorization",
-                &format!("Token {token}"),
-        )
-        .header("Accept",
-                "application/csv"
-        )
-        .header("Content-type",
-                "application/vnd.flux"
-        )
-        .timeout(
-            std::time::Duration::from_secs(
-                10
-            )
-        ) // OR .connect_timeout()
-        .body(data); // -> RequestBuilder
-    */
     Ok(request)
 }
 
