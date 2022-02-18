@@ -446,11 +446,7 @@ pub fn read_flux_query(client: &Client,
 /// POST WRITE LP
 pub fn write_lp(client: &Client,
                 influx: &InfluxCall,
-
-                //lp: LineProtocolBuilder,
                 lp: String,
-
-                //query: String,
                 debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
     
     if debug {
@@ -462,14 +458,7 @@ pub fn write_lp(client: &Client,
         .header(influx.auth[0],
                 influx.auth[1]
         )
-        /*
-        .header(influx.accept[0],
-                influx.accept[1],
-        )
-        .header(influx.content[0],
-                influx.content[1],
-        )
-        */
+        // TIMEOUT -> FUTURE USE
         .timeout(
             std::time::Duration::from_secs(
                 10

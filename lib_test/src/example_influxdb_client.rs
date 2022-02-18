@@ -1,4 +1,3 @@
-// dummy settings and data via config
 use crate::influxdb_toml_config_struct::{TomlConfig};
 
 use influxdb_client::{
@@ -104,6 +103,19 @@ type HashRecord = HashMap<String, String>;
 
 
 /// &str -> DateTime instead Serde parsing
+pub fn parse_datetime(datetime: &str) -> Result<DateTime<Utc>, chrono::format::ParseError> {
+    
+    match datetime.parse() {
+        Ok(t) => return Ok(t),
+        Err(why) => {
+            //eprintln!("ERROR: conversion &str -> DateTime \nREASON >>>{why}");
+
+            //None
+            Err(why)
+        }
+    }
+}
+/*
 pub fn parse_datetime(datetime: &str) -> Option<DateTime<Utc>> {
     
     match datetime.parse() {
@@ -115,6 +127,7 @@ pub fn parse_datetime(datetime: &str) -> Option<DateTime<Utc>> {
         }
     }
 }
+*/
 
 
 /// Hash
@@ -141,7 +154,8 @@ pub fn parse_csv(client: &Client,
                  config: &TomlConfig,
                  influx_config: &InfluxConfig,
                  influx_call: &InfluxCall,
-                 response: &str) -> Result<(), csv::Error> {
+                 //response: &str) -> Result<(), csv::Error> {
+                 response: &str) -> Result<(), Box<dyn std::error::Error>> {
 
     let mut reader = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -176,26 +190,7 @@ pub fn parse_csv(client: &Client,
                                                      &headers,
                     )?;
 
-                    println!("\nRECORD[{record_counter}]: {s_record:?}");                    
-                    /*
-                    let time = parse_time(s_record.time); // .value -> Error 
-                    let start = parse_time(s_record.start);
-                    let stop = parse_time(s_record.stop);
-
-                    println!("\nRECORD[{record_counter}]: {:?}\ntime: {:?}\nts: {:?}\nstart: {:?}\nstop: {:?}",
-                             s_record,
-                             time,
-                             
-                             match time {
-                                 Some(t) => t.timestamp_millis(),
-                                 None => 0,
-                             },
-                             
-                             start,
-                             stop,
-                    );
-                    */
-
+                    println!("\nRECORD[{record_counter}]:\n+ {s_record:?}");                    
                     // LP via METRIC
                     let metric = &config.metrics["temperature"];
 
@@ -222,10 +217,22 @@ pub fn parse_csv(client: &Client,
                         )
 
                         .ts(&format!("{}",
+                                     match parse_datetime(s_record.time) {
+                                         Ok(dt) => dt.timestamp_millis(),
+                                         Err(why) => {
+                                             //return Err(why)
+                                             return Err(Box::new(why))
+                                         },
+                                     }
+                        ))
+
+                        /*
+                        .ts(&format!("{}",
                                      parse_datetime(s_record.time)
-                                     .unwrap()
+                                     .unwrap() // NOT SAFE
                                      .timestamp_millis(),
                         ))
+                        */
 
                         .build(false) // debug tupple formater flag
                         ;
@@ -239,30 +246,39 @@ pub fn parse_csv(client: &Client,
                                 lp: data,
                             };
                             
-                            println!("@INFLUXDATA: {:?}",
+                            println!("LINE_PROTOCOL to write:\n+ {}",
                                      influx_data.lp,
                             );
 
+                            // /*
                             // WRITE
+                            let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
 
-                            let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test"); 
+                            // ERROR dns handle
+                            //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira"); 
                             
                             let update_influx_call = InfluxCall {
                                 uri_write: new_bucket,
+                                //uri_write: new_hostname,
                                 ..influx_call.clone()
                             };
-                            
-                            println!("\n@UPDATE_BUCKET: {:?}",
+
+                            /*
+                            println!("\n@UPDATE_BUCKET: {:?}\n+{}",
                                      update_influx_call.uri_write,
+                                     new_hostname,
                             );
+                            */
                                 
                             let write_result = write(client,
                                                      &update_influx_call,
                                                      config,
                                                      //lp: LineProtocolBuilder);
                                                      &influx_data.lp);
-
-                            println!("\nWRITE_RESULT: {write_result:?}");
+                            if write_result.is_err() {
+                                println!("WRITE_RESULT: {write_result:?}");
+                            }
+                            // */ //_ WRITE_end
                             
                         },
                         Err(why) => {
@@ -295,8 +311,10 @@ pub fn parse_csv(client: &Client,
             },
         };
 
+        /*
         println!("\n break");
         break
+        */
     }
 
     Ok(())
@@ -423,13 +441,8 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     println!("\n@InfluxCall: {influx_call:#?}");
 
     // REQW Client
-    /*
-    let client: Result<reqwest::blocking::Client, reqwest::Error>
-        = influxdb_client::connect::client();
-    */
     let client: reqwest::blocking::Client = influxdb_client::connect::client()?;
-
-    println!("\n@CLIENT: {client:#?}");
+    //println!("\n@CLIENT: {client:#?}");
     
     // REQW READ RequestBuilder
     let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
@@ -467,8 +480,10 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
                                &influx_call,
                                &response,
     );
-    
-    println!("\nCSV_STATUS: {csv_status:?}");
+
+    if csv_status.is_err() {
+        println!("CSV_STATUS: {csv_status:?}");
+    }
     // */
 
     Ok(())
@@ -479,7 +494,6 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 pub fn write(client: &Client,
              influx_call: &InfluxCall,
              config: &TomlConfig,
-             //lp: LineProtocolBuilder) -> Result<(), reqwest::Error> {
              lp: &str) -> Result<(), reqwest::Error> {
 
     // REQW WRITE RequestBuilder
@@ -488,9 +502,7 @@ pub fn write(client: &Client,
             &client,
             &influx_call,
             String::from(lp),
-            //flux_query,
-            //config.flag.debug_flux_query,
-            true, // DEBUG flag
+            config.flag.debug_reqwest, //true, // DEBUG flag
         );
 
     if config.flag.debug_reqwest {

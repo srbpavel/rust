@@ -16,7 +16,7 @@ debug_config = false
 debug_ts = false
 
 #display reqwest status/error info
-debug_reqwest = true # false
+debug_reqwest = false
 
 # display tuple formater pair
 debug_tuple_formater = false

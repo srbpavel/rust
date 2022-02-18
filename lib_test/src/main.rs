@@ -22,7 +22,9 @@ fn main() {
     // INFLUXDB_CLIENT
     let influxdb_status_msg = example_influxdb_client::start(config);
 
-    println!("\nLIB_TEST: {influxdb_status_msg:?}");
+    if influxdb_status_msg.is_err() {
+        println!("LIB_TEST: {influxdb_status_msg:?}");
+    }
 
     
     /* MQTT
