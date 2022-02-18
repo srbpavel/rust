@@ -275,18 +275,18 @@ pub fn parse_csv(config: &TomlConfig,
                         true,
                         //false,
                     );          
+                    */
                     
                     let influx_data = InfluxData {
                         config: influx_config.clone(),
                         call: influx_call.clone(),
-                        lp: lp,
+                        lp: lpb,
                     };
 
                     println!("@INFLUXDATA: {:?}",
                              influx_data.lp,
                     );          
                     
-                    */
                     //_
                     
 

@@ -17,6 +17,8 @@ pub trait Print {
 }
 */
 
+const EMPTY: &str = "";
+
 #[derive(Debug)]
 pub enum LpError {
     TimeStamp,
@@ -49,7 +51,6 @@ impl LpError {
 #[derive(Debug, Clone)]
 pub struct LineProtocolBuilder {
     pub template: String,
-    
     pub measurement: String,
     pub host: String,
     pub tags: String,
@@ -59,7 +60,6 @@ pub struct LineProtocolBuilder {
 
 impl LineProtocolBuilder {
     pub fn new(template: String,
-
                measurement: String,
                host: String,
                tags: String,
@@ -77,8 +77,6 @@ impl LineProtocolBuilder {
     }
 
     pub fn default() -> Self {
-        //let empty = String::from("");
-
         Self {
             template: String::from(""), //&empty,
             measurement: String::from(""),
@@ -92,47 +90,27 @@ impl LineProtocolBuilder {
     // need config + influx_config for TS format+len and ...
     pub fn validate(&self) -> Result<(), LpError> {
 
-        // EMPTY
-        /*
-        let s_elf = self.clone();
-        if vec![s_elf.template,
-                s_elf.measurement,
-                s_elf.host,
-                s_elf.tags,
-                s_elf.fields,
-                s_elf.ts]
-            .iter()
-            .filter(|s| *s == &String::from("") )
-            .collect::<Vec<_>>()
-            .len() != 0 { return Err(LpErr::Empty) }
-        */
-
-        let empty = String::from("");
-        
-        if self.measurement == empty {
+        // EMPTY default values
+        if self.measurement.eq(EMPTY) {
             return Err(LpError::EmptyMeasurement)
         }
 
-        if self.host == empty {
+        if self.host.eq(EMPTY) {
             return Err(LpError::EmptyHost)
         }
         
-        if self.tags == empty {
+        if self.tags.eq(EMPTY) {
             return Err(LpError::EmptyTags)
         }
         
-        if self.fields == empty {
+        if self.fields.eq(EMPTY) {
             return Err(LpError::EmptyFields)
         }
-        if self.ts == String::from("") {
+        if self.ts.eq(EMPTY) {
             return Err(LpError::EmptyTimeStamp)
         }
         
-        if self.ts == String::from("") {
-            return Err(LpError::EmptyTimeStamp)
-        }
-
-        // WRONG timestamp len/format
+        // WRONG timestamp len/format -> need config !!!
         if format!("{}", self.ts).len() != 13 { //10 {
             return Err(LpError::TimeStamp)
         }
@@ -140,10 +118,21 @@ impl LineProtocolBuilder {
         Ok(())
     }
 
+    /// remove last CHAR ',' in tag/field values
+    pub fn remove_last_comma(&mut self) {
+        [&mut self.tags, &mut self.fields]
+            .iter_mut()
+            .for_each(|s|
+                      **s = String::from(&s[0..s.len() - 1])
+            );
+    }
+    
     /// BUILD 
-    pub fn build(&self,
+    pub fn build(&mut self,
                  debug: bool) -> String {
 
+        self.remove_last_comma();
+        
         match self.validate() {
             Ok(_) => {
                 
@@ -154,13 +143,11 @@ impl LineProtocolBuilder {
                                    ("host", &self.host),
                                    
                                    ("tags",
-                                    //&self.tags,
-                                    &self.tags[0..&self.tags.len() - 1]
+                                    &self.tags,
                                    ),
                                    
                                    ("fields",
-                                    //&self.fields,
-                                    &self.fields[0..&self.fields.len() - 1]
+                                    &self.fields,
                                    ),
                                    
                                    ("ts", &self.ts),
@@ -173,7 +160,7 @@ impl LineProtocolBuilder {
             
             Err(why) => {
 
-                eprintln!("\n###ERROR: {:?}\nREASON >>> {:?}",
+                eprintln!("\n###ERROR: {:#?}\nREASON >>> {:?}",
                           self,
                           why.as_str(),
                 );
