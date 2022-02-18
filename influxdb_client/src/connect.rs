@@ -129,23 +129,15 @@ impl LineProtocolBuilder {
             .for_each(|s|
                       if let Some(last) = s.as_bytes().last() {
                           if last.eq(&(DELIMITER as u8)) {
-                              //println!("LAST_OK: <{}>", s);
-
                               **s = String::from(&s[0..s.len() - 1])
                           }
                       }
-                      /*
-                      else {
-                          println!("LAST_ERR: <{}>", s);
-                      }
-                      */
             );
     }
     
     /// finalize construction from all members
     /// ok if valid otherwise raise error
     pub fn build(&mut self,
-                 //debug: bool) -> String {
                  debug: bool) -> Result<String, LpError> {
 
         // VALIDATE that all was updated and not DEFAULT
@@ -180,18 +172,7 @@ impl LineProtocolBuilder {
 
             },
             
-            Err(why) => {
-
-                /*
-                eprintln!("\n###ERROR: {:#?}\nREASON >>> {:?}",
-                          self,
-                          why.as_str(),
-                );
-                */
-            
-                //String::from("")
-                Err(why)
-            }
+            Err(why) => { Err(why) }
         }
     }
 
@@ -440,12 +421,6 @@ pub fn read_flux_query(client: &Client,
     if debug {
         println!("\n#READ_FLUX_QUERY: {query}");
     }
-
-    /*
-    let client = ClientBuilder::new()
-        .danger_accept_invalid_certs(true) // HTTPS with no certificate
-        .build()?;
-    */
 
     let request = client.post(influx.uri_query)
         .header(influx.auth[0],

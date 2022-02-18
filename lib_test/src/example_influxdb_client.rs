@@ -22,8 +22,6 @@ use chrono::{DateTime,
              Utc,
 };
 
-//use template_formater::tuple_formater;
-
 
 /// use Struct or Hash for CSV parsing
 const RECORD_STRUCT: bool = true; // fields has to be exact as flux_output
@@ -159,8 +157,7 @@ pub fn parse_csv(config: &TomlConfig,
 
     let mut record_counter = 0;
 
-    // FAST
-    //for single_record in reader.records() { // .records() -> iterator
+    // ALL_RECORDS WALK
     for single_record in reader.records() { // .records() -> iterator
 
         record_counter += 1;
@@ -205,17 +202,19 @@ pub fn parse_csv(config: &TomlConfig,
                         .template(&metric.generic_lp)
 
                         .measurement(&metric.measurement)
-                        //.host(&config.host)
+                        .host(&config.host)
 
-                        // NAME, VALUE
+                        // TAG: NAME, VALUE
                         .tag(&metric.tag_machine, &influx_config.machine_id)
                         .tag(&metric.tag_carrier, &influx_config.carrier)
                         .tag(&metric.tag_id, &s_record.ds_id)
+
                         // record is valid -> true
                         .tag(&metric.tag_valid, &format!("{}", true))
-                        
-                        .field(&metric.field, // FIELD_name
-                               &s_record.value, // FIELD_value
+
+                        // FIELD: NAME, VALUE
+                        .field(&metric.field,
+                               &s_record.value,
                         )
 
                         .ts(&format!("{}",
@@ -224,27 +223,10 @@ pub fn parse_csv(config: &TomlConfig,
                                      .timestamp_millis(),
                         ))
 
-                        /* ERROR HANDLE
-                        */
-
                         .build(false) // debug tupple formater flag
                         ;
 
-                    // DEBUG
-                    //println!("\n@LP_BUILDED_verified: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
-
-                    /*
-                    let influx_data = InfluxData {
-                        config: influx_config.clone(),
-                        call: influx_call.clone(),
-                        lp: lpb,
-                    };
-
-                    println!("@INFLUXDATA: {:?}",
-                             influx_data.lp,
-                    );
-                    */
-
+                    // VERIFY LP parsing
                     match result_lpb {
                         Ok(data) => {
                             let influx_data = InfluxData {
@@ -267,9 +249,6 @@ pub fn parse_csv(config: &TomlConfig,
                         },
                     }
                     
-                    //_
-                    
-
                 // FUTURE_USE -> record HASH
                 } else {
                     let h_record = record_via_hash(&rec,
