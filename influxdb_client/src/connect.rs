@@ -265,7 +265,9 @@ impl <'d>InfluxData<'d> {
             },
 
             call: InfluxCall {
-                uri_write: DEFAULT,
+                //uri_write: DEFAULT,
+                uri_write: String::from(DEFAULT),
+                
                 uri_query: DEFAULT,
                 
                 auth: vec![],
@@ -377,7 +379,9 @@ impl <'c>InfluxConfig<'c> {
 ///
 #[derive(Debug, Clone)]
 pub struct InfluxCall<'i> {
-    pub uri_write: &'i str,
+    //pub uri_write: &'i str,
+    pub uri_write: String,
+
     pub uri_query: &'i str,
     pub auth: Vec<&'i str>,
     pub accept: Vec<&'i str>,
@@ -386,7 +390,9 @@ pub struct InfluxCall<'i> {
 
 impl <'i>InfluxCall<'i> {
     /// new
-    pub fn new(uri_write: &'i str,
+    pub fn new(//uri_write: &'i str,
+               uri_write: String,
+
                uri_query: &'i str,
                auth: Vec<&'i str>,
                accept: Vec<&'i str>,
@@ -401,18 +407,16 @@ impl <'i>InfluxCall<'i> {
         }
     }
 
-    //pub fn swap_bucket(&mut self,
+    // /*
+    /// swap bucket
     pub fn swap_bucket(&mut self,
-                       //influx_config: &InfluxConfig,
                        old_bucket: &str,
-                       //new_bucket: &str) -> &mut Self {
-                       //new_bucket: &'i str) -> &'i Self {
                        new_bucket: &str) -> &mut Self {
 
-        // /*
-        let new = self.uri_write.replace(
+        //self.uri_write = format!("{}", "aaa");
+
+        self.uri_write = self.uri_write.replace(
             &format!("bucket={}",
-                     //influx_config.bucket,
                      old_bucket,
             ),
             
@@ -420,39 +424,51 @@ impl <'i>InfluxCall<'i> {
                      new_bucket,
             ),
         );
-
-        self.uri_write = &format!("{}", new);
-
+        
         self
-            
-        // */
 
         /*
-        let clone = self.clone();
-        
-        //&mut Self {
-        Self {
-            uri_write: &format!("{}",
-                                clone.uri_write.replace(
-                                    &format!("bucket={}",
-                                             //influx_config.bucket,
-                                             old_bucket,
-                                    ),
-                                    
-                                    &format!("bucket={}",
-                                             new_bucket,
-                                    ),
-                                )
+        let Self {
+            uri_write,
+            uri_query,
+            auth,
+            accept,
+            content,
+        } = self;
+
+        /*
+        //new_uri_write = &*self.uri_write.replace(
+        let new_uri_write = uri_write.replace(
+            &format!("bucket={}",
+                     old_bucket,
             ),
             
-            uri_query: clone.uri_query,
-
-            auth: clone.auth,
-            accept: clone.accept,
-            content: clone.content,
-        }
+            &format!("bucket={}",
+                     new_bucket,
+            ),
+        ).as_str();
         */
+
+        Self {
+            uri_write: uri_write.replace(
+                &format!("bucket={}",
+                         old_bucket,
+                ),
+                
+                &format!("bucket={}",
+                         new_bucket,
+                ),
+            ).as_str(),
+            
+            uri_query,
+
+            auth,
+            accept,
+            content,
+        }
+    */
     }
+    // */
 }
 
 
@@ -506,7 +522,8 @@ pub fn write_lp(client: &Client,
         println!("\n#WRITE_REQUEST:\n+ {influx:?}\n+ {lp:?}");
     }
 
-    let request = client.post(influx.uri_write)
+    //let request = client.post(influx.uri_write)
+    let request = client.post(&influx.uri_write)
         // TOKEN
         .header(influx.auth[0],
                 influx.auth[1]

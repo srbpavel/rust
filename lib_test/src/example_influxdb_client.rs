@@ -153,7 +153,7 @@ pub fn record_via_struct<'r>(rec: &'r StringRecord,
 pub fn parse_csv(client: &Client,
                  config: &TomlConfig,
                  influx_config: &InfluxConfig,
-                 influx_call: &InfluxCall,
+                 influx_call: &mut InfluxCall,
                  //response: &str) -> Result<(), csv::Error> {
                  response: &str) -> Result<(), Box<dyn std::error::Error>> {
 
@@ -252,10 +252,17 @@ pub fn parse_csv(client: &Client,
 
                             // /*
                             // WRITE
-                            let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
+                            //let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
+                            let new_bucket = influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
 
                             // ERROR dns handle
-                            //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira"); 
+                            //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira");
+                            /*
+                            let new_hostname = influx_call.swap_bucket(
+                                "jozefina",
+                                "NINDZA",
+                            );
+                            */
                             
                             let update_influx_call = InfluxCall {
                                 uri_write: new_bucket,
@@ -264,7 +271,7 @@ pub fn parse_csv(client: &Client,
                             };
 
                             /*
-                            println!("\n@UPDATE_BUCKET: {:?}\n+{}",
+                            println!("\n@UPDATE_BUCKET: {:?}\n+{:?}",
                                      update_influx_call.uri_write,
                                      new_hostname,
                             );
@@ -421,8 +428,10 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
     // CALL
     //let influx_call = influxdb_client::connect::InfluxCall::new(
-    let influx_call = InfluxCall::new(
-        &uri_write,
+    //let influx_call = InfluxCall::new(
+    let mut influx_call = InfluxCall::new(
+        //&uri_write,
+        uri_write,
         &uri_query,
         
         vec![&config.template.curl.influx_auth[0],
@@ -477,7 +486,10 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     let csv_status = parse_csv(&client,
                                &config,
                                &influx_config,
-                               &influx_call,
+
+                               //&influx_call,
+                               &mut influx_call,
+
                                &response,
     );
 
