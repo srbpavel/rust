@@ -6,6 +6,7 @@ use influxdb_client::{
         InfluxConfig,
         InfluxCall,
         InfluxData,
+        LineProtocolBuilder,
     },
 };
 
@@ -191,10 +192,48 @@ pub fn parse_csv(config: &TomlConfig,
                     );
                     */
 
-                    // METRIC
+                    // LP via METRIC
                     let metric = &config.metrics["temperature"];
+
+                    let mut line_protocol_builder = LineProtocolBuilder::default();
                     
-                    //println!("\n@METRIC:\ntemplate: {}\nmeasurement: {}\nfield: {}",
+                    println!("\n@LP_B: {line_protocol_builder:?}");
+
+                    let lpb = line_protocol_builder
+                        .template(&metric.generic_lp)
+                        .measurement(&metric.measurement)
+                        .host(&config.host)
+
+                        //.tag()
+                        //"tag_machine"
+                        .tag(&metric.tag_machine, &influx_config.machine_id)
+
+                        //"tag_carrier" 
+                        .tag(&metric.tag_carrier, &influx_config.carrier)
+
+                        //"tag_valid" 
+                        .tag(&metric.tag_valid, &format!("{}", true))
+
+                        //"tag_id"
+                        .tag( &metric.tag_id, &s_record.ds_id)
+                        
+                        .field(&metric.field, // FIELD_name
+                               &s_record.value, // FIELD_value
+                        )
+                        
+                        .ts(&format!("{}",
+                                     parse_time(s_record.time)
+                                     .unwrap()
+                                     .timestamp_millis(),
+                        ))
+                        .build()
+                        ;
+
+                    println!("\n@LP_B: {line_protocol_builder:?}\n\nLPB:\n{lpb}");
+
+                    println!("temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=69 1645176001935");
+                    
+                    /*
                     let lp = tuple_formater(
                         &metric.generic_lp,
 
@@ -226,27 +265,24 @@ pub fn parse_csv(config: &TomlConfig,
                             ),
                         ],
 
-                        //true,
-                        false,
-                        
+                        true,
+                        //false,
                     );          
                     
-                    // format LP + WRITE example
                     let influx_data = InfluxData {
                         config: influx_config.clone(),
                         call: influx_call.clone(),
                         lp: lp,
                     };
 
-                    // /*
                     println!("@INFLUXDATA: {:?}",
-                             //influx_data,
                              influx_data.lp,
                     );          
-                    // */
+                    
+                    */
                     //_
                     
-                    
+
                 // FUTURE_USE
                 } else {
                     let h_record = record_via_hash(&rec,

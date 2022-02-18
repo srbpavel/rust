@@ -1,10 +1,11 @@
 use reqwest::blocking::{
     ClientBuilder,
-    //Response, // GET
     RequestBuilder,
 };
 
 use std::error::Error;
+
+use template_formater::tuple_formater;
 
 /*
 pub trait Print {
@@ -15,6 +16,125 @@ pub trait Print {
     fn print_config(&self);
 }
 */
+
+
+/// line_protocol_builder
+#[derive(Debug)]
+pub struct LineProtocolBuilder {
+    pub template: String,
+    
+    pub measurement: String,
+    pub host: String,
+    pub tags: String,
+    pub fields: String,
+    pub ts: String,
+}
+
+impl LineProtocolBuilder {
+    pub fn new(template: String,
+               measurement: String,
+               host: String,
+               tags: String,
+               fields: String,
+               ts: String) -> Self {
+        
+        Self {
+            template,
+            measurement,
+            host,
+            tags,
+            fields,
+            ts,
+        }
+    }
+    
+    pub fn default() -> Self {
+        Self {
+            template: String::from(""),
+            measurement: String::from(""),
+            host: String::from(""),
+            tags: String::from(""),
+            fields: String::from(""),
+            ts: String::from(""),
+        }
+    }
+
+    pub fn build(&self) -> String {
+
+        //if self.validate() {
+            
+        tuple_formater(&self.template,
+                       
+                       &vec![
+                           ("measurement", &self.measurement),
+                           ("host", &self.host),
+                             
+                           ("tags",
+                            //&self.tags,
+
+                            &self.tags[0..&self.tags.len() - 1]
+                           ),
+
+                           ("fields",
+                            //&self.fields,
+
+                            &self.fields[0..&self.fields.len() - 1]
+                           ),
+                               
+                           ("ts", &self.ts),
+                       ],
+                       
+                       true, //config.flag.debug_template_formater
+        )
+    }
+
+    pub fn template(&mut self, value: &str) -> &mut Self {
+        self.template = String::from(value);
+
+        self
+    }
+    
+    pub fn measurement(&mut self, value: &str) -> &mut Self {
+        //self.measurement = format!("measurement=\"{value}\"");
+        //self.measurement = format!("measurement={value}");
+        self.measurement = String::from(value);
+
+        self
+    }
+
+    pub fn host(&mut self, value: &str) -> &mut Self {
+        //self.host = format!("host=\"{value}\"");
+        //self.host = format!("host={value}");
+        self.host = String::from(value);
+
+        self
+    }
+
+    pub fn tag(&mut self,
+                name: &str,
+                value: &str) -> &mut Self {
+        
+        //self.tags += &format!("\"{name}\"=\"{value}\",");
+        self.tags += &format!("{name}={value},");
+
+        self
+    }
+
+    pub fn field(&mut self,
+                 name: &str,
+                 value: &str) -> &mut Self {
+
+        self.fields += &format!("{name}={value},");
+
+        self
+    }
+
+    pub fn ts(&mut self, value: &str) -> &mut Self {
+        self.ts = String::from(value);
+        
+        self
+    }
+}
 
 
 /// data to write
