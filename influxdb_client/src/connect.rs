@@ -7,17 +7,9 @@ use std::error::Error;
 
 use template_formater::tuple_formater;
 
-/*
-pub trait Print {
-    fn print(&self);
 
-    fn print_call(&self);
-
-    fn print_config(&self);
-}
-*/
-
-const EMPTY: &str = "";
+const DEFAULT: &str = "";
+const DELIMITER: char = ','; // 44
 
 #[derive(Debug)]
 pub enum LpError {
@@ -29,23 +21,18 @@ pub enum LpError {
     EmptyTimeStamp,
 }
 
-
 impl LpError {
     fn as_str(&self) -> &str {
         match *self {
-            LpError::EmptyMeasurement => "empty: measurement",
-            LpError::EmptyHost => "empty: host",
-
-            LpError::EmptyTags => "empty: tags",
-            LpError::EmptyFields => "empty: fields",
-
-            LpError::EmptyTimeStamp => "empty: ts",
-
-            LpError::TimeStamp => "wrong timestamp format/len",
+            LpError::TimeStamp => "WRONG timestamp format/len",
+            LpError::EmptyMeasurement => "EMPTY: measurement",
+            LpError::EmptyHost => "EMPTY: host",
+            LpError::EmptyTags => "EMPTY: tags",
+            LpError::EmptyFields => "EMPTY: fields",
+            LpError::EmptyTimeStamp => "EMPTY: ts",
         }
     }
 }
-
 
 /// line_protocol_builder
 #[derive(Debug, Clone)]
@@ -78,40 +65,42 @@ impl LineProtocolBuilder {
 
     pub fn default() -> Self {
         Self {
-            template: String::from(""), //&empty,
-            measurement: String::from(""),
-            host: String::from(""),
-            tags: String::from(""),
-            fields: String::from(""),
-            ts: String::from(""),
+            template: String::from(DEFAULT),
+            measurement: String::from(DEFAULT),
+            host: String::from(DEFAULT),
+            tags: String::from(DEFAULT),
+            fields: String::from(DEFAULT),
+            ts: String::from(DEFAULT),
         }
     }
 
-    // need config + influx_config for TS format+len and ...
+    /// DATA validation
     pub fn validate(&self) -> Result<(), LpError> {
 
-        // EMPTY default values
-        if self.measurement.eq(EMPTY) {
+        // DEFUALT not updated
+        if self.measurement.eq(DEFAULT) {
             return Err(LpError::EmptyMeasurement)
         }
 
-        if self.host.eq(EMPTY) {
+        if self.host.eq(DEFAULT) {
             return Err(LpError::EmptyHost)
         }
         
-        if self.tags.eq(EMPTY) {
+        if self.tags.eq(DEFAULT) {
             return Err(LpError::EmptyTags)
         }
         
-        if self.fields.eq(EMPTY) {
+        if self.fields.eq(DEFAULT) {
             return Err(LpError::EmptyFields)
         }
-        if self.ts.eq(EMPTY) {
+        if self.ts.eq(DEFAULT) {
             return Err(LpError::EmptyTimeStamp)
         }
         
         // WRONG timestamp len/format -> need config !!!
-        if format!("{}", self.ts).len() != 13 { //10 {
+        // is correct to verify millis via len ?
+        // VALIDATION WILL be performed before BUILD in future
+        if format!("{}", self.ts).len() != 13 { //13MS 10SEC {
             return Err(LpError::TimeStamp)
         }
         
@@ -122,8 +111,29 @@ impl LineProtocolBuilder {
     pub fn remove_last_comma(&mut self) {
         [&mut self.tags, &mut self.fields]
             .iter_mut()
-            .for_each(|s|
-                      **s = String::from(&s[0..s.len() - 1])
+            .for_each(|s| {
+
+                let last = s.as_bytes()
+                    .last()
+                    .unwrap();
+
+                /* DEBUG
+                println!("LAST: {}: {}",
+                         last,
+                         *last as char,
+                );
+                */
+                
+                if last//s.as_bytes()
+                    //.last()
+                    //.unwrap() // NOT SAFE
+                      //.eq(&b',') {
+                //.eq(&B_DELIMITER) {
+                    .eq(&(DELIMITER as u8)) {
+                        
+                        **s = String::from(&s[0..s.len() - 1])
+                    }
+            }
             );
     }
     
@@ -191,14 +201,17 @@ impl LineProtocolBuilder {
         self
     }
 
+    // TRY TO HAVE ONE ONE fn
     /// update tag
     pub fn tag(&mut self,
                 name: &str,
                 value: &str) -> &mut Self {
         
-        self.tags += &format!("{}={},",
-                              name.trim(),
-                              value.trim(),
+        self.tags += &format!("{name}={value}{delimiter}",
+                              name = name.trim(),
+                              value = value.trim(),
+                              delimiter = DELIMITER,
+                              //delimiter = ';', // ERROR handle
         );
 
         self
@@ -209,9 +222,10 @@ impl LineProtocolBuilder {
                  name: &str,
                  value: &str) -> &mut Self {
 
-        self.fields += &format!("{}={},",
-                                name.trim(),
-                                value.trim(),
+        self.fields += &format!("{name}={value}{delimiter}",
+                                name = name.trim(),
+                                value = value.trim(),
+                                delimiter = DELIMITER,
         );
 
         self
@@ -233,22 +247,6 @@ pub struct InfluxData<'d> {
     pub lp: String,
 }
 
-/*
-impl Print for InfluxData {
-    fn print(&self) {
-        println!("\nTRAIT >>> {:?}", self);
-    }
-
-    fn print_call(&self) {
-        self.call.print();
-    }
-
-    fn print_config(&self) {
-        self.config.print();
-    }
-}
-*/
-
 
 impl <'d>InfluxData<'d> {
     pub fn new(config: InfluxConfig<'d>,
@@ -269,26 +267,22 @@ impl <'d>InfluxData<'d> {
             },
 
             call: InfluxCall {
+                /*
                 uri_write: "",
                 uri_query: "",
-
+                */
+                uri_write: DEFAULT,
+                uri_query: DEFAULT,
+                
                 auth: vec![],
                 accept: vec![],
                 content: vec![],
             },
             
-            lp: "".to_string(),
+            //lp: "".to_string(),
+            lp: String::from(DEFAULT)
         }
     }
-
-    /*
-    pub fn import_lp<'a>(&self,
-                         config: &TomlConfig) {
-        
-        import_lp_via_curl(config,
-                           &self)
-    }
-    */
 }
 
 
@@ -447,6 +441,7 @@ pub fn read_flux_query(influx: &InfluxCall,
 }
 
 
+/*
 /// Record
 ///
 /// TemplateSensors
@@ -481,8 +476,6 @@ pub fn prepare_generic_lp_format(_config: &InfluxConfig) {
                    config.flag.debug_template_formater
     )
     */
-}
-
 
 /*
 pub fn prepare_generic_lp_format(config: &InfluxConfig,
@@ -513,3 +506,6 @@ pub fn prepare_generic_lp_format(config: &InfluxConfig,
     )
 }
 */
+}
+*/
+

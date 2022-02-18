@@ -22,7 +22,7 @@ use chrono::{DateTime,
              Utc,
 };
 
-use template_formater::tuple_formater;
+//use template_formater::tuple_formater;
 
 
 /// use Struct or Hash for CSV parsing
@@ -103,7 +103,7 @@ type HashRecord = HashMap<String, String>;
 
 
 /// &str -> DateTime instead Serde parsing
-pub fn parse_time(datetime: &str) -> Option<DateTime<Utc>> {
+pub fn parse_datetime(datetime: &str) -> Option<DateTime<Utc>> {
     
     match datetime.parse() {
         Ok(t) => Some(t),
@@ -224,7 +224,7 @@ pub fn parse_csv(config: &TomlConfig,
                         )
 
                         .ts(&format!("{}",
-                                     parse_time(s_record.time)
+                                     parse_datetime(s_record.time)
                                      .unwrap()
                                      .timestamp_millis(),
                         ))
