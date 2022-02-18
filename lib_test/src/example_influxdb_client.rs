@@ -159,6 +159,8 @@ pub fn parse_csv(config: &TomlConfig,
 
     let mut record_counter = 0;
 
+    // FAST
+    //for single_record in reader.records() { // .records() -> iterator
     for single_record in reader.records() { // .records() -> iterator
 
         record_counter += 1;
@@ -197,14 +199,14 @@ pub fn parse_csv(config: &TomlConfig,
 
                     let mut line_protocol_builder = LineProtocolBuilder::default();
                     
-                    println!("\n@LP_B: {line_protocol_builder:?}");
+                    //println!("\n@LP_B DEFAULT: {line_protocol_builder:?}");
 
                     let lpb = line_protocol_builder
                         .template(&metric.generic_lp)
+
                         .measurement(&metric.measurement)
                         .host(&config.host)
 
-                        //.tag()
                         //"tag_machine"
                         .tag(&metric.tag_machine, &influx_config.machine_id)
 
@@ -216,22 +218,27 @@ pub fn parse_csv(config: &TomlConfig,
 
                         //"tag_id"
                         .tag( &metric.tag_id, &s_record.ds_id)
-                        
+
                         .field(&metric.field, // FIELD_name
                                &s_record.value, // FIELD_value
                         )
-                        
+
                         .ts(&format!("{}",
                                      parse_time(s_record.time)
                                      .unwrap()
                                      .timestamp_millis(),
                         ))
-                        .build()
+
+                        /* ERROR HANDLE
+                        */
+
+                        .build(false) // debug tupple formater flag
                         ;
 
-                    println!("\n@LP_B: {line_protocol_builder:?}\n\nLPB:\n{lpb}");
+                    // DEBUG
+                    println!("\n@LP_BUILDED: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
 
-                    println!("temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=69 1645176001935");
+                    //println!("temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=69 1645176001935");
                     
                     /*
                     let lp = tuple_formater(
@@ -298,10 +305,13 @@ pub fn parse_csv(config: &TomlConfig,
             },
 
             Err(why) => {
-                eprintln!("ERROR: record\nREASON >>>: {why:?}");
+                eprintln!("ERROR: record\nREASON >>>: {:?}", why);
 
             },
         };
+
+        println!("\n break");
+        break
     }
 
     Ok(())

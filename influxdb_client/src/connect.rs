@@ -17,9 +17,36 @@ pub trait Print {
 }
 */
 
+#[derive(Debug)]
+pub enum LpError {
+    TimeStamp,
+    EmptyMeasurement,
+    EmptyHost,
+    EmptyTags,
+    EmptyFields,
+    EmptyTimeStamp,
+}
+
+
+impl LpError {
+    fn as_str(&self) -> &str {
+        match *self {
+            LpError::EmptyMeasurement => "empty: measurement",
+            LpError::EmptyHost => "empty: host",
+
+            LpError::EmptyTags => "empty: tags",
+            LpError::EmptyFields => "empty: fields",
+
+            LpError::EmptyTimeStamp => "empty: ts",
+
+            LpError::TimeStamp => "wrong timestamp format/len",
+        }
+    }
+}
+
 
 /// line_protocol_builder
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LineProtocolBuilder {
     pub template: String,
     
@@ -32,6 +59,7 @@ pub struct LineProtocolBuilder {
 
 impl LineProtocolBuilder {
     pub fn new(template: String,
+
                measurement: String,
                host: String,
                tags: String,
@@ -47,10 +75,12 @@ impl LineProtocolBuilder {
             ts,
         }
     }
-    
+
     pub fn default() -> Self {
+        //let empty = String::from("");
+
         Self {
-            template: String::from(""),
+            template: String::from(""), //&empty,
             measurement: String::from(""),
             host: String::from(""),
             tags: String::from(""),
@@ -59,78 +89,149 @@ impl LineProtocolBuilder {
         }
     }
 
-    pub fn build(&self) -> String {
+    // need config + influx_config for TS format+len and ...
+    pub fn validate(&self) -> Result<(), LpError> {
 
-        //if self.validate() {
-            
-        tuple_formater(&self.template,
-                       
-                       &vec![
-                           ("measurement", &self.measurement),
-                           ("host", &self.host),
-                             
-                           ("tags",
-                            //&self.tags,
+        // EMPTY
+        /*
+        let s_elf = self.clone();
+        if vec![s_elf.template,
+                s_elf.measurement,
+                s_elf.host,
+                s_elf.tags,
+                s_elf.fields,
+                s_elf.ts]
+            .iter()
+            .filter(|s| *s == &String::from("") )
+            .collect::<Vec<_>>()
+            .len() != 0 { return Err(LpErr::Empty) }
+        */
 
-                            &self.tags[0..&self.tags.len() - 1]
-                           ),
+        let empty = String::from("");
+        
+        if self.measurement == empty {
+            return Err(LpError::EmptyMeasurement)
+        }
 
-                           ("fields",
-                            //&self.fields,
+        if self.host == empty {
+            return Err(LpError::EmptyHost)
+        }
+        
+        if self.tags == empty {
+            return Err(LpError::EmptyTags)
+        }
+        
+        if self.fields == empty {
+            return Err(LpError::EmptyFields)
+        }
+        if self.ts == String::from("") {
+            return Err(LpError::EmptyTimeStamp)
+        }
+        
+        if self.ts == String::from("") {
+            return Err(LpError::EmptyTimeStamp)
+        }
 
-                            &self.fields[0..&self.fields.len() - 1]
-                           ),
+        // WRONG timestamp len/format
+        if format!("{}", self.ts).len() != 13 { //10 {
+            return Err(LpError::TimeStamp)
+        }
+        
+        Ok(())
+    }
+
+    /// BUILD 
+    pub fn build(&self,
+                 debug: bool) -> String {
+
+        match self.validate() {
+            Ok(_) => {
+                
+                tuple_formater(&self.template,
+                           
+                               &vec![
+                                   ("measurement", &self.measurement),
+                                   ("host", &self.host),
+                                   
+                                   ("tags",
+                                    //&self.tags,
+                                    &self.tags[0..&self.tags.len() - 1]
+                                   ),
+                                   
+                                   ("fields",
+                                    //&self.fields,
+                                    &self.fields[0..&self.fields.len() - 1]
+                                   ),
+                                   
+                                   ("ts", &self.ts),
+                               ],
                                
-                           ("ts", &self.ts),
-                       ],
-                       
-                       true, //config.flag.debug_template_formater
-        )
+                               debug,
+                )
+
+            },
+            
+            Err(why) => {
+
+                eprintln!("\n###ERROR: {:?}\nREASON >>> {:?}",
+                          self,
+                          why.as_str(),
+                );
+            
+                String::from("")
+            }
+        }
     }
 
+    /// template
     pub fn template(&mut self, value: &str) -> &mut Self {
-        self.template = String::from(value);
+        self.template = String::from(value.trim());
 
         self
     }
-    
+
+    /// measurement
     pub fn measurement(&mut self, value: &str) -> &mut Self {
-        //self.measurement = format!("measurement=\"{value}\"");
-        //self.measurement = format!("measurement={value}");
-        self.measurement = String::from(value);
+        self.measurement = String::from(value.trim());
 
         self
     }
 
+    /// host
     pub fn host(&mut self, value: &str) -> &mut Self {
-        //self.host = format!("host=\"{value}\"");
-        //self.host = format!("host={value}");
-        self.host = String::from(value);
+        self.host = String::from(value.trim());
 
         self
     }
 
+    /// update tag
     pub fn tag(&mut self,
                 name: &str,
                 value: &str) -> &mut Self {
         
-        //self.tags += &format!("\"{name}\"=\"{value}\",");
-        self.tags += &format!("{name}={value},");
+        self.tags += &format!("{}={},",
+                              name.trim(),
+                              value.trim(),
+        );
 
         self
     }
 
+    /// update field
     pub fn field(&mut self,
                  name: &str,
                  value: &str) -> &mut Self {
 
-        self.fields += &format!("{name}={value},");
+        self.fields += &format!("{}={},",
+                                name.trim(),
+                                value.trim(),
+        );
 
         self
     }
 
     pub fn ts(&mut self, value: &str) -> &mut Self {
-        self.ts = String::from(value);
+        self.ts = String::from(value.trim());
         
         self
     }
