@@ -400,6 +400,59 @@ impl <'i>InfluxCall<'i> {
             content,
         }
     }
+
+    //pub fn swap_bucket(&mut self,
+    pub fn swap_bucket(&mut self,
+                       //influx_config: &InfluxConfig,
+                       old_bucket: &str,
+                       //new_bucket: &str) -> &mut Self {
+                       //new_bucket: &'i str) -> &'i Self {
+                       new_bucket: &str) -> &mut Self {
+
+        // /*
+        let new = self.uri_write.replace(
+            &format!("bucket={}",
+                     //influx_config.bucket,
+                     old_bucket,
+            ),
+            
+            &format!("bucket={}",
+                     new_bucket,
+            ),
+        );
+
+        self.uri_write = &format!("{}", new);
+
+        self
+            
+        // */
+
+        /*
+        let clone = self.clone();
+        
+        //&mut Self {
+        Self {
+            uri_write: &format!("{}",
+                                clone.uri_write.replace(
+                                    &format!("bucket={}",
+                                             //influx_config.bucket,
+                                             old_bucket,
+                                    ),
+                                    
+                                    &format!("bucket={}",
+                                             new_bucket,
+                                    ),
+                                )
+            ),
+            
+            uri_query: clone.uri_query,
+
+            auth: clone.auth,
+            accept: clone.accept,
+            content: clone.content,
+        }
+        */
+    }
 }
 
 
