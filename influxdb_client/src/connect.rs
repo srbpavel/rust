@@ -1,4 +1,5 @@
 use reqwest::blocking::{
+    Client,
     ClientBuilder,
     RequestBuilder,
 };
@@ -8,9 +9,14 @@ use std::error::Error;
 use template_formater::tuple_formater;
 
 
+/// empty str for default struct
+/// durring validation used to compare if member was updated
 const DEFAULT: &str = "";
+/// delimiter between tag/field records
 const DELIMITER: char = ','; // 44
 
+
+/// line_protocol error
 #[derive(Debug)]
 pub enum LpError {
     TimeStamp,
@@ -21,8 +27,10 @@ pub enum LpError {
     EmptyTimeStamp,
 }
 
+
+/// line_protocol error -> msg
 impl LpError {
-    fn as_str(&self) -> &str {
+    pub fn as_str(&self) -> &str {
         match *self {
             LpError::TimeStamp => "WRONG timestamp format/len",
             LpError::EmptyMeasurement => "EMPTY: measurement",
@@ -34,7 +42,8 @@ impl LpError {
     }
 }
 
-/// line_protocol_builder
+
+/// line_protocol struct
 #[derive(Debug, Clone)]
 pub struct LineProtocolBuilder {
     pub template: String,
@@ -45,7 +54,10 @@ pub struct LineProtocolBuilder {
     pub ts: String,
 }
 
+/// line_protocol builder + validation + template formating from variables
 impl LineProtocolBuilder {
+
+    /// new
     pub fn new(template: String,
                measurement: String,
                host: String,
@@ -63,6 +75,7 @@ impl LineProtocolBuilder {
         }
     }
 
+    /// default
     pub fn default() -> Self {
         Self {
             template: String::from(DEFAULT),
@@ -74,10 +87,11 @@ impl LineProtocolBuilder {
         }
     }
 
-    /// DATA validation
+    /// data validation
+    /// DEFAULT values raise Error
+    /// TS sec/ms/ns len verifaction
     pub fn validate(&self) -> Result<(), LpError> {
 
-        // DEFUALT not updated
         if self.measurement.eq(DEFAULT) {
             return Err(LpError::EmptyMeasurement)
         }
@@ -115,43 +129,24 @@ impl LineProtocolBuilder {
             .for_each(|s|
                       if let Some(last) = s.as_bytes().last() {
                           if last.eq(&(DELIMITER as u8)) {
-                              println!("LAST_OK: <{}>", s);
+                              //println!("LAST_OK: <{}>", s);
 
                               **s = String::from(&s[0..s.len() - 1])
                           }
-                      } else {
+                      }
+                      /*
+                      else {
                           println!("LAST_ERR: <{}>", s);
                       }
+                      */
             );
-            
-            /*
-            .for_each(|s| match s.as_bytes().last() {
-
-                Some(last) => if last.eq(&(DELIMITER as u8)) {
-                    **s = String::from(&s[0..s.len() - 1])
-                },
-
-                None => {}
-            }
-            );
-            */
-        
-            /*
-            .for_each(|s| { let last = s.as_bytes()
-                            .last()
-                            .unwrap(); // NOT SAFE
-                            
-                            if last.eq(&(DELIMITER as u8)) {
-                                **s = String::from(&s[0..s.len() - 1])
-                            }
-            }
-            );
-            */
     }
     
-    /// BUILD 
+    /// finalize construction from all members
+    /// ok if valid otherwise raise error
     pub fn build(&mut self,
-                 debug: bool) -> String {
+                 //debug: bool) -> String {
+                 debug: bool) -> Result<String, LpError> {
 
         // VALIDATE that all was updated and not DEFAULT
         match self.validate() {
@@ -161,36 +156,41 @@ impl LineProtocolBuilder {
                 self.remove_last_comma();
 
                 // fill LP template with data
-                tuple_formater(&self.template,
+                let tp = tuple_formater(&self.template,
                            
-                               &vec![
-                                   ("measurement", &self.measurement),
-                                   ("host", &self.host),
-                                   
-                                   ("tags",
-                                    &self.tags,
-                                   ),
-                                   
-                                   ("fields",
-                                    &self.fields,
-                                   ),
-                                   
-                                   ("ts", &self.ts),
-                               ],
-                               
-                               debug,
-                )
+                                        &vec![
+                                            ("measurement", &self.measurement),
+                                            ("host", &self.host),
+                                            
+                                            ("tags",
+                                             &self.tags,
+                                            ),
+                                            
+                                            ("fields",
+                                             &self.fields,
+                                            ),
+                                            
+                                            ("ts", &self.ts),
+                                        ],
+                                        
+                                        debug,
+                );
+
+                Ok(tp)
 
             },
             
             Err(why) => {
 
+                /*
                 eprintln!("\n###ERROR: {:#?}\nREASON >>> {:?}",
                           self,
                           why.as_str(),
                 );
+                */
             
-                String::from("")
+                //String::from("")
+                Err(why)
             }
         }
     }
@@ -216,7 +216,7 @@ impl LineProtocolBuilder {
         self
     }
 
-    // TRY TO HAVE ONE ONE fn
+    // TRY TO HAVE ONE ONE fn -> learn GENERIC
     /// update tag
     pub fn tag(&mut self,
                 name: &str,
@@ -264,6 +264,7 @@ pub struct InfluxData<'d> {
 
 
 impl <'d>InfluxData<'d> {
+    /// new
     pub fn new(config: InfluxConfig<'d>,
                call: InfluxCall<'d>,
                lp: String) -> Self {
@@ -274,7 +275,8 @@ impl <'d>InfluxData<'d> {
             lp,
         }
     }
-    
+
+    /// default
     pub fn default() -> Self {
         Self {
             config: InfluxConfig { ..InfluxConfig::default()
@@ -282,10 +284,6 @@ impl <'d>InfluxData<'d> {
             },
 
             call: InfluxCall {
-                /*
-                uri_write: "",
-                uri_query: "",
-                */
                 uri_write: DEFAULT,
                 uri_query: DEFAULT,
                 
@@ -294,14 +292,13 @@ impl <'d>InfluxData<'d> {
                 content: vec![],
             },
             
-            //lp: "".to_string(),
             lp: String::from(DEFAULT)
         }
     }
 }
 
 
-/// config properties
+/// initial config properties
 ///
 #[derive(Debug, Clone)]
 pub struct InfluxConfig<'c> {
@@ -378,6 +375,8 @@ impl <'c>InfluxConfig<'c> {
             
             machine_id: "MACHINE_ID",
             carrier: "CARRIER",
+
+            // default flag, updated later if all steps valid
             flag_valid_default: false,
         }
     }
@@ -405,6 +404,7 @@ pub struct InfluxCall<'i> {
 }
 
 impl <'i>InfluxCall<'i> {
+    /// new
     pub fn new(uri_write: &'i str,
                uri_query: &'i str,
                auth: Vec<&'i str>,
@@ -422,8 +422,18 @@ impl <'i>InfluxCall<'i> {
 }
 
 
+/// client init
+pub fn client() -> Result<Client, reqwest::Error> {
+
+    ClientBuilder::new()
+        .danger_accept_invalid_certs(true) // HTTPS with no certificate
+        .build()
+}
+
+
 /// POST flux_query
-pub fn read_flux_query(influx: &InfluxCall,
+pub fn read_flux_query(client: &Client,
+                       influx: &InfluxCall,
                        query: String,
                        debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
 
@@ -431,9 +441,11 @@ pub fn read_flux_query(influx: &InfluxCall,
         println!("\n#READ_FLUX_QUERY: {query}");
     }
 
+    /*
     let client = ClientBuilder::new()
         .danger_accept_invalid_certs(true) // HTTPS with no certificate
         .build()?;
+    */
 
     let request = client.post(influx.uri_query)
         .header(influx.auth[0],
@@ -454,73 +466,3 @@ pub fn read_flux_query(influx: &InfluxCall,
     
     Ok(request)
 }
-
-
-/*
-/// Record
-///
-/// TemplateSensors
-///
-pub fn prepare_generic_lp_format(_config: &InfluxConfig) {
-                                 //generic_pre_record: &Record,
-                                 //metric: &TemplateSensors) -> String {
-    
-    println!("\n@LP: ");
-    
-    /*
-    tuple_formater(&metric.generic_lp,
-                   &vec![
-                       ("tag_machine", &metric.tag_machine),
-                       ("tag_carrier", &metric.tag_carrier),
-                       ("tag_valid", &metric.tag_valid),
-                       ("tag_id", &metric.tag_id),
-                       ("field", &metric.field),
-
-                       ("measurement", &generic_pre_record.measurement),
-                       ("host", &generic_pre_record.host),
-                       ("machine_id", &generic_pre_record.machine),
-                       
-                       ("carrier", &generic_pre_record.carrier),
-                       ("valid", &generic_pre_record.valid),
-                       
-                       ("id", &generic_pre_record.id),
-                       ("value", &generic_pre_record.value.to_string()),
-                       
-                       ("ts", &generic_pre_record.ts.to_string()),
-                   ],
-                   config.flag.debug_template_formater
-    )
-    */
-
-/*
-pub fn prepare_generic_lp_format(config: &InfluxConfig,
-                                 generic_pre_record: &Record,
-                                 metric: &TemplateSensors)  -> String {
-
-    tuple_formater(&metric.generic_lp,
-                   &vec![
-                       ("tag_machine", &metric.tag_machine),
-                       ("tag_carrier", &metric.tag_carrier),
-                       ("tag_valid", &metric.tag_valid),
-                       ("tag_id", &metric.tag_id),
-                       ("field", &metric.field),
-
-                       ("measurement", &generic_pre_record.measurement),
-                       ("host", &generic_pre_record.host),
-                       ("machine_id", &generic_pre_record.machine),
-                       
-                       ("carrier", &generic_pre_record.carrier),
-                       ("valid", &generic_pre_record.valid),
-                       
-                       ("id", &generic_pre_record.id),
-                       ("value", &generic_pre_record.value.to_string()),
-                       
-                       ("ts", &generic_pre_record.ts.to_string()),
-                   ],
-                   config.flag.debug_template_formater
-    )
-}
-*/
-}
-*/
-

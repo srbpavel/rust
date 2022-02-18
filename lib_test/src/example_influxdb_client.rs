@@ -168,8 +168,9 @@ pub fn parse_csv(config: &TomlConfig,
         match single_record {
             
             Ok(rec) => { // StringRecord
-                
-                if RECORD_STRUCT { 
+
+                // record as STRUCT
+                if RECORD_STRUCT {
                     let s_record = record_via_struct(&rec,
                                                      &headers,
                     )?;
@@ -198,27 +199,21 @@ pub fn parse_csv(config: &TomlConfig,
                     let metric = &config.metrics["temperature"];
 
                     let mut line_protocol_builder = LineProtocolBuilder::default();
-                    
-                    //println!("\n@LP_B DEFAULT: {line_protocol_builder:?}");
+                   //println!("\n@LP_B DEFAULT: {line_protocol_builder:?}");
 
-                    let lpb = line_protocol_builder
+                    let result_lpb = line_protocol_builder
                         .template(&metric.generic_lp)
 
                         .measurement(&metric.measurement)
-                        .host(&config.host)
+                        //.host(&config.host)
 
-                        //"tag_machine"
+                        // NAME, VALUE
                         .tag(&metric.tag_machine, &influx_config.machine_id)
-
-                        //"tag_carrier" 
                         .tag(&metric.tag_carrier, &influx_config.carrier)
-
-                        //"tag_valid" 
+                        .tag(&metric.tag_id, &s_record.ds_id)
+                        // record is valid -> true
                         .tag(&metric.tag_valid, &format!("{}", true))
-
-                        //"tag_id"
-                        .tag( &metric.tag_id, &s_record.ds_id)
-
+                        
                         .field(&metric.field, // FIELD_name
                                &s_record.value, // FIELD_value
                         )
@@ -236,47 +231,9 @@ pub fn parse_csv(config: &TomlConfig,
                         ;
 
                     // DEBUG
-                    println!("\n@LP_BUILDED_verified: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
+                    //println!("\n@LP_BUILDED_verified: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
 
-                    //println!("temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=69 1645176001935");
-                    
                     /*
-                    let lp = tuple_formater(
-                        &metric.generic_lp,
-
-                        &vec![
-                            ("tag_machine", &metric.tag_machine),
-                            ("tag_carrier", &metric.tag_carrier),
-                            ("tag_valid", &metric.tag_valid),
-                            ("tag_id", &metric.tag_id),
-                            ("field", &metric.field),
-                            
-                            ("measurement", &metric.measurement),
-                            ("host", &config.host),
-                            ("machine_id", &influx_config.machine_id),
-                            
-                            ("carrier", &influx_config.carrier),
-                            ("valid", "true"),
-
-                            // ID -> make it generic
-                            ("id", &s_record.ds_id),
-                            
-                            ("value", &s_record.value),
-                        
-                            ("ts",
-                             &format!("{}",
-                                      parse_time(s_record.time)
-                                      .unwrap()
-                                      .timestamp_millis(),
-                                      ),
-                            ),
-                        ],
-
-                        true,
-                        //false,
-                    );          
-                    */
-                    
                     let influx_data = InfluxData {
                         config: influx_config.clone(),
                         call: influx_call.clone(),
@@ -285,12 +242,35 @@ pub fn parse_csv(config: &TomlConfig,
 
                     println!("@INFLUXDATA: {:?}",
                              influx_data.lp,
-                    );          
+                    );
+                    */
+
+                    match result_lpb {
+                        Ok(data) => {
+                            let influx_data = InfluxData {
+                                config: influx_config.clone(),
+                                call: influx_call.clone(),
+                                lp: data,
+                            };
+                            
+                            println!("@INFLUXDATA: {:?}",
+                                     influx_data.lp,
+                            );
+                        },
+                        Err(why) => {
+
+                            eprintln!("\n###ERROR RECORD:\n+ {:?}\n+ {:?}\nREASON >>> {:?}",
+                                      s_record,
+                                      line_protocol_builder,
+                                      why.as_str(),                        
+                            );                                             
+                        },
+                    }
                     
                     //_
                     
 
-                // FUTURE_USE
+                // FUTURE_USE -> record HASH
                 } else {
                     let h_record = record_via_hash(&rec,
                                                    &headers,
@@ -437,9 +417,19 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
     println!("\n@InfluxCall: {influx_call:#?}");
 
-    // REQW
+    // REQW Client
+    /*
+    let client: Result<reqwest::blocking::Client, reqwest::Error>
+        = influxdb_client::connect::client();
+    */
+    let client: reqwest::blocking::Client = influxdb_client::connect::client()?;
+
+    println!("\n@CLIENT: {client:#?}");
+    
+    // REQW RequestBuilder
     let request: Result<RequestBuilder, Box< dyn std::error::Error>>
         = influxdb_client::connect::read_flux_query(
+            &client,
             &influx_call,
             flux_query,
             config.flag.debug_flux_query,
