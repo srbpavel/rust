@@ -412,7 +412,7 @@ pub fn client() -> Result<Client, reqwest::Error> {
 }
 
 
-/// POST flux_query
+/// POST READ flux_query
 pub fn read_flux_query(client: &Client,
                        influx: &InfluxCall,
                        query: String,
@@ -439,5 +439,44 @@ pub fn read_flux_query(client: &Client,
         )
         .body(query); // -> RequestBuilder
     
+    Ok(request)
+}
+
+
+/// POST WRITE LP
+pub fn write_lp(client: &Client,
+                influx: &InfluxCall,
+
+                //lp: LineProtocolBuilder,
+                lp: String,
+
+                //query: String,
+                debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
+    
+    if debug {
+        println!("\n#WRITE_REQUEST:\n+ {influx:?}\n+ {lp:?}");
+    }
+
+    let request = client.post(influx.uri_write)
+        // TOKEN
+        .header(influx.auth[0],
+                influx.auth[1]
+        )
+        /*
+        .header(influx.accept[0],
+                influx.accept[1],
+        )
+        .header(influx.content[0],
+                influx.content[1],
+        )
+        */
+        .timeout(
+            std::time::Duration::from_secs(
+                10
+            )
+        )
+        // DATA
+        .body(lp); // -> RequestBuilder
+
     Ok(request)
 }

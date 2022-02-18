@@ -10,7 +10,10 @@ use influxdb_client::{
     },
 };
 
-use reqwest::blocking::{RequestBuilder};
+use reqwest::blocking::{
+    Client,
+    RequestBuilder,
+};
 
 use csv::StringRecord;
 
@@ -134,7 +137,8 @@ pub fn record_via_struct<'r>(rec: &'r StringRecord,
 
 ///CSV
 /// https://docs.influxdata.com/influxdb/v2.1/reference/syntax/annotated-csv/#annotations
-pub fn parse_csv(config: &TomlConfig,
+pub fn parse_csv(client: &Client,
+                 config: &TomlConfig,
                  influx_config: &InfluxConfig,
                  influx_call: &InfluxCall,
                  response: &str) -> Result<(), csv::Error> {
@@ -238,6 +242,28 @@ pub fn parse_csv(config: &TomlConfig,
                             println!("@INFLUXDATA: {:?}",
                                      influx_data.lp,
                             );
+
+                            // WRITE
+
+                            let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test"); 
+                            
+                            let update_influx_call = InfluxCall {
+                                uri_write: new_bucket,
+                                ..influx_call.clone()
+                            };
+                            
+                            println!("\n@UPDATE_BUCKET: {:?}",
+                                     update_influx_call.uri_write,
+                            );
+                                
+                            let write_result = write(client,
+                                                     &update_influx_call,
+                                                     config,
+                                                     //lp: LineProtocolBuilder);
+                                                     &influx_data.lp);
+
+                            println!("\nWRITE_RESULT: {write_result:?}");
+                            
                         },
                         Err(why) => {
 
@@ -405,8 +431,8 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
     println!("\n@CLIENT: {client:#?}");
     
-    // REQW RequestBuilder
-    let request: Result<RequestBuilder, Box< dyn std::error::Error>>
+    // REQW READ RequestBuilder
+    let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
         = influxdb_client::connect::read_flux_query(
             &client,
             &influx_call,
@@ -415,10 +441,10 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         );
 
     if config.flag.debug_reqwest {
-        println!("\nREQUEST: {request:?}");
+        println!("\nREQUEST: {request_read:?}");
     }
 
-    let response = request
+    let response = request_read
         .unwrap()
         .send()? // reqwest::Error
         .text()?; // -> String
@@ -435,7 +461,8 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     }
     
     // /* CSV
-    let csv_status = parse_csv(&config,
+    let csv_status = parse_csv(&client,
+                               &config,
                                &influx_config,
                                &influx_call,
                                &response,
@@ -444,5 +471,40 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     println!("\nCSV_STATUS: {csv_status:?}");
     // */
 
+    Ok(())
+}
+
+
+/// WRITE www
+pub fn write(client: &Client,
+             influx_call: &InfluxCall,
+             config: &TomlConfig,
+             //lp: LineProtocolBuilder) -> Result<(), reqwest::Error> {
+             lp: &str) -> Result<(), reqwest::Error> {
+
+    // REQW WRITE RequestBuilder
+    let request_write: Result<RequestBuilder, Box< dyn std::error::Error>>
+        = influxdb_client::connect::write_lp(
+            &client,
+            &influx_call,
+            String::from(lp),
+            //flux_query,
+            //config.flag.debug_flux_query,
+            true, // DEBUG flag
+        );
+
+    if config.flag.debug_reqwest {
+        println!("\nREQUEST_WRITE: {request_write:?}");
+    }
+
+    let response = request_write
+        .unwrap()
+        .send()? // reqwest::Error
+        .text()?; // -> String
+
+    if config.flag.debug_reqwest {
+        println!("\nRESPONSE: {response:#?}");
+    }
+    
     Ok(())
 }
