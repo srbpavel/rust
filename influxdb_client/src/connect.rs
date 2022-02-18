@@ -107,45 +107,60 @@ impl LineProtocolBuilder {
         Ok(())
     }
 
-    /// remove last CHAR ',' in tag/field values
+    /// remove last DELIMITER char in tags/fields values
     pub fn remove_last_comma(&mut self) {
         [&mut self.tags, &mut self.fields]
             .iter_mut()
-            .for_each(|s| {
 
-                let last = s.as_bytes()
-                    .last()
-                    .unwrap();
+            .for_each(|s|
+                      if let Some(last) = s.as_bytes().last() {
+                          if last.eq(&(DELIMITER as u8)) {
+                              println!("LAST_OK: <{}>", s);
 
-                /* DEBUG
-                println!("LAST: {}: {}",
-                         last,
-                         *last as char,
-                );
-                */
-                
-                if last//s.as_bytes()
-                    //.last()
-                    //.unwrap() // NOT SAFE
-                      //.eq(&b',') {
-                //.eq(&B_DELIMITER) {
-                    .eq(&(DELIMITER as u8)) {
-                        
-                        **s = String::from(&s[0..s.len() - 1])
-                    }
+                              **s = String::from(&s[0..s.len() - 1])
+                          }
+                      } else {
+                          println!("LAST_ERR: <{}>", s);
+                      }
+            );
+            
+            /*
+            .for_each(|s| match s.as_bytes().last() {
+
+                Some(last) => if last.eq(&(DELIMITER as u8)) {
+                    **s = String::from(&s[0..s.len() - 1])
+                },
+
+                None => {}
             }
             );
+            */
+        
+            /*
+            .for_each(|s| { let last = s.as_bytes()
+                            .last()
+                            .unwrap(); // NOT SAFE
+                            
+                            if last.eq(&(DELIMITER as u8)) {
+                                **s = String::from(&s[0..s.len() - 1])
+                            }
+            }
+            );
+            */
     }
     
     /// BUILD 
     pub fn build(&mut self,
                  debug: bool) -> String {
 
-        self.remove_last_comma();
-        
+        // VALIDATE that all was updated and not DEFAULT
         match self.validate() {
             Ok(_) => {
-                
+
+                // REMOVE trailing delimiter
+                self.remove_last_comma();
+
+                // fill LP template with data
                 tuple_formater(&self.template,
                            
                                &vec![

@@ -236,7 +236,7 @@ pub fn parse_csv(config: &TomlConfig,
                         ;
 
                     // DEBUG
-                    println!("\n@LP_BUILDED: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
+                    println!("\n@LP_BUILDED_verified: {line_protocol_builder:#?}\n\n#LPB:\n{lpb}");
 
                     //println!("temperature,host=spongebob,Machine=spongebob,SensorId=0,SensorCarrier=cargo,SensorValid=true TemperatureDecimal=69 1645176001935");
                     
