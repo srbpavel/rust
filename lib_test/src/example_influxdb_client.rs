@@ -107,27 +107,10 @@ pub fn parse_datetime(datetime: &str) -> Result<DateTime<Utc>, chrono::format::P
     match datetime.parse() {
         Ok(t) => return Ok(t),
         Err(why) => {
-            //eprintln!("ERROR: conversion &str -> DateTime \nREASON >>>{why}");
-
-            //None
             Err(why)
         }
     }
 }
-/*
-pub fn parse_datetime(datetime: &str) -> Option<DateTime<Utc>> {
-    
-    match datetime.parse() {
-        Ok(t) => Some(t),
-        Err(why) => {
-            eprintln!("ERROR: conversion &str -> DateTime \nREASON >>>{why}");
-
-            None
-        }
-    }
-}
-*/
-
 
 /// Hash
 pub fn record_via_hash<'r>(rec: &'r StringRecord,
@@ -257,68 +240,79 @@ pub fn parse_csv(client: &Client,
                             //println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
 
                             let result_fqb = flux_query_builder
-                                .debug(false)
+                                .debug(false) // display tuple_format pairs
                                 .bucket("reqwest_backup_ds_test")
                                 .range_start("-24h")
-                                //.range_stop("-12h")
+                                //.range_stop("-12h") // FUTURE USE
                                 .filter("_measurement", "temperature")
                                 .filter("host", "spongebob")
-                                .filter("SensorId", &s_record.ds_id)
+                                .filter(&metric.tag_id, &s_record.ds_id)
+
+                                .drop(vec!["_start", "_stop"])
+                                
+                                //.keep(vec!["_time"])
+                                //.keep(vec!["_time", &metric.tag_id])
+                                
                                 .sort("_time", "true")
                                 .limit("1")
-                                //.group(true)
-                                //.count(true)
-                                //.count_column("_value")
+                                //.group(true) // + count -> return number
+                                //.count(true) // - group -> result + _value: count
+                                //.count_column("_value") // specify column
                                 .build()
                                 ;
 
                             match result_fqb {
                                 Ok(data) => {
-                                    println!("\n@RESULT_FQB: {data}");
+                                    //println!("\n@RESULT_FQB: {data}");
 
                                     let verify_result = verify(client,
                                                                config,
                                                                &updated_data,
                                                                &data);
                                     
-                                    println!("VERIFY_RESULT:\n+ {verify_result:?}");
+                                    println!("VERIFY_WRITE_RESULT:\n+ {verify_result:?}");
+
+                                    // COMPARE
+                                    println!("\n#COMPARE:\n IN: {}\n OUT: <{:?}>",
+                                             &s_record.time,
+
+                                             match verify_result {
+                                                 Ok(r) => {
+
+                                                     r
+                                                     
+                                                     /*
+                                                     let mut reader = csv::ReaderBuilder::new()
+                                                         .has_headers(true)
+                                                         .delimiter(b',')
+                                                         .from_reader(r.as_bytes());
+                                                     
+                                                     let rec = reader
+                                                         .records()
+                                                         .next()
+                                                         .unwrap()
+                                                         .unwrap()
+                                                         .deserialize(None)
+                                                         .unwrap()
+                                                         ;
+
+                                                     rec
+                                                     */
+                                                 },
+                                                 
+                                                 Err(_) => String::from(""),
+                                             }
+                                             ,
+                                    );
                                 },
 
                                 Err(why) => {
                                     
-                                    //eprintln!("\n###ERROR FQB:\n+ {:?}\nREASON >>> {:?}",
                                     eprintln!("\n###ERROR FQB:\nREASON >>> {:?}",
-                                              //result_fqb,
                                               why.as_str(),                        
                                     );                                             
                                 },
                             }
-                            
-                            /* // VERIFY 
-                            let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> filter(fn:(r) => r.SensorId == \"{ds_id}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
-                                                     //bucket=&active_config.bucket,
-                                                     bucket="reqwest_backup_ds_test",
-                                                     ds_id=&s_record.ds_id,
-                                                     measurement="temperature",
-                                                     range_start=&config.template.flux.query_verify_record_range_start,
-                                                     
-                            );
-
-                            let verify_result = verify(client,
-                                                       config,
-                                                       &updated_data,
-                                                       &flux_query);
-
-                            println!("VERIFY_RESULT:\n+ {verify_result:?}");
-                            */
-                            
-                            /*
-                            if verify_result.is_err() {
-                                println!("VERIFY_RESULT: {verify_result:?}");
-                            }
-                            */
-                            //
-                            
                         },
                         Err(why) => {
 
@@ -350,10 +344,10 @@ pub fn parse_csv(client: &Client,
             },
         };
 
-        /*
+        // /*
         println!("\n break");
         break
-        */
+        // */
     }
 
     Ok(())
@@ -550,8 +544,11 @@ pub fn verify(client: &Client,
               influx_data: &InfluxData,
               flux_query: &str) -> Result<String, reqwest::Error> {
 
-
-    println!("\nVERIFY_flux_Q:\n+ {flux_query:?}");
+    /* // DEBUG
+    if config.flag.debug_flux_query {
+        println!("\nVERIFY_flux_Q:\n+ {flux_query:?}");
+    }
+    */
     
     // REQW READ RequestBuilder
     let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>

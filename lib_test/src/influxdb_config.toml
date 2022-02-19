@@ -51,7 +51,7 @@ debug_influx_output = false
 run_flux_verify_record = true # false
 
 # display flux query
-debug_flux_query = false
+debug_flux_query = true # false
 
 # display flux stdout
 debug_flux_result = false

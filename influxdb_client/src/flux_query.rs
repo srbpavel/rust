@@ -35,6 +35,8 @@ pub struct QueryBuilder {
     pub filter: String,
     pub sort: String,
     pub limit: String,
+    pub drop: String,
+    pub keep: String,
     pub group: bool,
     pub count: bool,
     pub count_column: String,
@@ -51,6 +53,8 @@ impl QueryBuilder {
                range_stop: String,
                filter: String,
                sort: String,
+               drop: String,
+               keep: String,
                limit: String,
                group: bool,
                count: bool,
@@ -63,6 +67,8 @@ impl QueryBuilder {
             range_stop,
             filter,
             sort,
+            drop,
+            keep,
             limit,
             group,
             count,
@@ -79,8 +85,12 @@ impl QueryBuilder {
             range_stop: String::from(DEFAULT_EMPTY), // FUTURE USE
             filter: String::from(DEFAULT_EMPTY),
             sort: String::from(DEFAULT_EMPTY),
-            limit: String::from(DEFAULT_EMPTY),
 
+            keep: String::from(DEFAULT_EMPTY),
+            drop: String::from(DEFAULT_EMPTY),
+
+            limit: String::from(DEFAULT_EMPTY),
+            
             group: false,
             count: false,
             count_column: String::from(DEFAULT_COUNT),
@@ -182,6 +192,30 @@ impl QueryBuilder {
         self
     }
 
+    /// drop
+    pub fn drop(&mut self,
+                cols: Vec<&str>) -> &mut Self {
+
+        self.drop = format!(
+            " |> drop(columns: {:?})",
+            cols,
+        );
+        
+        self
+    }
+    
+    /// keep
+    pub fn keep(&mut self,
+                cols: Vec<&str>) -> &mut Self {
+
+        self.keep = format!(
+            " |> keep(columns: {:?})",
+            cols,
+        );
+        
+        self
+    }
+    
     /// limit
     pub fn limit(&mut self,
                  value: &str) -> &mut Self {
@@ -205,16 +239,6 @@ impl QueryBuilder {
                                     value.trim(),
         );
         
-        /*
-        self.count_column = if !value.eq("") {
-            format!(" |> count(column: \"{}\")",
-                    value.trim(),
-            )
-        } else {
-            String::from(" |> count()")
-        };
-        */
-
         self
     }
 
@@ -222,6 +246,9 @@ impl QueryBuilder {
     /// ok if valid otherwise raise error
     pub fn build(&mut self) -> Result<String, FQError> {
 
+        // + VALIDATION
+        // ..
+        
         let range = if self.range_stop.eq("") {
             format!(" |> range(start:{})", &self.range_start)
                     
@@ -231,10 +258,15 @@ impl QueryBuilder {
                     &self.range_stop,
                     )
         };
-        
+
+        // JOIN
         let mut fqb = vec![&self.bucket,
                            &range,
                            &self.filter,
+
+                           &self.drop,
+                           &self.keep,
+                           
                            &self.sort,
                            &self.limit,
         ]
@@ -243,23 +275,21 @@ impl QueryBuilder {
             .collect::<Vec<_>>()
             .concat();
 
+        // GROUP
         if self.group {
-            println!("group: true");
-            
             fqb = format!("{}{}",
                           fqb,
                           " |> group()",
             );
-        } else { println!("group: false");  }
-        
+        }
+
+        //COUNT
         if self.count {
-            println!("count: true");
-            
             fqb = format!("{}{}",
                           fqb,
                           self.count_column,
             );
-        } else { println!("count: false");  }
+        }
 
         Ok(fqb)
     }

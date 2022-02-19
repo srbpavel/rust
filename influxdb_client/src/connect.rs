@@ -25,7 +25,7 @@ pub fn read_flux_query(client: &Client,
                        debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
 
     if debug {
-        println!("\n#READ_FLUX_QUERY: {query}");
+        println!("\n#READ_FLUX_QUERY:\n+ {query}");
     }
 
     let request = client.post(influx.uri_query)
