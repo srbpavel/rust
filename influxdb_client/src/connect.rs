@@ -424,62 +424,21 @@ impl <'i>InfluxCall<'i> {
     ///
     /// NIET GOED will totaly change arch
     //pub fn swap_bucket(&mut self,
-    pub fn swap_key(&mut self,
+    pub fn swap_key(&self,
                     key: &str,
-                    old_bucket: &str,
+                    old_value: &str,
                     //new_bucket: &str) -> &mut Self {
-                    new_bucket: &str) -> &Self {
+                    //new_bucket: &str) -> &Self {
+                    new_value: &str) -> String {
 
-        //self.uri_write = format!("{}", "aaa");
-
-        self.uri_write = self.uri_write.replace(
-            &format!("{key}={old_bucket}"),
+        //self.uri_write = self.uri_write.replace(
+        self.uri_write.replace(
+            &format!("{key}={old_value}"),
             
-            &format!("{key}={new_bucket}"),
-        );
+            &format!("{key}={new_value}"),
+        )//;
         
-        self
-
-        /*
-        let Self {
-            uri_write,
-            uri_query,
-            auth,
-            accept,
-            content,
-        } = self;
-
-        /*
-        //new_uri_write = &*self.uri_write.replace(
-        let new_uri_write = uri_write.replace(
-            &format!("bucket={}",
-                     old_bucket,
-            ),
-            
-            &format!("bucket={}",
-                     new_bucket,
-            ),
-        ).as_str();
-        */
-
-        Self {
-            uri_write: uri_write.replace(
-                &format!("bucket={}",
-                         old_bucket,
-                ),
-                
-                &format!("bucket={}",
-                         new_bucket,
-                ),
-            ).as_str(),
-            
-            uri_query,
-
-            auth,
-            accept,
-            content,
-        }
-    */
+        //self
     }
     // */
 }

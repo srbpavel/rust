@@ -14,7 +14,8 @@ mod influxdb_toml_config_struct;
 // TEMPLATE_FORMATER
 // ...
 
-const DELAY: u64 = 10;
+// CRON DELAY duration
+//const DELAY: u64 = 10;
 
 fn main() {
     /*

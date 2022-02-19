@@ -226,14 +226,6 @@ pub fn parse_csv(client: &Client,
                                      }
                         ))
 
-                        /*
-                        .ts(&format!("{}",
-                                     parse_datetime(s_record.time)
-                                     .unwrap() // NOT SAFE
-                                     .timestamp_millis(),
-                        ))
-                        */
-
                         .build(false) // debug tupple formater flag
                         ;
 
@@ -245,86 +237,59 @@ pub fn parse_csv(client: &Client,
                                 .swap_key(
                                     "bucket",
                                     "backup_ds_test",
-                                    "BUCKET",
-                                );
-                                /*
-                                .swap_key(
-                                    "org",
-                                    "foookin_paavel",
-                                    "ORG",
+                                    "reqwest_backup_ds_test",
                                 );
 
+                            //println!("\n#CALL_WITH_KEY:\n+ {call_with_key:?}");
 
-                                .swap_key(
-                                    "precision",
-                                    "ms",
-                                    "NS",
-                                );
-                             */
-
-                            println!("\n#CALL_WITH_KEY:\n+ {call_with_key:?}");
-                            
-                            /*
+                            // /* CALL
                             let update_influx_call = InfluxCall {
-                                uri_write: call_with_bucket.uri_write
+                                uri_write: call_with_key,
                                 //uri_write: new_hostname,
                                 ..influx_call.clone()
                             };
-                            */
 
+                            println!("\n@UPDATE_KEY:\n+ {:?}",
+                                     //update_influx_call.uri_write,
+                                     update_influx_call,
+                            );
+                            // */
+                            
                             // /*
                             let influx_data = InfluxData {
                                 config: influx_config.clone(),
-                                //call: call_with_bucket,
-                                //call: call_with_bucket.clone(),
-                                call: call_with_key.clone(),
+                                //call: call_with_key.clone(),
+                                call: update_influx_call,
                                 
                                 lp: data,
                             };
                             
-                            println!("LINE_PROTOCOL to write:\n+ {}",
-                                     influx_data.lp,
+                            println!("\n@INFLUX_DATA_UPDATE_KEY:\n+ {:?}",
+                                     influx_data,
                             );
                             // */
 
-                            /*
+                            // /*
                             // WRITE
-                            //let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
-                            // CALL: let new_bucket = influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
-
                             // ERROR dns handle
                             //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira");
-                            /*
-                            let new_hostname = influx_call.swap_bucket(
-                                "jozefina",
-                                "NINDZA",
-                            );
-                            */
-
-                            /* CALL
-                            let update_influx_call = InfluxCall {
-                                uri_write: new_bucket,
-                                //uri_write: new_hostname,
-                                ..influx_call.clone()
-                            };
-                            */
 
                             /*
-                            println!("\n@UPDATE_BUCKET: {:?}\n+{:?}",
-                                     update_influx_call.uri_write,
-                                     new_hostname,
-                            );
-                            */
-                                
                             let write_result = write(client,
                                                      &update_influx_call,
                                                      config,
-                                                     //lp: LineProtocolBuilder);
                                                      &influx_data.lp);
+                            */
+
+                            let write_result = write(client,
+                                                     //&update_influx_call,
+                                                     config,
+                                                     &influx_data);
+                            
                             if write_result.is_err() {
                                 println!("WRITE_RESULT: {write_result:?}");
                             }
-                            */ //_ WRITE_end
+                            // */ //_ WRITE_end
                             
                         },
                         Err(why) => {
@@ -543,16 +508,21 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
 /// WRITE www
 pub fn write(client: &Client,
-             influx_call: &InfluxCall,
+             //influx_call: &InfluxCall,
              config: &TomlConfig,
-             lp: &str) -> Result<(), reqwest::Error> {
+             //lp: &str) -> Result<(), reqwest::Error> {
+             influx_data: &InfluxData) -> Result<(), reqwest::Error> {
 
     // REQW WRITE RequestBuilder
     let request_write: Result<RequestBuilder, Box< dyn std::error::Error>>
         = influxdb_client::connect::write_lp(
             &client,
-            &influx_call,
-            String::from(lp),
+            //&influx_call,
+            &influx_data.call,
+
+            //String::from(lp),
+            String::from(&influx_data.lp),
+
             config.flag.debug_reqwest, //true, // DEBUG flag
         );
 
