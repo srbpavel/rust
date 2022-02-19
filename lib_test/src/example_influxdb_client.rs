@@ -254,16 +254,41 @@ pub fn parse_csv(client: &Client,
                             // FLUX BUILDER
 
                             let mut flux_query_builder = QueryBuilder::default();
-                            println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
+                            //println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
 
                             let result_fqb = flux_query_builder
+                                .debug(false)
                                 .bucket("reqwest_backup_ds_test")
                                 .range_start("-12h")
-                                .filter("mesurement", "dallas")
+                                .filter("_measurement", "temperature")
                                 .filter("host", "spongebob")
+                                .filter("SensorId", &s_record.ds_id)
+                                .sort("_time", "true")
+                                .limit("1")
+                                .build()
                                 ;
 
-                            println!("\n@RESULT_FQB: {result_fqb:?}");
+                            match result_fqb {
+                                Ok(data) => {
+                                    println!("\n@RESULT_FQB: {data}");
+
+                                    let verify_result = verify(client,
+                                                               config,
+                                                               &updated_data,
+                                                               &data);
+                                    
+                                    println!("VERIFY_RESULT:\n+ {verify_result:?}");
+                                },
+
+                                Err(why) => {
+                                    
+                                    //eprintln!("\n###ERROR FQB:\n+ {:?}\nREASON >>> {:?}",
+                                    eprintln!("\n###ERROR FQB:\nREASON >>> {:?}",
+                                              //result_fqb,
+                                              why.as_str(),                        
+                                    );                                             
+                                },
+                            }
                             
                             /* // VERIFY 
                             let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> filter(fn:(r) => r.SensorId == \"{ds_id}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
@@ -274,7 +299,7 @@ pub fn parse_csv(client: &Client,
                                                      range_start=&config.template.flux.query_verify_record_range_start,
                                                      
                             );
-                            
+
                             let verify_result = verify(client,
                                                        config,
                                                        &updated_data,
@@ -321,10 +346,10 @@ pub fn parse_csv(client: &Client,
             },
         };
 
-        // /*
+        /*
         println!("\n break");
         break
-        // */
+        */
     }
 
     Ok(())
