@@ -410,6 +410,29 @@ impl <'i>InfluxCall<'i> {
         }
     }
 
+    /// object update
+    ///
+    /// ok but maybe change it same way it is builded
+    pub fn update_key(&mut self,
+                      key: &str,
+                      old_value: &str,
+                      new_value: &str) -> &mut Self {
+
+        if !key.eq("hostname") {
+            self.uri_write = self.uri_write.replace(
+                &format!("{key}={old_value}"),
+                &format!("{key}={new_value}"),
+            )
+        } else {
+            self.uri_write = self.uri_write.replace(
+                &format!("//{old_value}"),
+                &format!("//{new_value}"),
+            )
+        };
+
+        self
+    }
+    
     /// swap key bucket/org/precision
     ///
     /// fookin, i will need to return Self not String
