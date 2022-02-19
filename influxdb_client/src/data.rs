@@ -1,6 +1,8 @@
 use crate::config::InfluxConfig;
-use crate::lp::DEFAULT;
 use crate::call::InfluxCall;
+
+
+pub const DEFAULT: &str = "";
 
 
 /// data to write

@@ -1,6 +1,6 @@
 use template_formater::tuple_formater;
 
-const FLUX_DELIMITER: &str = "|>";
+//const FLUX_DELIMITER: &str = "|>";
 const DEFAULT_EMPTY: &str = "";
 //const DEFAULT_SORT: &str = "sort(columns: [\"_time\"], desc:true)";
 //const DEFAULT_LIMIT: &str = "limit(n:10)";
@@ -35,7 +35,7 @@ pub struct QueryBuilder {
     pub bucket: String,
 
     pub range_start: String,
-    pub range_end: String,
+    pub range_stop: String,
 
     pub filter: String,
     
@@ -55,7 +55,7 @@ impl QueryBuilder {
                bucket: String,
 
                range_start: String,
-               range_end: String,
+               range_stop: String,
 
                filter: String,
                
@@ -69,7 +69,7 @@ impl QueryBuilder {
             debug,
             bucket,
             range_start,
-            range_end,
+            range_stop,
             filter,
             sort,
             limit,
@@ -84,7 +84,7 @@ impl QueryBuilder {
             bucket: String::from(DEFAULT_EMPTY),
 
             range_start: String::from(DEFAULT_EMPTY),
-            range_end: String::from(DEFAULT_EMPTY),
+            range_stop: String::from(DEFAULT_EMPTY),
 
             filter: String::from(DEFAULT_EMPTY),
 
@@ -111,9 +111,10 @@ impl QueryBuilder {
                   value: &str) -> &mut Self {
 
         self.bucket = String::from(
-            tuple_formater("from(bucket:\"{bucket}\") {FD} ",
+            //tuple_formater("from(bucket:\"{bucket}\") {FD} ",
+            tuple_formater("from(bucket:\"{bucket}\")",
                            &vec![
-                               ("FD", FLUX_DELIMITER), 
+                               //("FD", FLUX_DELIMITER), 
                                ("bucket", value.trim()),
                            ],
                            self.debug,
@@ -127,6 +128,9 @@ impl QueryBuilder {
     pub fn range_start(&mut self,
                        value: &str) -> &mut Self {
 
+        self.range_start = String::from(value);
+        
+        /*
         self.range_start = String::from(
             tuple_formater("range(start:{range_start}) {FD} ",
                            &vec![
@@ -136,6 +140,16 @@ impl QueryBuilder {
                            self.debug,
             )
         );
+        */
+        
+        self
+    }
+
+    /// range_end
+    pub fn range_stop(&mut self,
+                     value: &str) -> &mut Self {
+
+        self.range_stop = String::from(value);
         
         self
     }
@@ -145,15 +159,26 @@ impl QueryBuilder {
                   key: &str,
                   value: &str) -> &mut Self {
 
+        self.filter += &tuple_formater(
+            " |> filter(fn:(r) => r.{key} == \"{value}\")",
+            &vec![
+                ("key", key.trim()),
+                ("value", value.trim()),
+            ],
+            self.debug,
+        );
+        
+        /*
         self.filter += &format!("{} {FLUX_DELIMITER} ",
                                 tuple_formater(
-                                    "filter(fn:(r) => r.{key} == \"{value}\")",
+                                    "|> filter(fn:(r) => r.{key} == \"{value}\")",
                                     &vec![
                                         ("key", key.trim()),
                                         ("value", value.trim()),
                                     ],
                                     self.debug,
                                 ));
+        */
         self
     }
 
@@ -163,9 +188,9 @@ impl QueryBuilder {
                 value: &str) -> &mut Self {
         
         self.sort = tuple_formater(
-            "sort(columns: [\"{key}\"], desc:{value}) {FD} ",
+            " |> sort(columns: [\"{key}\"], desc:{value})",
             &vec![
-                ("FD", FLUX_DELIMITER), 
+                //("FD", FLUX_DELIMITER), 
                 ("key", key.trim()),
                 ("value", value.trim()),
             ],
@@ -181,9 +206,9 @@ impl QueryBuilder {
         
         self.limit = tuple_formater(
             //"limit(n:{value}) {FD}",
-            "limit(n:{value})",
+            " |> limit(n:{value})",
             &vec![
-                ("FD", FLUX_DELIMITER), 
+                //("FD", FLUX_DELIMITER), 
                 ("value", value.trim()),
             ],
             self.debug,
@@ -196,6 +221,28 @@ impl QueryBuilder {
     /// ok if valid otherwise raise error
     pub fn build(&mut self) -> Result<String, FQError> {
 
+        let range = if self.range_stop.eq("") {
+            format!(" |> range(start:{})", &self.range_start)
+                    
+        } else {
+            format!(" |> range(start: {}, stop: {})",
+                    &self.range_start,
+                    &self.range_stop,
+                    )
+        };
+        
+        let fqb = vec![&self.bucket,
+                       &range,
+                       &self.filter,
+                       &self.sort,
+                       &self.limit,
+        ]
+            .into_iter()
+            .map(|v| v.as_str())
+            .collect::<Vec<_>>()
+            .concat();
+       
+        /*
         //let fqb = tuple_formater("{bucket} {FD} {range_start} {FD} {filter} {sort} {FD} {limit}",
         let fqb = tuple_formater("{bucket} {range_start} {filter} {sort} {limit}",
                                  
@@ -204,7 +251,7 @@ impl QueryBuilder {
                                      ("bucket", &self.bucket),
 
                                      ("range_start", &self.range_start),
-                                     //("range_end", &self.range_end),
+                                     //("range_stop", &self.range_stop),
                                      
                                      ("filter", &self.filter),
                                      ("sort", &self.sort),
@@ -213,28 +260,9 @@ impl QueryBuilder {
                                 
                                  self.debug,
         );
+        */
 
         Ok(fqb)
-        
-        // REMOVE trailing delimiter -> FUTURE USE
-        //Ok(remove_last_delimiter(fqb))
     }
 }
 
-
-/*
-pub fn remove_last_delimiter(text: &str) -> String {
-    /*
-    [&mut self.tags, &mut self.fields]
-        .iter_mut()
-        
-        .for_each(|s|
-                  if let Some(last) = s.as_bytes().last() {
-                      if last.eq(&(DELIMITER as u8)) {
-                          **s = String::from(&s[0..s.len() - 1])
-                      }
-                  }
-        );
-    */
-}
-*/

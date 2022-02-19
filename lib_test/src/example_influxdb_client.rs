@@ -259,7 +259,8 @@ pub fn parse_csv(client: &Client,
                             let result_fqb = flux_query_builder
                                 .debug(false)
                                 .bucket("reqwest_backup_ds_test")
-                                .range_start("-12h")
+                                .range_start("-24h")
+                                //.range_stop("-12h")
                                 .filter("_measurement", "temperature")
                                 .filter("host", "spongebob")
                                 .filter("SensorId", &s_record.ds_id)
