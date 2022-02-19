@@ -17,6 +17,7 @@ mod influxdb_toml_config_struct;
 const DELAY: u64 = 10;
 
 fn main() {
+    /*
     //CRON offset sleep
     println!("CRON SLEEP: {DELAY}sec");
     std::thread::sleep(
@@ -24,6 +25,7 @@ fn main() {
             DELAY*1000)
             );
     println!("CRON alive:");
+    */
     
     // EXAMPLE >>> EASY_CONFIG
     let config = example_easy_config::sample();

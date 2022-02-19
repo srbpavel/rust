@@ -1,3 +1,13 @@
+///
+/// API write
+/// https://docs.influxdata.com/influxdb/v2.1/write-data/developer-tools/api/
+/// API query
+/// https://docs.influxdata.com/influxdb/v2.1/query-data/execute-queries/influx-api/
+/// API CSV
+/// https://docs.influxdata.com/influxdb/v2.1/reference/syntax/annotated-csv/
+///
+///
+
 use reqwest::blocking::{
     Client,
     ClientBuilder,
@@ -409,20 +419,23 @@ impl <'i>InfluxCall<'i> {
 
     // /*
     /// swap bucket
-    pub fn swap_bucket(&mut self,
-                       old_bucket: &str,
-                       new_bucket: &str) -> &mut Self {
+    ///
+    /// we take MUT -> update -> return non-MUT
+    ///
+    /// NIET GOED will totaly change arch
+    //pub fn swap_bucket(&mut self,
+    pub fn swap_key(&mut self,
+                    key: &str,
+                    old_bucket: &str,
+                    //new_bucket: &str) -> &mut Self {
+                    new_bucket: &str) -> &Self {
 
         //self.uri_write = format!("{}", "aaa");
 
         self.uri_write = self.uri_write.replace(
-            &format!("bucket={}",
-                     old_bucket,
-            ),
+            &format!("{key}={old_bucket}"),
             
-            &format!("bucket={}",
-                     new_bucket,
-            ),
+            &format!("{key}={new_bucket}"),
         );
         
         self

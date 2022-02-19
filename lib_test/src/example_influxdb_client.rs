@@ -240,20 +240,57 @@ pub fn parse_csv(client: &Client,
                     // VERIFY LP parsing
                     match result_lpb {
                         Ok(data) => {
+                            
+                            let call_with_key = influx_call
+                                .swap_key(
+                                    "bucket",
+                                    "backup_ds_test",
+                                    "BUCKET",
+                                );
+                                /*
+                                .swap_key(
+                                    "org",
+                                    "foookin_paavel",
+                                    "ORG",
+                                );
+
+
+                                .swap_key(
+                                    "precision",
+                                    "ms",
+                                    "NS",
+                                );
+                             */
+
+                            println!("\n#CALL_WITH_KEY:\n+ {call_with_key:?}");
+                            
+                            /*
+                            let update_influx_call = InfluxCall {
+                                uri_write: call_with_bucket.uri_write
+                                //uri_write: new_hostname,
+                                ..influx_call.clone()
+                            };
+                            */
+
+                            // /*
                             let influx_data = InfluxData {
                                 config: influx_config.clone(),
-                                call: influx_call.clone(),
+                                //call: call_with_bucket,
+                                //call: call_with_bucket.clone(),
+                                call: call_with_key.clone(),
+                                
                                 lp: data,
                             };
                             
                             println!("LINE_PROTOCOL to write:\n+ {}",
                                      influx_data.lp,
                             );
+                            // */
 
-                            // /*
+                            /*
                             // WRITE
                             //let new_bucket = &influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
-                            let new_bucket = influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
+                            // CALL: let new_bucket = influx_call.uri_write.replace("bucket=backup_ds_test","bucket=reqwest_backup_ds_test");
 
                             // ERROR dns handle
                             //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira");
@@ -263,12 +300,14 @@ pub fn parse_csv(client: &Client,
                                 "NINDZA",
                             );
                             */
-                            
+
+                            /* CALL
                             let update_influx_call = InfluxCall {
                                 uri_write: new_bucket,
                                 //uri_write: new_hostname,
                                 ..influx_call.clone()
                             };
+                            */
 
                             /*
                             println!("\n@UPDATE_BUCKET: {:?}\n+{:?}",
@@ -285,7 +324,7 @@ pub fn parse_csv(client: &Client,
                             if write_result.is_err() {
                                 println!("WRITE_RESULT: {write_result:?}");
                             }
-                            // */ //_ WRITE_end
+                            */ //_ WRITE_end
                             
                         },
                         Err(why) => {
@@ -318,10 +357,10 @@ pub fn parse_csv(client: &Client,
             },
         };
 
-        /*
+        // /*
         println!("\n break");
         break
-        */
+        // */
     }
 
     Ok(())
