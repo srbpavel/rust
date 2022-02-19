@@ -281,6 +281,8 @@ pub fn parse_csv(client: &Client,
                             println!("\n#UPDATED lowercase:\n+ {updated_call:?}");
                             */
 
+                            /*
+                            // UPDATE
                             let updated_call = influx_call
                                 .update_key(
                                     "bucket",
@@ -291,13 +293,15 @@ pub fn parse_csv(client: &Client,
                             println!("+ {:?}",
                                      updated_call.uri_write,
                             );
+                            */
                             
                             let updated_data = InfluxData {
                                 config: influx_config.clone(),
                                 // .clone() -> deMut
                                 // expected struct `InfluxCall`,
                                 // found `&mut InfluxCall<'_>`
-                                call: updated_call.clone(),
+                                //call: updated_call.clone(),
+                                call: influx_call.clone(),
                                 lp: data,
                             };
                             
@@ -459,29 +463,44 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         println!("\nREQUEST: {request_read:?}");
     }
 
+    // WE HAVE flux query DATA
     let response = request_read
         .unwrap()
         .send()? // reqwest::Error
         .text()?; // -> String
 
-    let response_len = response
-        .split("\r\n,") // ',' not to catch last line \r\n\r\n
-        .collect::<Vec<_>>()
-        .len() - 1; // -HEADER
-
     if config.flag.debug_reqwest {
+        let response_len = response
+            .split("\r\n,") // ',' not to catch last line \r\n\r\n
+            .collect::<Vec<_>>()
+            .len() - 1; // -HEADER
+        
         println!("\nRESPONSE[{len}]: {response:#?}",
                  len = response_len,
         );
     }
 
+    // UPDATE
+    let updated_call = influx_call
+        .update_key(
+            "bucket",
+            "backup_ds_test",
+            "reqwest_backup_ds_test",
+        );
+    
+    println!("\n@UPDATE_CALL -> WRITE:\n+ {:?}",
+             updated_call.uri_write,
+    );    
+    
+    
     //CSV
     let csv_status = parse_csv(&client,
                                &config,
                                &influx_config,
 
                                //&influx_call,
-                               &mut influx_call,
+                               //&mut influx_call,
+                               updated_call,
 
                                &response,
     );
