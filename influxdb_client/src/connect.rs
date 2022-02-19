@@ -8,12 +8,7 @@
 ///
 ///
 
-//use crate::config::InfluxConfig;
 use crate::call::InfluxCall;
-//use crate::data::InfluxData;
-
-//use crate::lp::DEFAULT;
-
 
 use reqwest::blocking::{
     Client,
@@ -34,6 +29,7 @@ pub fn read_flux_query(client: &Client,
     }
 
     let request = client.post(influx.uri_query)
+        // TOKEN
         .header(influx.auth[0],
                 influx.auth[1]
         )
@@ -43,11 +39,13 @@ pub fn read_flux_query(client: &Client,
         .header(influx.content[0],
                 influx.content[1],
         )
+        // TIMEOUT -> FUTURE USE
         .timeout(
             std::time::Duration::from_secs(
                 10
             )
         )
+        // DATA
         .body(query); // -> RequestBuilder
     
     Ok(request)
@@ -64,7 +62,6 @@ pub fn write_lp(client: &Client,
         println!("\n#WRITE_REQUEST:\n+ {influx:?}\n+ {lp:?}");
     }
 
-    //let request = client.post(influx.uri_write)
     let request = client.post(&influx.uri_write)
         // TOKEN
         .header(influx.auth[0],

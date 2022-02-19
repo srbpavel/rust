@@ -1,10 +1,9 @@
-use template_formater::tuple_formater;
-
-//use crate::connect::InfluxConfig;
 use crate::config::InfluxConfig;
 
+use template_formater::tuple_formater;
 
-/// prepare api write uri
+
+/// prepare uri_write for InfluxCall
 pub fn uri_write(template: &str,
                  config: &InfluxConfig,
                  debug: bool) -> String {
@@ -26,7 +25,7 @@ pub fn uri_write(template: &str,
 }
 
 
-/// prepare api read/query uri
+/// prepare uri_query for InfluxCall
 pub fn uri_query(template: &str,
                  config: &InfluxConfig,
                  debug: bool) -> String {
@@ -45,7 +44,7 @@ pub fn uri_query(template: &str,
     )
 }
 
-/// prepare token header
+/// prepare auth with TOKEN for InfluxCall
 pub fn token(template: &str,
              config: &InfluxConfig,
              debug: bool) -> String {
