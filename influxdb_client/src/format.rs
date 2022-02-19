@@ -1,6 +1,7 @@
 use template_formater::tuple_formater;
 
-use crate::connect::InfluxConfig;
+//use crate::connect::InfluxConfig;
+use crate::config::InfluxConfig;
 
 
 /// prepare api write uri

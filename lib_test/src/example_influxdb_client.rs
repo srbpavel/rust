@@ -1,12 +1,10 @@
 use crate::influxdb_toml_config_struct::{TomlConfig};
 
 use influxdb_client::{
-    connect::{
-        InfluxConfig,
-        InfluxCall,
-        InfluxData,
-        LineProtocolBuilder,
-    },
+    config::InfluxConfig,
+    call::InfluxCall,
+    data::InfluxData,
+    lp::LineProtocolBuilder,
 };
 
 use reqwest::blocking::{
@@ -446,7 +444,7 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     println!("\n@InfluxCall: {influx_call:#?}");
 
     // REQW Client
-    let client: reqwest::blocking::Client = influxdb_client::connect::client()?;
+    let client: reqwest::blocking::Client = influxdb_client::client::client()?;
     
     // REQW READ RequestBuilder
     let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
