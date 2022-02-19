@@ -5,6 +5,7 @@ use influxdb_client::{
     call::InfluxCall,
     data::InfluxData,
     lp::LineProtocolBuilder,
+    flux_query::QueryBuilder,
 };
 
 use reqwest::blocking::{
@@ -217,84 +218,16 @@ pub fn parse_csv(client: &Client,
                                      match parse_datetime(s_record.time) {
                                          Ok(dt) => dt.timestamp_millis(),
                                          Err(why) => {
-                                             //return Err(why)
                                              return Err(Box::new(why))
                                          },
                                      }
                         ))
 
-                        .build(false) // debug tupple formater flag
-                        ;
+                        .build(config.flag.debug_tuple_formater);
 
                     // VERIFY LP parsing
                     match result_lpb {
                         Ok(data) => {
-                            /*
-                            //START OBJ
-                            let mut updated_call = influx_call
-                                .update_key(
-                                    "bucket",
-                                    "backup_ds_test",
-                                    "REQWEST_BACKUP_DS_TEST",
-                                )
-                                .update_key(
-                                    "org",
-                                    "foookin_paavel",
-                                    "ORG",
-                                )
-                                .update_key(
-                                    "precision",
-                                    "ms",
-                                    "MS",
-                                )
-                                .update_key(
-                                    "hostname",
-                                    "jozefina",
-                                    "LA_VAMPIRA",
-                                );
-                            
-                            println!("\n#UPDATED uppercase:\n+ {updated_call:?}");
-
-                            updated_call = influx_call
-                                .update_key(
-                                    "bucket",
-                                    "REQWEST_BACKUP_DS_TEST",
-                                    "reqwest_backup_ds_test",
-                                )
-                                .update_key(
-                                    "org",
-                                    "ORG",
-                                    "foookin_paavel",
-                                )
-                                .update_key(
-                                    "precision",
-                                    "MS",
-                                    "ms",
-                                )
-                                .update_key(
-                                    "hostname",
-                                    "LA_VAMPIRA",
-                                    "jozefina",
-                                )
-                                ;
-                            
-                            println!("\n#UPDATED lowercase:\n+ {updated_call:?}");
-                            */
-
-                            /*
-                            // UPDATE
-                            let updated_call = influx_call
-                                .update_key(
-                                    "bucket",
-                                    "backup_ds_test",
-                                    "reqwest_backup_ds_test",
-                                );
-
-                            println!("+ {:?}",
-                                     updated_call.uri_write,
-                            );
-                            */
-                            
                             let updated_data = InfluxData {
                                 config: influx_config.clone(),
                                 // .clone() -> deMut
@@ -317,6 +250,45 @@ pub fn parse_csv(client: &Client,
                                 println!("WRITE_RESULT: {write_result:?}");
                             }
                             // */
+
+                            // FLUX BUILDER
+
+                            let mut flux_query_builder = QueryBuilder::default();
+                            println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
+
+                            let result_fqb = flux_query_builder
+                                .bucket("reqwest_backup_ds_test")
+                                .range_start("-12h")
+                                .filter("mesurement", "dallas")
+                                .filter("host", "spongebob")
+                                ;
+
+                            println!("\n@RESULT_FQB: {result_fqb:?}");
+                            
+                            /* // VERIFY 
+                            let flux_query = format!("from(bucket:\"{bucket}\") |> range(start:{range_start}) |> filter(fn:(r) => r._measurement == \"{measurement}\") |> filter(fn:(r) => r.SensorId == \"{ds_id}\") |> sort(columns: [\"_time\"], desc:true) |> limit(n:1)",
+                                                     //bucket=&active_config.bucket,
+                                                     bucket="reqwest_backup_ds_test",
+                                                     ds_id=&s_record.ds_id,
+                                                     measurement="temperature",
+                                                     range_start=&config.template.flux.query_verify_record_range_start,
+                                                     
+                            );
+                            
+                            let verify_result = verify(client,
+                                                       config,
+                                                       &updated_data,
+                                                       &flux_query);
+
+                            println!("VERIFY_RESULT:\n+ {verify_result:?}");
+                            */
+                            
+                            /*
+                            if verify_result.is_err() {
+                                println!("VERIFY_RESULT: {verify_result:?}");
+                            }
+                            */
+                            //
                             
                         },
                         Err(why) => {
@@ -349,22 +321,25 @@ pub fn parse_csv(client: &Client,
             },
         };
 
-        /*
+        // /*
         println!("\n break");
         break
-        */
+        // */
     }
 
     Ok(())
 }
 
 
-// START
+/// START
 pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
+    // DUMMY measurement + influx instance
     const MEASUREMENT: &str = "dallas";
-
+    const WRITE_BUCKET: &str = "reqwest_backup_ds_test";
     let active_config = &config.all_influx.values[1];
 
+    
+    // init InfluxConfig
     let influx_config = InfluxConfig::new(
         &active_config.name,
         active_config.status,
@@ -428,7 +403,6 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 
     // CALL
     let mut influx_call = InfluxCall::new(
-        //&uri_write,
         uri_write,
         &uri_query,
         
@@ -480,12 +454,13 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
         );
     }
 
-    // UPDATE
+    // UPDATE InfluxCall for WRITE
     let updated_call = influx_call
         .update_key(
             "bucket",
             "backup_ds_test",
-            "reqwest_backup_ds_test",
+            //"reqwest_backup_ds_test",
+            WRITE_BUCKET,
         );
     
     println!("\n@UPDATE_CALL -> WRITE:\n+ {:?}",
@@ -497,11 +472,7 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     let csv_status = parse_csv(&client,
                                &config,
                                &influx_config,
-
-                               //&influx_call,
-                               //&mut influx_call,
                                updated_call,
-
                                &response,
     );
 
@@ -541,4 +512,48 @@ pub fn write(client: &Client,
     }
     
     Ok(())
+}
+
+
+/// VERIFY
+pub fn verify(client: &Client,
+              config: &TomlConfig,
+              influx_data: &InfluxData,
+              flux_query: &str) -> Result<String, reqwest::Error> {
+
+
+    println!("\nVERIFY_flux_Q:\n+ {flux_query:?}");
+    
+    // REQW READ RequestBuilder
+    let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
+        = influxdb_client::connect::read_flux_query(
+            &client,
+            &influx_data.call,
+            String::from(flux_query),
+            config.flag.debug_flux_query,
+        );
+
+    if config.flag.debug_reqwest {
+        println!("\nREQUEST: {request_read:?}");
+    }
+
+    // WE HAVE flux query DATA
+    let response = request_read
+        .unwrap()
+        .send()? // reqwest::Error
+        .text()?; // -> String
+
+    if config.flag.debug_reqwest {
+        let response_len = response
+            .split("\r\n,") // ',' not to catch last line \r\n\r\n
+            .collect::<Vec<_>>()
+            .len() - 1; // -HEADER
+        
+        println!("\nRESPONSE[{len}]: {response:#?}",
+                 len = response_len,
+        );
+    }
+    
+    //Ok(())
+    Ok(response)
 }
