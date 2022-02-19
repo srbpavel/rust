@@ -232,7 +232,8 @@ pub fn parse_csv(client: &Client,
                     // VERIFY LP parsing
                     match result_lpb {
                         Ok(data) => {
-                            
+                            // menit to o uroven vejs pred FOR a hlavne pres Self
+                            // B
                             let call_with_key = influx_call
                                 .swap_key(
                                     "bucket",
@@ -240,49 +241,50 @@ pub fn parse_csv(client: &Client,
                                     "reqwest_backup_ds_test",
                                 );
 
-                            //println!("\n#CALL_WITH_KEY:\n+ {call_with_key:?}");
+                            println!("\n#CALL_WITH_KEY:\n+ {call_with_key:?}");
 
-                            // /* CALL
-                            let update_influx_call = InfluxCall {
+                            // CALL BUCKET
+                            let updated_influx_call = InfluxCall {
                                 uri_write: call_with_key,
-                                //uri_write: new_hostname,
                                 ..influx_call.clone()
                             };
 
-                            println!("\n@UPDATE_KEY:\n+ {:?}",
-                                     //update_influx_call.uri_write,
-                                     update_influx_call,
+                            //println!("\n@UPDATED_KEY:\n+ {updated_influx_call:?}");
+
+                            /*
+                            // H
+                            let call_with_key_h = updated_influx_call
+                                .swap_key(
+                                    "hostname",
+                                    "jozefina",
+                                    "la_vampira",
+                                );
+
+                            println!("\n#CALL_WITH_KEY_H:\n+ {call_with_key_h:?}");
+
+                            // CALL HOSTNAME
+                            let updated_influx_call_h = InfluxCall {
+                                uri_write: call_with_key_h,
+                                ..updated_influx_call.clone()
+                            };
+
+                            println!("\n@UPDATED_KEY:\n+ {:?}",
+                                     updated_influx_call_h,
                             );
-                            // */
+                            */
                             
-                            // /*
                             let influx_data = InfluxData {
                                 config: influx_config.clone(),
-                                //call: call_with_key.clone(),
-                                call: update_influx_call,
-                                
+                                call: updated_influx_call,
+                                //call: updated_influx_call_h,
                                 lp: data,
                             };
                             
-                            println!("\n@INFLUX_DATA_UPDATE_KEY:\n+ {:?}",
-                                     influx_data,
-                            );
-                            // */
+                            //println!("\n@INFLUX_DATA_UPDATE_KEY:\n+ {influx_data:?}");
 
                             // /*
                             // WRITE
-                            // ERROR dns handle
-                            //let new_hostname = &new_bucket.replace("//jozefina","//la_vampira");
-
-                            /*
                             let write_result = write(client,
-                                                     &update_influx_call,
-                                                     config,
-                                                     &influx_data.lp);
-                            */
-
-                            let write_result = write(client,
-                                                     //&update_influx_call,
                                                      config,
                                                      &influx_data);
                             
@@ -322,10 +324,10 @@ pub fn parse_csv(client: &Client,
             },
         };
 
-        // /*
+        /*
         println!("\n break");
         break
-        // */
+        */
     }
 
     Ok(())
@@ -431,8 +433,6 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
     );
 
     // CALL
-    //let influx_call = influxdb_client::connect::InfluxCall::new(
-    //let influx_call = InfluxCall::new(
     let mut influx_call = InfluxCall::new(
         //&uri_write,
         uri_write,
@@ -506,24 +506,18 @@ pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
 }
 
 
-/// WRITE www
+/// WRITE
 pub fn write(client: &Client,
-             //influx_call: &InfluxCall,
              config: &TomlConfig,
-             //lp: &str) -> Result<(), reqwest::Error> {
              influx_data: &InfluxData) -> Result<(), reqwest::Error> {
 
     // REQW WRITE RequestBuilder
     let request_write: Result<RequestBuilder, Box< dyn std::error::Error>>
         = influxdb_client::connect::write_lp(
             &client,
-            //&influx_call,
             &influx_data.call,
-
-            //String::from(lp),
             String::from(&influx_data.lp),
-
-            config.flag.debug_reqwest, //true, // DEBUG flag
+            config.flag.debug_reqwest,
         );
 
     if config.flag.debug_reqwest {

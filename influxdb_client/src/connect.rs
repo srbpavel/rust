@@ -275,11 +275,8 @@ impl <'d>InfluxData<'d> {
             },
 
             call: InfluxCall {
-                //uri_write: DEFAULT,
                 uri_write: String::from(DEFAULT),
-                
                 uri_query: DEFAULT,
-                
                 auth: vec![],
                 accept: vec![],
                 content: vec![],
@@ -389,9 +386,7 @@ impl <'c>InfluxConfig<'c> {
 ///
 #[derive(Debug, Clone)]
 pub struct InfluxCall<'i> {
-    //pub uri_write: &'i str,
     pub uri_write: String,
-
     pub uri_query: &'i str,
     pub auth: Vec<&'i str>,
     pub accept: Vec<&'i str>,
@@ -400,9 +395,7 @@ pub struct InfluxCall<'i> {
 
 impl <'i>InfluxCall<'i> {
     /// new
-    pub fn new(//uri_write: &'i str,
-               uri_write: String,
-
+    pub fn new(uri_write: String,
                uri_query: &'i str,
                auth: Vec<&'i str>,
                accept: Vec<&'i str>,
@@ -417,30 +410,29 @@ impl <'i>InfluxCall<'i> {
         }
     }
 
-    // /*
-    /// swap bucket
+    /// swap key bucket/org/precision
     ///
-    /// we take MUT -> update -> return non-MUT
+    /// fookin, i will need to return Self not String
     ///
-    /// NIET GOED will totaly change arch
-    //pub fn swap_bucket(&mut self,
     pub fn swap_key(&self,
                     key: &str,
                     old_value: &str,
-                    //new_bucket: &str) -> &mut Self {
-                    //new_bucket: &str) -> &Self {
                     new_value: &str) -> String {
 
-        //self.uri_write = self.uri_write.replace(
-        self.uri_write.replace(
-            &format!("{key}={old_value}"),
-            
-            &format!("{key}={new_value}"),
-        )//;
-        
-        //self
+        if key != "hostname" {
+            self.uri_write.replace(
+                &format!("{key}={old_value}"),
+                
+                &format!("{key}={new_value}"),
+            )
+        } else {
+            self.uri_write.replace(
+                &format!("//{old_value}"),
+                
+                &format!("//{new_value}"),
+            )
+        }
     }
-    // */
 }
 
 
