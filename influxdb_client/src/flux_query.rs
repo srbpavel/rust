@@ -2,9 +2,7 @@ use template_formater::tuple_formater;
 
 //const FLUX_DELIMITER: &str = "|>";
 const DEFAULT_EMPTY: &str = "";
-//const DEFAULT_SORT: &str = "sort(columns: [\"_time\"], desc:true)";
-//const DEFAULT_LIMIT: &str = "limit(n:10)";
-
+const DEFAULT_COUNT: &str = " |> count()";
 
 /// flux_query error
 #[derive(Debug)]
@@ -31,19 +29,16 @@ impl FQError {
 #[derive(Debug, Clone)]
 pub struct QueryBuilder {
     pub debug: bool,
-
     pub bucket: String,
-
     pub range_start: String,
     pub range_stop: String,
-
     pub filter: String,
-    
-    //pub measurement: String,
-    //pub host: String,
-
     pub sort: String,
     pub limit: String,
+    pub group: bool,
+    pub count: bool,
+    pub count_column: String,
+    
 }
 
 /// query builder + validation + template formating from variables
@@ -51,19 +46,15 @@ impl QueryBuilder {
 
     /// new
     pub fn new(debug: bool,
-
                bucket: String,
-
                range_start: String,
                range_stop: String,
-
                filter: String,
-               
-               //measurement: String,
-               //host: String,
-
                sort: String,
-               limit: String) -> Self {
+               limit: String,
+               group: bool,
+               count: bool,
+               count_column: String) -> Self {
         
         Self {
             debug,
@@ -73,6 +64,9 @@ impl QueryBuilder {
             filter,
             sort,
             limit,
+            group,
+            count,
+            count_column,
         }
     }
 
@@ -80,28 +74,42 @@ impl QueryBuilder {
     pub fn default() -> Self {
         Self {
             debug: true,
-            
             bucket: String::from(DEFAULT_EMPTY),
-
             range_start: String::from(DEFAULT_EMPTY),
-            range_stop: String::from(DEFAULT_EMPTY),
-
+            range_stop: String::from(DEFAULT_EMPTY), // FUTURE USE
             filter: String::from(DEFAULT_EMPTY),
-
             sort: String::from(DEFAULT_EMPTY),
             limit: String::from(DEFAULT_EMPTY),
-            /*
-            sort: String::from(DEFAULT_SORT),
-            limit: String::from(DEFAULT_LIMIT),
-            */
+
+            group: false,
+            count: false,
+            count_column: String::from(DEFAULT_COUNT),
         }
     }
 
-    /// debug
+    /// debug tuple_formater pairs + build
     pub fn debug(&mut self,
                  value: bool) -> &mut Self {
         
         self.debug = value;
+
+        self
+    }
+
+    /// enable/disable count results
+    pub fn count(&mut self,
+                 value: bool) -> &mut Self {
+        
+        self.count = value;
+
+        self
+    }
+
+    /// enable/disable group results
+    pub fn group(&mut self,
+                 value: bool) -> &mut Self {
+        
+        self.group = value;
 
         self
     }
@@ -111,10 +119,8 @@ impl QueryBuilder {
                   value: &str) -> &mut Self {
 
         self.bucket = String::from(
-            //tuple_formater("from(bucket:\"{bucket}\") {FD} ",
             tuple_formater("from(bucket:\"{bucket}\")",
                            &vec![
-                               //("FD", FLUX_DELIMITER), 
                                ("bucket", value.trim()),
                            ],
                            self.debug,
@@ -129,18 +135,6 @@ impl QueryBuilder {
                        value: &str) -> &mut Self {
 
         self.range_start = String::from(value);
-        
-        /*
-        self.range_start = String::from(
-            tuple_formater("range(start:{range_start}) {FD} ",
-                           &vec![
-                               ("FD", FLUX_DELIMITER), 
-                               ("range_start", value.trim()),
-                           ],
-                           self.debug,
-            )
-        );
-        */
         
         self
     }
@@ -167,18 +161,7 @@ impl QueryBuilder {
             ],
             self.debug,
         );
-        
-        /*
-        self.filter += &format!("{} {FLUX_DELIMITER} ",
-                                tuple_formater(
-                                    "|> filter(fn:(r) => r.{key} == \"{value}\")",
-                                    &vec![
-                                        ("key", key.trim()),
-                                        ("value", value.trim()),
-                                    ],
-                                    self.debug,
-                                ));
-        */
+
         self
     }
 
@@ -190,7 +173,6 @@ impl QueryBuilder {
         self.sort = tuple_formater(
             " |> sort(columns: [\"{key}\"], desc:{value})",
             &vec![
-                //("FD", FLUX_DELIMITER), 
                 ("key", key.trim()),
                 ("value", value.trim()),
             ],
@@ -205,15 +187,34 @@ impl QueryBuilder {
                  value: &str) -> &mut Self {
         
         self.limit = tuple_formater(
-            //"limit(n:{value}) {FD}",
             " |> limit(n:{value})",
             &vec![
-                //("FD", FLUX_DELIMITER), 
                 ("value", value.trim()),
             ],
             self.debug,
         );
         
+        self
+    }
+
+    /// count
+    pub fn count_column(&mut self,
+                 value: &str) -> &mut Self {
+
+        self.count_column = format!(" |> count(column: \"{}\")",
+                                    value.trim(),
+        );
+        
+        /*
+        self.count_column = if !value.eq("") {
+            format!(" |> count(column: \"{}\")",
+                    value.trim(),
+            )
+        } else {
+            String::from(" |> count()")
+        };
+        */
+
         self
     }
 
@@ -231,38 +232,35 @@ impl QueryBuilder {
                     )
         };
         
-        let fqb = vec![&self.bucket,
-                       &range,
-                       &self.filter,
-                       &self.sort,
-                       &self.limit,
+        let mut fqb = vec![&self.bucket,
+                           &range,
+                           &self.filter,
+                           &self.sort,
+                           &self.limit,
         ]
             .into_iter()
             .map(|v| v.as_str())
             .collect::<Vec<_>>()
             .concat();
-       
-        /*
-        //let fqb = tuple_formater("{bucket} {FD} {range_start} {FD} {filter} {sort} {FD} {limit}",
-        let fqb = tuple_formater("{bucket} {range_start} {filter} {sort} {limit}",
-                                 
-                                 &vec![
-                                     //("FD", FLUX_DELIMITER),
-                                     ("bucket", &self.bucket),
 
-                                     ("range_start", &self.range_start),
-                                     //("range_stop", &self.range_stop),
-                                     
-                                     ("filter", &self.filter),
-                                     ("sort", &self.sort),
-                                     ("limit", &self.limit),
-                                 ],
-                                
-                                 self.debug,
-        );
-        */
+        if self.group {
+            println!("group: true");
+            
+            fqb = format!("{}{}",
+                          fqb,
+                          " |> group()",
+            );
+        } else { println!("group: false");  }
+        
+        if self.count {
+            println!("count: true");
+            
+            fqb = format!("{}{}",
+                          fqb,
+                          self.count_column,
+            );
+        } else { println!("count: false");  }
 
         Ok(fqb)
     }
 }
-

@@ -266,6 +266,9 @@ pub fn parse_csv(client: &Client,
                                 .filter("SensorId", &s_record.ds_id)
                                 .sort("_time", "true")
                                 .limit("1")
+                                //.group(true)
+                                //.count(true)
+                                //.count_column("_value")
                                 .build()
                                 ;
 
