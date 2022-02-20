@@ -30,22 +30,24 @@ impl FluxQueryError {
 }
 
 
+type QBStr = String;
+
 /// flux query struct
 #[derive(Debug, Clone)]
 pub struct QueryBuilder {
     pub debug: bool,
-    pub bucket: String,
-    pub bucket_id: String,
-    pub range_start: String,
-    pub range_stop: String,
-    pub filter: String,
-    pub sort: String,
-    pub limit: String,
-    pub drop: String,
-    pub keep: String,
+    pub bucket: QBStr,
+    pub bucket_id: QBStr,
+    pub range_start: QBStr,
+    pub range_stop: QBStr,
+    pub filter: QBStr,
+    pub sort: QBStr,
+    pub limit: QBStr,
+    pub drop: QBStr,
+    pub keep: QBStr,
     pub group: bool,
     pub count: bool,
-    pub count_column: String,
+    pub count_column: QBStr,
     
 }
 
@@ -54,18 +56,18 @@ impl QueryBuilder {
 
     /// new
     pub fn new(debug: bool,
-               bucket: String,
-               bucket_id: String,
-               range_start: String,
-               range_stop: String,
-               filter: String,
-               sort: String,
-               drop: String,
-               keep: String,
-               limit: String,
+               bucket: QBStr,
+               bucket_id: QBStr,
+               range_start: QBStr,
+               range_stop: QBStr,
+               filter: QBStr,
+               sort: QBStr,
+               drop: QBStr,
+               keep: QBStr,
+               limit: QBStr,
                group: bool,
                count: bool,
-               count_column: String) -> Self {
+               count_column: QBStr) -> Self {
         
         Self {
             debug,
@@ -91,18 +93,18 @@ impl QueryBuilder {
     pub fn default() -> Self {
         Self {
             debug: true,
-            bucket: String::from(DEFAULT_EMPTY),
-            bucket_id: String::from(DEFAULT_EMPTY),
-            range_start: String::from(DEFAULT_EMPTY),
-            range_stop: String::from(DEFAULT_EMPTY),
-            filter: String::from(DEFAULT_EMPTY),
-            sort: String::from(DEFAULT_EMPTY),
-            keep: String::from(DEFAULT_EMPTY),
-            drop: String::from(DEFAULT_EMPTY),
-            limit: String::from(DEFAULT_EMPTY),
+            bucket: QBStr::from(DEFAULT_EMPTY),
+            bucket_id: QBStr::from(DEFAULT_EMPTY),
+            range_start: QBStr::from(DEFAULT_EMPTY),
+            range_stop: QBStr::from(DEFAULT_EMPTY),
+            filter: QBStr::from(DEFAULT_EMPTY),
+            sort: QBStr::from(DEFAULT_EMPTY),
+            keep: QBStr::from(DEFAULT_EMPTY),
+            drop: QBStr::from(DEFAULT_EMPTY),
+            limit: QBStr::from(DEFAULT_EMPTY),
             group: false,
             count: false,
-            count_column: String::from(DEFAULT_COUNT),
+            count_column: QBStr::from(DEFAULT_COUNT),
         }
     }
 
@@ -161,6 +163,11 @@ impl QueryBuilder {
     pub fn bucket(&mut self,
                   value: &str) -> &mut Self {
 
+        self.bucket = format!("from(bucket:\"{}\")",
+                              value.trim(),
+        );
+        
+        /*
         self.bucket = String::from(
             tuple_formater("from(bucket:\"{bucket}\")",
                            &vec![
@@ -169,7 +176,8 @@ impl QueryBuilder {
                            self.debug,
             )
         );
-        
+        */
+
         self
     }
 
@@ -177,7 +185,7 @@ impl QueryBuilder {
     ///
     /// https://docs.influxdata.com/flux/v0.x/stdlib/influxdata/influxdb/from/
     ///
-    /// just bucket in from() function
+    /// just bucketID in from() function
     ///
     /// ID: 66f7f3f74b11c188
     ///
@@ -186,6 +194,11 @@ impl QueryBuilder {
     pub fn bucket_id(&mut self,
                      value: &str) -> &mut Self {
 
+        self.bucket = format!("from(bucketID:\"{}\")",
+                              value.trim(),
+        );
+
+        /*
         self.bucket_id = String::from(
             tuple_formater("from(bucketID:\"{bucket}\")",
                            &vec![
@@ -194,7 +207,8 @@ impl QueryBuilder {
                            self.debug,
             )
         );
-        
+        */
+
         self
     }
 
@@ -412,7 +426,6 @@ impl QueryBuilder {
         // RANGE start or start+stop
         let range = if self.range_stop.eq("") {
             format!(" |> range(start:{})", &self.range_start)
-                    
         } else {
             format!(" |> range(start:{}, stop:{})",
                     &self.range_start,

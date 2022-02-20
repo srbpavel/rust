@@ -25,7 +25,7 @@ use chrono::{DateTime,
 
 
 /// this depends on flux query result
-/// we start with &str and parse bool/u64/datetime later
+/// we start with &str,bool,u64 and parse datetime later
 /// very nice tutorial rust csv explained https://blog.burntsushi.net/csv/
 ///
 ///",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,_result,0,2022-02-16T08:45:43.372462165Z,2022-02-16T20:45:43.372462165Z,2022-02-16T20:45:09.299Z,20.5625,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n
@@ -99,13 +99,13 @@ pub fn parse_datetime(datetime: &str) -> Result<DateTime<Utc>, chrono::format::P
 }
 
 
-/// TOO LONG and not diveded to FN, easier to follow
+/// all in one go, just to follow an example
 pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // influx instance to read data from
     let read_config = &config.all_influx.values[1];
     // metric variables as measurement, tag/field names
     let metric = &config.metrics["temperature"];
-    // influx instance to write data to
+    // influx instance to write data to / we only use bucket from here
     let write_config = &config.all_influx.values[0];
     
     // populate InfluxConfig
@@ -322,14 +322,14 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                     .template(&metric.generic_lp)
                     .measurement(&s_record._measurement)
                     .host(&s_record.host)
-                    // TAG: NAME, VALUE
-                    .tag(&headers[11], &s_record.Machine)
+                    // TAG: KEY, VALUE
                     .tag(&headers[7], &s_record.DsCarrier)
                     .tag(&headers[8], &s_record.DsId)
                     .tag(&headers[9], &s_record.DsPin)
+                    .tag(&headers[11], &s_record.Machine)
                     // RECORD is valid -> true
                     .tag(&headers[10], &format!("{}", true))
-                    // FIELD: NAME, VALUE
+                    // FIELD: KEY, VALUE
                     .field(&s_record._field,
                            &s_record._value,
                     )
@@ -389,13 +389,11 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                         let result_fqb = flux_query_builder
                             .debug(false) // display tuple_format pairs
                             .bucket(&write_config.bucket,)
-                            .range_start("-12h") // FUTURE USE
-
+                            .range_start("-12h")
                             .filter("_measurement", "==",&s_record._measurement)
                             .filter("host", "==",&s_record.host)
                             .filter(&headers[8], "==", &s_record.DsId)
                             .filter("_time", "==", &s_record._time)
-
                             /*
                             .filter("_time",
                                     ">",
@@ -409,7 +407,6 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             //.filter("_value", ">", "18")
                             //.filter("_value", "<=", "18")
                             //.filter("_value", ">=", "18")
-
                             .drop(vec!["_start", "_stop"])
                             //.keep(vec!["_time"])
                             //.keep(vec!["_time", &headers[8]])
@@ -420,7 +417,6 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             //.count(true) // - group -> result + _value: count
                             //.count_column("_value") // specify column
                             .build();
-
                         
                         match result_fqb {
                             Ok(flux_query) => {
