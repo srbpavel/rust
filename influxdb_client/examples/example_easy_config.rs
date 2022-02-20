@@ -1,27 +1,14 @@
 use std::process;
 
-// INFLUXDB Struct for TOML config
 use crate::influxdb_toml_config_struct::{TomlConfig};
 
 use easy_config::{read_toml_config};
+
 
 const CONFIG_FILENAME: &str = "/home/conan/soft/rust/influxdb_client/examples/influxdb_config.toml";
 
 
 pub fn sample_config() -> TomlConfig {
-    /* // DEBUG
-    println!("#SAMPLE <EASY_CONFIG>\n");
-    */
-
-    // FILE_NAME -> here from code / later via CmdArg or ...
-    //let config_filename = "/home/conan/soft/rust/lib_test/src/influxdb_config.toml";
-    
-    /* DEBUG
-    println!("#FILE_NAME: {}",
-             config_filename,
-    );
-    */
-
     // TOML_VALUE
     let toml_value = read_toml_config(&String::from(CONFIG_FILENAME)).unwrap_or_else(|err| {
         eprintln!("\nEXIT: error parsing TOML config file: {c}\nREASON >>> {e}",

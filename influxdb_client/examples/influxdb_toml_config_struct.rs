@@ -11,7 +11,7 @@ pub struct TomlConfig {
 
     //pub work_dir: MyStr,
     //pub name: MyStr,
-    //pub host: MyStr,
+    pub host: MyStr,
 
     //iter via HASH key
     pub metrics: HashMap<MyStr, TemplateSensors>,
@@ -62,7 +62,7 @@ pub struct Flag {
     //pub debug_metric_record: bool,
 
     pub debug_influx_instances: bool,
-    //pub debug_influx_lp: bool,
+    pub debug_influx_lp: bool,
     //pub debug_influx_uri: bool,
     //pub debug_influx_auth: bool,
     //pub debug_influx_output: bool,
@@ -157,7 +157,7 @@ pub struct TemplateSensors {
     //pub annotated_header: MyStr,
     //pub csv_annotated: MyStr,
 
-    //pub generic_lp: MyStr,
+    pub generic_lp: MyStr,
     //pub generic_query_verify_record: MyStr,
 }
 
