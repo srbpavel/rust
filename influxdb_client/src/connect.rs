@@ -59,7 +59,11 @@ pub fn write_lp(client: &Client,
                 debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
     
     if debug {
-        println!("\n#WRITE_REQUEST:\n+ {influx:?}\n+ {lp:?}");
+        /*
+        println!("\n#WRITE_LP:\n+ uri_write: {:?}\n+ lp: {lp:?}",
+                 influx.uri_write);
+        */
+        println!("\n#WRITE_LP:\n+ lp: {lp:?}");
     }
 
     let request = client.post(&influx.uri_write)

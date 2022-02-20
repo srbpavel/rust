@@ -14,11 +14,8 @@ use influxdb_client::{
 };
 
 use reqwest::blocking::{
-    //Client,
     RequestBuilder,
 };
-
-//use csv::StringRecord;
 
 use serde::Deserialize;
 
@@ -33,8 +30,9 @@ use chrono::{DateTime,
 ///
 ///",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,_result,0,2022-02-16T08:45:43.372462165Z,2022-02-16T20:45:43.372462165Z,2022-02-16T20:45:09.299Z,20.5625,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n
 ///
-///Record { annotation: "", result: "_result", table: 0, start: "2022-02-16T08:45:43.372462165Z", stop: "2022-02-16T20:45:43.372462165Z", time: "2022-02-16T20:45:09.299Z", value: "20.5625", machine: "mrazak", ds_carrier: "labjack", ds_id: "1052176647976", ds_pin: "14", ds_valid: true, field: "DsDecimal", measurement: "dallas", host: "ruth" }
+/// Record { annotation: "", result: "_result", table: 4, _start: "2022-02-20T05:32:49.735230174Z", _stop: "2022-02-20T17:32:49.735230174Z", _time: "2022-02-20T17:30:04.474Z", _value: "19.1875", Machine: "mrazak", DsCarrier: "labjack", DsId: "96928329000", DsPin: "14", DsValid: true, _field: "DsDecimal", _measurement: "dallas", host: "ruth" }
 ///
+/// #[serde(rename = "..." )] Record { annotation: "", result: "_result", table: 0, start: "2022-02-16T08:45:43.372462165Z", stop: "2022-02-16T20:45:43.372462165Z", time: "2022-02-16T20:45:09.299Z", value: "20.5625", machine: "mrazak", ds_carrier: "labjack", ds_id: "1052176647976", ds_pin: "14", ds_valid: true, field: "DsDecimal", measurement: "dallas", host: "ruth" }
 ///
 #[allow(dead_code)]
 #[allow(non_snake_case)]
@@ -47,15 +45,11 @@ pub struct Record<'h> {
     // this is needed only when .deserialize(Some(headers)
     #[serde(rename = "")]
     annotation: &'h str,
-
     result: &'h str,
     table: u64,
 
-    // members can be renamed as commented
-    //
     // we do not let Serde to parse DateTime as we do ourself
     // Option<DateTime<Utc>>
-    //
     //#[serde(rename = "_start")]
     //start: &'h str,
     _start: &'h str,
@@ -65,6 +59,7 @@ pub struct Record<'h> {
     //#[serde(rename = "_time")]
     //time: &'h str,
     _time: &'h str,
+
     //#[serde(rename = "_value")]
     //value: &'h str,
     _value: &'h str,
@@ -160,9 +155,9 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         config.flag.debug_template_formater,
     );
 
-    // FLUX_QUERY_BUILDER
+    // READ: FLUX_QUERY_BUILDER
     let mut flux_query_builder = QueryBuilder::default();
-    
+
     let result_fqb = flux_query_builder
         .debug(false) // display tuple_format key/value pairs
         .bucket(influx_config.bucket)
@@ -187,7 +182,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         //.count(true)
         //.count_column("_value")
         .build();
-    
+
     let flux_query = match result_fqb {
         Ok(data) => {
             data
@@ -248,11 +243,27 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>()
             .len() - 1; // -HEADER
         
-        println!("\nRESPONSE[{len}]: {response:#?}",
+        println!("\nRESPONSE[result count: {len}]: {response:#?}",
                  len = response_len,
         );
     }
 
+    /* limit 1 result for each table, but we will receive multiple tables as per tag indexing
+
+    ",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,
+
+    _result,0,2022-02-20T05:45:14.02667451Z,2022-02-20T17:45:14.02667451Z,2022-02-20T17:45:09.547Z,19.6875,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n,
+
+    _result,1,2022-02-20T05:45:14.02667451Z,2022-02-20T17:45:14.02667451Z,2022-02-20T17:45:04.757Z,19.0625,labjack,236134354984,8,true,hrnecek_s_ledem,DsDecimal,dallas,ruth\r\n,
+
+    _result,2,2022-02-20T05:45:14.02667451Z,2022-02-20T17:45:14.02667451Z,2022-02-20T17:45:05.628Z,21.1875,labjack,841704586024,8,true,hrnecek_s_ledem,DsDecimal,dallas,ruth\r\n,
+
+    _result,3,2022-02-20T05:45:14.02667451Z,2022-02-20T17:45:14.02667451Z,2022-02-20T17:45:08.67Z,19.75,labjack,910462155048,14,true,mrazak,DsDecimal,dallas,ruth\r\n,
+
+    _result,4,2022-02-20T05:45:14.02667451Z,2022-02-20T17:45:14.02667451Z,2022-02-20T17:45:07.796Z,19.375,labjack,96928329000,14,true,mrazak,DsDecimal,dallas,ruth\r\n\r\n"
+    */
+
+    // NOW WE CAN WRITE DATA TO another influx server or just different bucket or ...
     // UPDATE InfluxCall -> same SERVER but different BUCKET
     let updated_call = influx_call
         .update_key(
@@ -260,10 +271,12 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             &read_config.bucket,
             &write_config.bucket,
         );
-    
-    println!("\n@UPDATE_CALL -> WRITE:\n+ {:?}",
-             updated_call.uri_write,
-    );    
+
+    if config.flag.debug_influx_instances {
+        println!("\n@UPDATE_CALL -> we will WRITE data to BUCKET\n+ InfluxCall.uri_write: {:?}",
+                 updated_call.uri_write,
+        );
+    }
     
     //parse response to CSV
     let mut reader = csv::ReaderBuilder::new()
@@ -281,7 +294,9 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // HEADER clone as needed later for single_record -> CSV StringRecord
     let headers = &reader.headers()?.clone();
 
-    println!("\n#HEADER:\n+ {headers:?}");
+    if config.flag.debug_metric_record {
+        println!("\n#CSV_HEADER:\n+ {headers:?}");
+    }
 
     // WALK through all CSV records
     let mut record_counter = 0;
@@ -291,15 +306,18 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         match single_record {
             Ok(rec) => { // StringRecord
                 let s_record: Record = rec.deserialize(Some(headers))?;
-                println!("\nRECORD[{record_counter}]:\n+ {s_record:?}");                    
+
+                if config.flag.debug_metric_record {
+                    println!("\n#CSV -> Struct: RECORD[{record_counter}]:\n+ {s_record:?}");
+                }
 
                 let mut line_protocol_builder = LineProtocolBuilder::default();
 
                 if config.flag.debug_influx_lp {
-                    println!("\n@LP_B DEFAULT: {line_protocol_builder:?}");
+                    println!("\n@LineProtocol_Builder DEFAULT: {line_protocol_builder:?}");
                 }
 
-                // LP BUILDER
+                // LINE_PROTOCOL_BUILDER
                 let result_lpb = line_protocol_builder
                     .template(&metric.generic_lp)
                     .measurement(&s_record._measurement)
@@ -325,7 +343,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                     ))
                     .build(config.flag.debug_template_formater);
                 
-                // VERIFY LP parsing
+                // VALIDATE LINE_PROTOCOL
                 match result_lpb {
                     Ok(data) => {
                         let updated_data = InfluxData {
@@ -334,10 +352,12 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             lp: data,
                         };
                         
-                        println!("\n@INFLUX_DATA_UPDATE_KEY:\n+ {:?}\n+ {}",
+                        /*
+                        println!("\n@INFLUX_DATA_UPDATE:\n+ uri_write: {:?}\n+ lp: {}",
                                  updated_data.call.uri_write,
                                  updated_data.lp,
                         );
+                        */
 
                         // WRITE: REQW RequestBuilder
                         let request_write: Result<RequestBuilder, Box< dyn std::error::Error>>
@@ -360,10 +380,11 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                         if config.flag.debug_reqwest {
                             println!("\n#RESPONSE WRITE:\n+ {response:#?}");
                         }
-                        
-                        // VERIFY FLUX BUILDER
+
+                        // OK, SO NOW DATA HAS BEEN WRITTEN to new place, let's verify it is there
+                        // VERIFY FLUX QUERY BUILDER
                         let mut flux_query_builder = QueryBuilder::default();
-                        println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
+                        //println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
                         
                         let result_fqb = flux_query_builder
                             .debug(false) // display tuple_format pairs
@@ -371,11 +392,11 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             .range_start("-12h") // FUTURE USE
 
                             .filter("_measurement", "==",&s_record._measurement)
-                            //.filter("host", "==",&s_record.host)
+                            .filter("host", "==",&s_record.host)
                             .filter(&headers[8], "==", &s_record.DsId)
+                            .filter("_time", "==", &s_record._time)
 
-                            //.filter("_time", "==", &s_record._time)
-                            // /*
+                            /*
                             .filter("_time",
                                     ">",
                                     &format!("{}",
@@ -383,7 +404,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                                              .to_rfc3339()
                                     ),
                             )
-                            // */
+                            */
                             
                             //.filter("_value", ">", "18")
                             //.filter("_value", "<=", "18")
@@ -403,7 +424,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                         
                         match result_fqb {
                             Ok(flux_query) => {
-                                println!("\n@RESULT_FQB: {flux_query}");
+                                //println!("\n@RESULT_FluxQueryBuilder for VERIFY: {flux_query}");
 
                                 // VERIFY: REQW READ RequestBuilder
                                 let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
@@ -438,7 +459,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             },
                             Err(why) => {
                         
-                                eprintln!("\n###ERROR FQB:\nREASON >>> {:?}",
+                                eprintln!("\n###ERROR FluxQueryBuilder VERIFY:\nREASON >>> {:?}",
                                           why.as_str(),                        
                                 );                                             
                             },
@@ -446,15 +467,14 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                     },
                     Err(why) => {
                         
-                        eprintln!("\n###ERROR RECORD:\n+ {:?}\n+ {:?}\nREASON >>> {:?}",
-                                      s_record,
+                        eprintln!("\n###ERROR record LineProtocolBuilder:\n+ {:?}\n+ {:?}\nREASON >>> {:?}",
+                                  s_record,
                                   line_protocol_builder,
                                   why.as_str(),                        
                         );                                             
                     },
                 }
             },
-            
             Err(why) => {
                 eprintln!("ERROR: record\nREASON >>>: {:?}", why);
 

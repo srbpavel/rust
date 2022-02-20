@@ -36,7 +36,7 @@ debug_template_formater = false
 # JSON value
 ###debug_pointer_output = false 
 # record Struct
-###debug_metric_record = false
+debug_metric_record = true # false
 
 # view influx Struct parsed config data
 debug_influx_instances = true # false
@@ -98,7 +98,7 @@ sms_email = ""
 #hash map
 [metrics]
 [metrics.temperature]
-flag_status = true # false
+###flag_status = true # false
 # influx:: measurement
 measurement = "dallas"
 
@@ -124,12 +124,12 @@ measurement = "dallas"
 ###       ]
 
 # influx:: TAG names
-tag_machine = "Machine"
-tag_id = "SensorId"
-tag_carrier = "SensorCarrier" 
-tag_valid = "SensorValid"
+###tag_machine = "Machine"
+###tag_id = "SensorId"
+###tag_carrier = "SensorCarrier" 
+###tag_valid = "SensorValid"
 # influx:: _field
-field = "TemperatureDecimal"
+###field = "TemperatureDecimal"
 
 ###annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
 ###annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"

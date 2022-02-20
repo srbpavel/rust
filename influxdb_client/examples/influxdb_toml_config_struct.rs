@@ -59,7 +59,7 @@ pub struct Flag {
     //pub debug_sensor_output: bool,
     //pub debug_metric_instances: bool,
     //pub debug_pointer_output: bool,
-    //pub debug_metric_record: bool,
+    pub debug_metric_record: bool,
 
     pub debug_influx_instances: bool,
     pub debug_influx_lp: bool,
@@ -134,7 +134,7 @@ pub struct Influx {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateSensors {
-    pub flag_status: bool,
+    //pub flag_status: bool,
     pub measurement: MyStr,
 
     //pub program: MyStr,
@@ -146,12 +146,12 @@ pub struct TemplateSensors {
 
     //pub values: Vec<Sensor>,
     
-    pub tag_machine: MyStr,
-    pub tag_id: MyStr,
-    pub tag_carrier: MyStr,
-    pub tag_valid: MyStr,
+    //pub tag_machine: MyStr,
+    //pub tag_id: MyStr,
+    //pub tag_carrier: MyStr,
+    //pub tag_valid: MyStr,
 
-    pub field: MyStr,
+    //pub field: MyStr,
 
     //pub annotated_datatype: MyStr,
     //pub annotated_header: MyStr,
