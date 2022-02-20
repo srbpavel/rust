@@ -8,6 +8,7 @@ use template_formater::tuple_formater;
 const DEFAULT_EMPTY: &str = "";
 const DEFAULT_COUNT: &str = " |> count()";
 
+
 /// flux_query error
 #[derive(Debug)]
 pub enum FQError {
@@ -21,9 +22,9 @@ pub enum FQError {
 impl FQError {
     pub fn as_str(&self) -> &str {
         match *self {
-            FQError::EmptyBucket => "EMPTY: bucket",
+            FQError::EmptyBucket => "EMPTY: bucket, use bucket or bucket_id",
             FQError::EmptyRangeStart => "EMPTY: range_start",
-            FQError::EmptyFilter => "EMPTY: filter",
+            FQError::EmptyFilter => "EMPTY: filter", // WE ALWAYS FILTER
          }
     }
 }
@@ -34,6 +35,7 @@ impl FQError {
 pub struct QueryBuilder {
     pub debug: bool,
     pub bucket: String,
+    pub bucket_id: String,
     pub range_start: String,
     pub range_stop: String,
     pub filter: String,
@@ -53,6 +55,7 @@ impl QueryBuilder {
     /// new
     pub fn new(debug: bool,
                bucket: String,
+               bucket_id: String,
                range_start: String,
                range_stop: String,
                filter: String,
@@ -67,6 +70,7 @@ impl QueryBuilder {
         Self {
             debug,
             bucket,
+            bucket_id,
             range_start,
             range_stop,
             filter,
@@ -88,16 +92,14 @@ impl QueryBuilder {
         Self {
             debug: true,
             bucket: String::from(DEFAULT_EMPTY),
+            bucket_id: String::from(DEFAULT_EMPTY),
             range_start: String::from(DEFAULT_EMPTY),
-            range_stop: String::from(DEFAULT_EMPTY), // FUTURE USE
+            range_stop: String::from(DEFAULT_EMPTY),
             filter: String::from(DEFAULT_EMPTY),
             sort: String::from(DEFAULT_EMPTY),
-
             keep: String::from(DEFAULT_EMPTY),
             drop: String::from(DEFAULT_EMPTY),
-
             limit: String::from(DEFAULT_EMPTY),
-            
             group: false,
             count: false,
             count_column: String::from(DEFAULT_COUNT),
@@ -118,8 +120,11 @@ impl QueryBuilder {
 
     /// enable/disable count results
     ///
-    /// 
+    /// without group() -> return verbose result
+    /// Ok(",result,table,_start,_stop,Machine,SensorCarrier,SensorId,SensorValid,_field,_measurement,host,_value\r\n,_result,0,2022-02-19T20:42:55Z,2022-02-20T08:42:55.238989405Z,spongebob,cargo,1052176647976,true,TemperatureDecimal,temperature,spongebob,20\r\n\r\n") <- here we have count=20 for SensorId=1052176647976
     ///
+    /// with group() -> just result count
+    /// Ok(",result,table,_value\r\n,_result,0,20\r\n\r\n")
     pub fn count(&mut self,
                  value: bool) -> &mut Self {
         
@@ -130,7 +135,7 @@ impl QueryBuilder {
 
     /// enable/disable group results
     ///
-    /// 
+    /// use together with count() -> return just count result as _value
     ///
     pub fn group(&mut self,
                  value: bool) -> &mut Self {
@@ -140,9 +145,13 @@ impl QueryBuilder {
         self
     }
     
-    /// bucket
+    /// bucket name
     ///
-    /// 
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/influxdata/influxdb/from/
+    ///
+    /// at moment using just bucket in from() function
+    ///
+    /// name: Horses or ID: 66f7f3f74b11c188
     ///
     pub fn bucket(&mut self,
                   value: &str) -> &mut Self {
@@ -159,9 +168,42 @@ impl QueryBuilder {
         self
     }
 
+    /// bucket ID
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/influxdata/influxdb/from/
+    ///
+    /// at moment using just bucket in from() function
+    ///
+    /// ID: 66f7f3f74b11c188
+    ///
+    pub fn bucket_id(&mut self,
+                     value: &str) -> &mut Self {
+
+        self.bucket_id = String::from(
+            tuple_formater("from(bucketID:\"{bucket}\")",
+                           &vec![
+                               ("bucket", value.trim()),
+                           ],
+                           self.debug,
+            )
+        );
+        
+        self
+    }
+
     /// range_start
     ///
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
+    ///
+    /// RELATIVE: -60m, -12h, -1d, -1y 
+    ///
+    /// EXACT: 2022-02-19T09:00:00Z
+    /// &format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).to_rfc3339())
+    ///
+    /// TS: 1645302731 / need to be in SECONDS
+    /// &format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).timestamp()))
+    ///
+    /// https://docs.rs/chrono/latest/chrono/struct.Duration.html
     ///
     pub fn range_start(&mut self,
                        value: &str) -> &mut Self {
@@ -174,6 +216,8 @@ impl QueryBuilder {
     /// range_end
     ///
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
+    ///
+    /// -12h, now()
     ///
     pub fn range_stop(&mut self,
                      value: &str) -> &mut Self {
@@ -290,7 +334,7 @@ impl QueryBuilder {
     pub fn build(&mut self) -> Result<String, FQError> {
 
         // VALIDATION just for EMPTY at the moment
-        if self.bucket.eq(DEFAULT_EMPTY) {
+        if self.bucket.eq(DEFAULT_EMPTY) && self.bucket_id.eq(DEFAULT_EMPTY) {
             return Err(FQError::EmptyBucket)
         }
 
@@ -302,6 +346,7 @@ impl QueryBuilder {
             return Err(FQError::EmptyFilter)
         }
 
+        // RANGE
         let range = if self.range_stop.eq("") {
             format!(" |> range(start:{})", &self.range_start)
                     
@@ -313,17 +358,23 @@ impl QueryBuilder {
         };
 
         // JOIN
-        let mut fqb = vec![&self.bucket,
-                           &range,
-                           &self.filter,
-
-                           &self.drop,
-                           &self.keep,
-                           
-                           &self.sort,
-                           &self.limit,
+        let mut fqb = vec![
+            // BUCKET
+            if self.bucket.eq(DEFAULT_EMPTY) {
+                &self.bucket_id
+            } else {
+                &self.bucket
+            },
+            
+            &range,
+            
+            &self.filter,
+            &self.drop,
+            &self.keep,
+            &self.sort,
+            &self.limit,
         ]
-            .into_iter()
+            .iter()
             .map(|v| v.as_str())
             .collect::<Vec<_>>()
             .concat();
@@ -336,7 +387,7 @@ impl QueryBuilder {
             );
         }
 
-        //COUNT
+        // COUNT
         if self.count {
             fqb = format!("{}{}",
                           fqb,
