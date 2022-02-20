@@ -14,11 +14,11 @@ use influxdb_client::{
 };
 
 use reqwest::blocking::{
-    Client,
+    //Client,
     RequestBuilder,
 };
 
-use csv::StringRecord;
+//use csv::StringRecord;
 
 use serde::Deserialize;
 
@@ -27,13 +27,14 @@ use chrono::{DateTime,
 };
 
 
-/// this depend on flux query result
+/// this depends on flux query result
 /// we start with &str and parse bool/u64/datetime later
 /// very nice tutorial rust csv explained https://blog.burntsushi.net/csv/
 ///
 ///",result,table,_start,_stop,_time,_value,DsCarrier,DsId,DsPin,DsValid,Machine,_field,_measurement,host\r\n,_result,0,2022-02-16T08:45:43.372462165Z,2022-02-16T20:45:43.372462165Z,2022-02-16T20:45:09.299Z,20.5625,labjack,1052176647976,14,true,mrazak,DsDecimal,dallas,ruth\r\n
 ///
 ///Record { annotation: "", result: "_result", table: 0, start: "2022-02-16T08:45:43.372462165Z", stop: "2022-02-16T20:45:43.372462165Z", time: "2022-02-16T20:45:09.299Z", value: "20.5625", machine: "mrazak", ds_carrier: "labjack", ds_id: "1052176647976", ds_pin: "14", ds_valid: true, field: "DsDecimal", measurement: "dallas", host: "ruth" }
+///
 ///
 #[allow(dead_code)]
 #[allow(non_snake_case)]
@@ -50,53 +51,42 @@ pub struct Record<'h> {
     result: &'h str,
     table: u64,
 
+    // members can be renamed as commented
+    //
     // we do not let Serde to parse DateTime as we do ourself
     // Option<DateTime<Utc>>
-    #[serde(rename = "_start")]
+    //
+    //#[serde(rename = "_start")]
     //start: &'h str,
     _start: &'h str,
-    #[serde(rename = "_stop")]
+    //#[serde(rename = "_stop")]
     //stop: &'h str,
     _stop: &'h str,
-    #[serde(rename = "_time")]
+    //#[serde(rename = "_time")]
     //time: &'h str,
     _time: &'h str,
-
-    #[serde(rename = "_value")]
+    //#[serde(rename = "_value")]
     //value: &'h str,
     _value: &'h str,
-    #[serde(rename = "Machine")]
+    //#[serde(rename = "Machine")]
     //machine: &'h str,
     Machine: &'h str,
-
-    /* 
-    #[serde(rename = "MemoryCarrier")]
-    memory_carrier: &'h str,
-    #[serde(rename = "MemoryId")]
-    memory_id: &'h str,
-    #[serde(rename = "MemoryValid")]
-    memory_valid: bool,
-    */
-
-    // /*
-    #[serde(rename = "DsCarrier")]
+    //#[serde(rename = "DsCarrier")]
     //ds_carrier: &'h str,
     DsCarrier: &'h str,
-    #[serde(rename = "DsId")]
+    //#[serde(rename = "DsId")]
     //ds_id: &'h str,
     DsId: &'h str,
-    #[serde(rename = "DsPin")]
+    //#[serde(rename = "DsPin")]
     //ds_pin: &'h str,
     DsPin: &'h str,
-    #[serde(rename = "DsValid")]
+    //#[serde(rename = "DsValid")]
     //ds_valid: bool,
     DsValid: bool,
-    // */
-
-    #[serde(rename = "_field")]
+    //#[serde(rename = "_field")]
     //field: &'h str,
     _field: &'h str,
-    #[serde(rename = "_measurement")]
+    //#[serde(rename = "_measurement")]
     //measurement: &'h str,
     _measurement: &'h str,
     host: &'h str,
@@ -114,8 +104,7 @@ pub fn parse_datetime(datetime: &str) -> Result<DateTime<Utc>, chrono::format::P
 }
 
 
-/// START
-//pub fn start(config: TomlConfig) -> Result<(), reqwest::Error> {
+/// TOO LONG and not diveded to FN, easier to follow
 pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // influx instance to read data from
     let read_config = &config.all_influx.values[1];
@@ -180,10 +169,8 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         //.bucket_id("66f7f3f74b11c188")
         .range_start("-12h")
         //.range_start("2022-02-19T09:00:00Z")
-        //.range_start(&format!("{}", minus_12h.to_rfc3339()))
         //.range_start(&format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).to_rfc3339()))
         //.range_start("1645302362")
-        //.range_start(&format!("{}", minus_12h_ts))
         //.range_start(&format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).timestamp()))
         //.range_stop("-12h")
         //.range_stop("now()")
@@ -194,7 +181,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         //.drop(vec!["_start", "_stop"])
         //.keep(vec!["_time"])
         //.keep(vec!["_time", &metric.tag_id])
-        .sort("_time", "true")
+        .sort(vec!["_time"], "true")
         .limit("1")
         //.group(true)
         //.count(true)
@@ -218,15 +205,12 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     let mut influx_call = InfluxCall::new(
         uri_write,
         &uri_query,
-        
         vec![&config.template.curl.influx_auth[0],
              &token,
         ],
-
         vec![&config.template.curl.influx_accept[0],
              &config.template.curl.influx_accept[1],
         ],
-
         vec![&config.template.curl.influx_content[0],
              &config.template.curl.influx_content[1],
         ],
@@ -297,24 +281,16 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // HEADER clone as needed later for single_record -> CSV StringRecord
     let headers = &reader.headers()?.clone();
 
-    // verify HEADERS ans access it later
-    println!("\n#HEADER:\n+ {headers:?}\n+ <{}>",
-             &headers[7],
-    );
+    println!("\n#HEADER:\n+ {headers:?}");
 
-    let mut record_counter = 0;
-    
     // WALK through all CSV records
+    let mut record_counter = 0;
     for single_record in reader.records() { // .records() -> iterator
-
         record_counter += 1;
         
         match single_record {
-            
             Ok(rec) => { // StringRecord
-
                 let s_record: Record = rec.deserialize(Some(headers))?;
-                
                 println!("\nRECORD[{record_counter}]:\n+ {s_record:?}");                    
 
                 let mut line_protocol_builder = LineProtocolBuilder::default();
@@ -326,21 +302,17 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                 // LP BUILDER
                 let result_lpb = line_protocol_builder
                     .template(&metric.generic_lp)
-                    //.measurement(&metric.measurement)
                     .measurement(&s_record._measurement)
-                    //.host(&config.host)
                     .host(&s_record.host)
                     // TAG: NAME, VALUE
-                    //.tag(&metric.tag_machine, &influx_config.machine_id)
-                    .tag(&headers[11], &s_record.Machine) //?
-                    //.tag(&metric.tag_carrier, &influx_config.carrier)
+                    .tag(&headers[11], &s_record.Machine)
                     .tag(&headers[7], &s_record.DsCarrier)
                     .tag(&headers[8], &s_record.DsId)
                     .tag(&headers[9], &s_record.DsPin)
                     // RECORD is valid -> true
                     .tag(&headers[10], &format!("{}", true))
                     // FIELD: NAME, VALUE
-                    .field(&s_record._field,//&metric.field,
+                    .field(&s_record._field,
                            &s_record._value,
                     )
                     .ts(&format!("{}",
@@ -367,8 +339,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                                  updated_data.lp,
                         );
 
-                        // WRITE
-                        // REQW WRITE RequestBuilder
+                        // WRITE: REQW RequestBuilder
                         let request_write: Result<RequestBuilder, Box< dyn std::error::Error>>
                             = influxdb_client::connect::write_lp(
                                 &client,
@@ -390,68 +361,72 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             println!("\n#RESPONSE WRITE:\n+ {response:#?}");
                         }
                         
-                        
-                        /* // WRITE
-                        let write_result = write(client,
-                                                 config,
-                                                 &updated_data);
-                        
-                        if write_result.is_err() {
-                        println!("WRITE_RESULT: {write_result:?}");
-                        }
-                        */
-                        
-                        /*
-                        // FLUX BUILDER
+                        // VERIFY FLUX BUILDER
                         let mut flux_query_builder = QueryBuilder::default();
-                        //println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
+                        println!("\n@FLUX_B DEFAULT: {flux_query_builder:?}");
                         
                         let result_fqb = flux_query_builder
-                        .debug(false) // display tuple_format pairs
-                        
-                        .bucket("reqwest_backup_ds_test")
-                        
-                        .range_start("-24h")
-                        //.range_stop("-12h") // FUTURE USE
-                        
-                        .filter("_measurement", "temperature")
-                        .filter("host", "spongebob")
-                        .filter(&metric.tag_id, &s_record.ds_id)
-                        
-                        .drop(vec!["_start", "_stop"])
-                                
-                        //.keep(vec!["_time"])
-                        //.keep(vec!["_time", &metric.tag_id])
-                        
-                        .sort("_time", "true")
-                        .limit("1")
-                        //.group(true) // + count -> return number
-                        //.count(true) // - group -> result + _value: count
-                        //.count_column("_value") // specify column
-                        .build()
-                        ;
+                            .debug(false) // display tuple_format pairs
+                            .bucket(&write_config.bucket,)
+                            .range_start("-12h") // FUTURE USE
+                            .filter("_measurement", &s_record._measurement)
+                            .filter("host", &s_record.host)
+                            .filter(&headers[8], &s_record.DsId)
+                            .filter("_time", &s_record._time)
+                            .drop(vec!["_start", "_stop"])
+                            //.keep(vec!["_time"])
+                            //.keep(vec!["_time", &headers[8]])
+                            //.sort(vec!["_time", &s_record.DsId], "true")
+                            .sort(vec!["_time"], "true")
+                            //.limit("5")
+                            //.group(true) // + count -> return number
+                            //.count(true) // - group -> result + _value: count
+                            //.count_column("_value") // specify column
+                            .build();
+
                         
                         match result_fqb {
-                        Ok(data) => {
-                        //println!("\n@RESULT_FQB: {data}");
+                            Ok(flux_query) => {
+                                println!("\n@RESULT_FQB: {flux_query}");
+
+                                // VERIFY: REQW READ RequestBuilder
+                                let request_read: Result<RequestBuilder, Box< dyn std::error::Error>>
+                                    = influxdb_client::connect::read_flux_query(
+                                        &client,
+                                        &updated_data.call,
+                                        String::from(flux_query),
+                                        config.flag.debug_flux_query,
+                                    );
+                                
+                                if config.flag.debug_reqwest {
+                                    println!("\nREQUEST VERIFY: {request_read:?}");
+                                }
+                                
+                                // WE HAVE flux query DATA
+                                let response = request_read
+                                    .unwrap()
+                                    .send()? // reqwest::Error
+                                    .text()?; // -> String
+                                
+                                if config.flag.debug_reqwest {
+                                    let response_len = response
+                                        .split("\r\n,") // ',' not to catch last line \r\n\r\n
+                                        .collect::<Vec<_>>()
+                                        .len() - 1; // -HEADER
+                                    
+                                    println!("\nRESPONSE VERIFY[{len}] : {response:#?}",
+                                             len = response_len,
+                                    );
+                                }
+                                
+                            },
+                            Err(why) => {
                         
-                        let verify_result = verify(client,
-                                                               config,
-                        &updated_data,
-                        &data);
-                        
-                        println!("VERIFY_WRITE_RESULT:\n+ {verify_result:?}");
-                        
-                    },
-                        
-                        Err(why) => {
-                        
-                        eprintln!("\n###ERROR FQB:\nREASON >>> {:?}",
-                        why.as_str(),                        
-                    );                                             
-                    },
-                    }
-                         */
+                                eprintln!("\n###ERROR FQB:\nREASON >>> {:?}",
+                                          why.as_str(),                        
+                                );                                             
+                            },
+                        }
                     },
                     Err(why) => {
                         
@@ -470,7 +445,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             },
         };
         
-        /*
+        /* DEBUG just to see first record
         println!("\n break");
         break
         */

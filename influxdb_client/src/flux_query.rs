@@ -4,7 +4,7 @@
 
 use template_formater::tuple_formater;
 
-//const FLUX_DELIMITER: &str = "|>";
+
 const DEFAULT_EMPTY: &str = "";
 pub const DEFAULT_COUNT: &str = " |> count()";
 
@@ -235,13 +235,24 @@ impl QueryBuilder {
                   key: &str,
                   value: &str) -> &mut Self {
 
-        self.filter += &tuple_formater(
-            " |> filter(fn:(r) => r.{key} == \"{value}\")",
-            &vec![
-                ("key", key.trim()),
-                ("value", value.trim()),
-            ],
-            self.debug,
+        self.filter += &format!(
+            " |> filter(fn:(r) => r.{}",
+
+            &tuple_formater(
+                // flux query wants time without double quotes
+                if !key.trim().eq("_time") {
+                    //" |> filter(fn:(r) => r.{key}==\"{value}\")"
+                    "{key}==\"{value}\")"
+                } else {
+                    //" |> filter(fn:(r) => r.{key}=={value})"
+                    "{key}=={value})"
+                },
+                &vec![
+                    ("key", key.trim()),
+                    ("value", value.trim()),
+                ],
+                self.debug,
+            )
         );
 
         self
@@ -252,16 +263,13 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/sort/
     ///
     pub fn sort(&mut self,
-                key: &str,
-                value: &str) -> &mut Self {
-        
-        self.sort = tuple_formater(
-            " |> sort(columns: [\"{key}\"], desc:{value})",
-            &vec![
-                ("key", key.trim()),
-                ("value", value.trim()),
-            ],
-            self.debug,
+                columns: Vec<&str>,
+                flag: &str) -> &mut Self {
+
+        self.sort = format!(
+            " |> sort(columns: {:?}, desc:{})",
+            columns,
+            flag.trim(),
         );
         
         self
@@ -320,8 +328,10 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/count/
     ///
     pub fn count_column(&mut self,
-                 value: &str) -> &mut Self {
+                        value: &str) -> &mut Self {
 
+        self.count = true;
+        
         self.count_column = format!(" |> count(column: \"{}\")",
                                     value.trim(),
         );
