@@ -49,10 +49,18 @@ impl <'d>InfluxData<'d> {
         }
     }
 
-    /// curl
-    pub fn curl_call() -> String {
+    /// display curl version of request
+    ///
+    /// $curl --cacert /home/conan/.ssh/ruth/influxdb-selfsigned.crt --request POST "https://ruth:8086/api/v2/write?org=foookin_paavel&bucket=bbb&precision=ms" --header "Authorization: Token ....." --data-raw "battery_adc,host=spongebob,BatSenKey=14,BatUlId=50x29196a980,BatCarrier=ttn,BatValid=true BatDecimal=7.64,BatKey=20909 1621759946147"
+    ///
+    pub fn curl(&self) -> String {
         println!("@CURL:\n +");
 
-        String::from("curl")
+        //String::from("curl")
+        format!("{program}{uri_write}{auth:?}",
+                program="ccc",
+                uri_write=&self.call.uri_write,
+                auth=&self.call.auth,
+        )
     }
 }

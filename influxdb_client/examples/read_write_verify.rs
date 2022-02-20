@@ -215,6 +215,33 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         println!("\n@{influx_call:#?}");
     }
 
+    let curl_read = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {header} \"{accept}\" {header} \"{content}\" {data} '{raw}\'",
+                            // curl
+                            program=&config.template.curl.program,
+                            // param
+                            insecure=&config.template.curl.param_insecure,
+                            request=&config.template.curl.param_request,
+                            post=&config.template.curl.param_post,
+                            data=&config.template.curl.param_data,
+
+                            // header
+                            header=&config.template.curl.param_header,
+                            
+                            url=influx_call.uri_query,
+                            auth=influx_call.auth.join(": "),
+                            accept=influx_call.accept.join(": "),
+                            content=influx_call.content.join(": "),
+
+                            // flux qeuery
+                            raw=flux_query,
+    );
+    
+    if config.flag.debug_influx_curl {
+        println!("\n@CURL_READ\n{}",
+                 curl_read,
+        );
+    }
+    
     // REQW Client
     let client: reqwest::blocking::Client = influxdb_client::client::client()?;
     
@@ -351,6 +378,28 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             call: influx_call.clone(),
                             lp: data,
                         };
+
+                        let curl_write = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {data} \"{raw}\"",
+                                                    program=&config.template.curl.program,
+                                                    insecure=&config.template.curl.param_insecure,
+                                                    request=&config.template.curl.param_request,
+                                                    post=&config.template.curl.param_post,
+
+                                                    url=updated_data.call.uri_write,
+
+                                                    header=&config.template.curl.param_header,
+
+                                                    auth=updated_data.call.auth.join(": "),
+
+                                                    data=&config.template.curl.param_data,
+                                                    raw=updated_data.lp,
+                        );
+                        
+                        if config.flag.debug_influx_curl {
+                            println!("\n@CURL_WRITE\n{}",
+                                     curl_write,
+                            );
+                        }
                         
                         /*
                         println!("\n@INFLUX_DATA_UPDATE:\n+ uri_write: {:?}\n+ lp: {}",
@@ -477,10 +526,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             },
         };
         
-        /* DEBUG just to see first record
+        // /* DEBUG just to see first record
         println!("\n break");
         break
-        */
+        // */
     }
     
     Ok(())

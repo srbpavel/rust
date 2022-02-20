@@ -47,6 +47,9 @@ debug_influx_lp = true # false
 # CURL stdout/stderr
 ###debug_influx_output = false
 
+# display curl call
+debug_influx_curl = true # false
+
 # query influx to verify write was successfull
 ###run_flux_verify_record = true # false
 

@@ -63,6 +63,7 @@ pub struct Flag {
 
     pub debug_influx_instances: bool,
     pub debug_influx_lp: bool,
+    pub debug_influx_curl: bool,
     //pub debug_influx_uri: bool,
     //pub debug_influx_auth: bool,
     //pub debug_influx_output: bool,
