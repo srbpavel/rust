@@ -241,9 +241,12 @@ pub fn parse_csv(client: &Client,
 
                             let result_fqb = flux_query_builder
                                 .debug(false) // display tuple_format pairs
+
                                 .bucket("reqwest_backup_ds_test")
+
                                 .range_start("-24h")
                                 //.range_stop("-12h") // FUTURE USE
+
                                 .filter("_measurement", "temperature")
                                 .filter("host", "spongebob")
                                 .filter(&metric.tag_id, &s_record.ds_id)
@@ -286,21 +289,30 @@ pub fn parse_csv(client: &Client,
                                                          .has_headers(true)
                                                          .delimiter(b',')
                                                          .from_reader(r.as_bytes());
+
+                                                     let headers = reader.headers().unwrap().clone(); //&
                                                      
                                                      let rec = reader
+                                                         // StringRecordsIter
                                                          .records()
-                                                         .next()
-                                                         .unwrap()
-                                                         .unwrap()
-                                                         .deserialize(None)
-                                                         .unwrap()
+                                                         .last() // Option
+                                                         .unwrap() // Result
+                                                         .unwrap() // StringRecord
                                                          ;
 
-                                                     rec
+                                                     let s_record = record_via_struct(&rec,//&
+                                                                                      &headers,//&
+                                                     );
+
+                                                     s_record // Result
+                                                         .unwrap() // Record Struct
+                                                         .time
+                                                     
                                                      */
                                                  },
                                                  
                                                  Err(_) => String::from(""),
+                                                 //Err(_) => "",
                                              }
                                              ,
                                     );

@@ -1,3 +1,7 @@
+///
+/// https://docs.influxdata.com/flux/v0.x/spec/data-model/#match-parameter-names
+///
+
 use template_formater::tuple_formater;
 
 //const FLUX_DELIMITER: &str = "|>";
@@ -77,6 +81,9 @@ impl QueryBuilder {
     }
 
     /// default
+    ///
+    /// 
+    ///
     pub fn default() -> Self {
         Self {
             debug: true,
@@ -98,6 +105,9 @@ impl QueryBuilder {
     }
 
     /// debug tuple_formater pairs + build
+    ///
+    /// 
+    ///
     pub fn debug(&mut self,
                  value: bool) -> &mut Self {
         
@@ -107,6 +117,9 @@ impl QueryBuilder {
     }
 
     /// enable/disable count results
+    ///
+    /// 
+    ///
     pub fn count(&mut self,
                  value: bool) -> &mut Self {
         
@@ -116,6 +129,9 @@ impl QueryBuilder {
     }
 
     /// enable/disable group results
+    ///
+    /// 
+    ///
     pub fn group(&mut self,
                  value: bool) -> &mut Self {
         
@@ -125,6 +141,9 @@ impl QueryBuilder {
     }
     
     /// bucket
+    ///
+    /// 
+    ///
     pub fn bucket(&mut self,
                   value: &str) -> &mut Self {
 
@@ -141,6 +160,9 @@ impl QueryBuilder {
     }
 
     /// range_start
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
+    ///
     pub fn range_start(&mut self,
                        value: &str) -> &mut Self {
 
@@ -150,6 +172,9 @@ impl QueryBuilder {
     }
 
     /// range_end
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
+    ///
     pub fn range_stop(&mut self,
                      value: &str) -> &mut Self {
 
@@ -158,7 +183,10 @@ impl QueryBuilder {
         self
     }
 
-    /// measurement
+    /// filter
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/filter/
+    ///
     pub fn filter(&mut self,
                   key: &str,
                   value: &str) -> &mut Self {
@@ -176,6 +204,9 @@ impl QueryBuilder {
     }
 
     /// sort
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/sort/
+    ///
     pub fn sort(&mut self,
                 key: &str,
                 value: &str) -> &mut Self {
@@ -193,6 +224,9 @@ impl QueryBuilder {
     }
 
     /// drop
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/drop/
+    ///
     pub fn drop(&mut self,
                 cols: Vec<&str>) -> &mut Self {
 
@@ -205,6 +239,9 @@ impl QueryBuilder {
     }
     
     /// keep
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/keep/
+    ///
     pub fn keep(&mut self,
                 cols: Vec<&str>) -> &mut Self {
 
@@ -217,6 +254,9 @@ impl QueryBuilder {
     }
     
     /// limit
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/limit/
+    ///
     pub fn limit(&mut self,
                  value: &str) -> &mut Self {
         
@@ -232,6 +272,9 @@ impl QueryBuilder {
     }
 
     /// count
+    ///
+    /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/count/
+    ///
     pub fn count_column(&mut self,
                  value: &str) -> &mut Self {
 
@@ -246,9 +289,19 @@ impl QueryBuilder {
     /// ok if valid otherwise raise error
     pub fn build(&mut self) -> Result<String, FQError> {
 
-        // + VALIDATION
-        // ..
-        
+        // VALIDATION just for EMPTY at the moment
+        if self.bucket.eq(DEFAULT_EMPTY) {
+            return Err(FQError::EmptyBucket)
+        }
+
+        if self.range_start.eq(DEFAULT_EMPTY) {
+            return Err(FQError::EmptyRangeStart)
+        }
+
+        if self.filter.eq(DEFAULT_EMPTY) {
+            return Err(FQError::EmptyFilter)
+        }
+
         let range = if self.range_stop.eq("") {
             format!(" |> range(start:{})", &self.range_start)
                     
