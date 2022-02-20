@@ -378,7 +378,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             //.keep(vec!["_time", &headers[8]])
                             //.sort(vec!["_time", &s_record.DsId], "true")
                             .sort(vec!["_time"], "true")
-                            //.limit("5")
+                            //.limit("1")
                             //.group(true) // + count -> return number
                             //.count(true) // - group -> result + _value: count
                             //.count_column("_value") // specify column

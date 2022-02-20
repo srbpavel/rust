@@ -106,7 +106,7 @@ impl QueryBuilder {
         }
     }
 
-    /// debug tuple_formater pairs + build
+    /// debug tuple_formater pairs + final build
     ///
     /// 
     ///
@@ -118,13 +118,16 @@ impl QueryBuilder {
         self
     }
 
-    /// enable/disable count results
+    /// count results
     ///
     /// without group() -> return verbose result
+    ///
     /// Ok(",result,table,_start,_stop,Machine,SensorCarrier,SensorId,SensorValid,_field,_measurement,host,_value\r\n,_result,0,2022-02-19T20:42:55Z,2022-02-20T08:42:55.238989405Z,spongebob,cargo,1052176647976,true,TemperatureDecimal,temperature,spongebob,20\r\n\r\n") <- here we have count=20 for SensorId=1052176647976
     ///
     /// with group() -> just result count
+    ///
     /// Ok(",result,table,_value\r\n,_result,0,20\r\n\r\n")
+    ///
     pub fn count(&mut self,
                  value: bool) -> &mut Self {
         
@@ -150,8 +153,6 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/influxdata/influxdb/from/
     ///
     /// at moment using just bucket in from() function
-    ///
-    /// name: Horses or ID: 66f7f3f74b11c188
     ///
     pub fn bucket(&mut self,
                   value: &str) -> &mut Self {
@@ -195,13 +196,15 @@ impl QueryBuilder {
     ///
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
     ///
-    /// RELATIVE: -60m, -12h, -1d, -1y 
+    /// relative: -60m, -12h, -1d, -1y 
     ///
-    /// EXACT: 2022-02-19T09:00:00Z
+    /// exact: 2022-02-19T09:00:00Z
     /// &format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).to_rfc3339())
     ///
-    /// TS: 1645302731 / need to be in SECONDS
+    /// timestamp: 1645302731 !!! need to be in seconds!!!
     /// &format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).timestamp()))
+    ///
+    /// this has nothing to do with your data even if stored in precision ms,ns
     ///
     /// https://docs.rs/chrono/latest/chrono/struct.Duration.html
     ///
@@ -218,6 +221,8 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/range/
     ///
     /// -12h, now()
+    ///
+    /// same as for range_start()
     ///
     pub fn range_stop(&mut self,
                      value: &str) -> &mut Self {
@@ -237,14 +242,10 @@ impl QueryBuilder {
 
         self.filter += &format!(
             " |> filter(fn:(r) => r.{}",
-
             &tuple_formater(
-                // flux query wants time without double quotes
                 if !key.trim().eq("_time") {
-                    //" |> filter(fn:(r) => r.{key}==\"{value}\")"
                     "{key}==\"{value}\")"
                 } else {
-                    //" |> filter(fn:(r) => r.{key}=={value})"
                     "{key}=={value})"
                 },
                 &vec![
@@ -280,12 +281,9 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/drop/
     ///
     pub fn drop(&mut self,
-                cols: Vec<&str>) -> &mut Self {
+                columns: Vec<&str>) -> &mut Self {
 
-        self.drop = format!(
-            " |> drop(columns: {:?})",
-            cols,
-        );
+        self.drop = format!(" |> drop(columns: {columns:?})");
         
         self
     }
@@ -295,12 +293,9 @@ impl QueryBuilder {
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/keep/
     ///
     pub fn keep(&mut self,
-                cols: Vec<&str>) -> &mut Self {
+                columns: Vec<&str>) -> &mut Self {
 
-        self.keep = format!(
-            " |> keep(columns: {:?})",
-            cols,
-        );
+        self.keep = format!(" |> keep(columns: {columns:?})");
         
         self
     }
@@ -311,7 +306,12 @@ impl QueryBuilder {
     ///
     pub fn limit(&mut self,
                  value: &str) -> &mut Self {
+
+        self.limit = format!(" |> limit(n:{})",
+                             value.trim(),
+        );
         
+        /*
         self.limit = tuple_formater(
             " |> limit(n:{value})",
             &vec![
@@ -319,6 +319,7 @@ impl QueryBuilder {
             ],
             self.debug,
         );
+        */
         
         self
     }
@@ -375,7 +376,7 @@ impl QueryBuilder {
             } else {
                 &self.bucket
             },
-            
+
             &range,
             
             &self.filter,
@@ -389,7 +390,7 @@ impl QueryBuilder {
             .collect::<Vec<_>>()
             .concat();
 
-        // GROUP
+        // add GROUP
         if self.group {
             fqb = format!("{}{}",
                           fqb,
@@ -397,7 +398,7 @@ impl QueryBuilder {
             );
         }
 
-        // COUNT
+        // add COUNT
         if self.count {
             fqb = format!("{}{}",
                           fqb,
