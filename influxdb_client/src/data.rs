@@ -1,3 +1,7 @@
+///
+/// all data needed to call influx
+///
+
 use crate::config::InfluxConfig;
 use crate::call::InfluxCall;
 
@@ -43,5 +47,12 @@ impl <'d>InfluxData<'d> {
             
             lp: String::from(DEFAULT)
         }
+    }
+
+    /// curl
+    pub fn curl_call() -> String {
+        println!("@CURL:\n +");
+
+        String::from("curl")
     }
 }

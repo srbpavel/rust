@@ -6,7 +6,7 @@ use template_formater::tuple_formater;
 
 //const FLUX_DELIMITER: &str = "|>";
 const DEFAULT_EMPTY: &str = "";
-const DEFAULT_COUNT: &str = " |> count()";
+pub const DEFAULT_COUNT: &str = " |> count()";
 
 
 /// flux_query error

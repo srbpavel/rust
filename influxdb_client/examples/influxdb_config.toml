@@ -1,0 +1,267 @@
+###user = "lib_test_sonya"
+
+# used in backup_filename
+###name = 'easy_laptop'
+# influx:: host TAG / email machine_id / ...
+###host = 'spongebob'
+# backup parent dir
+###work_dir = '/home/conan/soft/rust/influxdb_client'
+
+
+[flag]
+# display this config file
+debug_config = false
+
+# display date_time Struct
+###debug_ts = false
+
+#display reqwest status/error info
+debug_reqwest = true # false
+
+# display tuple formater pair
+###debug_tuple_formater = false
+
+# display email Message Struct -> headers + envelope
+###debug_email = true # false
+# display email Message Struct -> body
+###debug_email_body = true # false
+
+# display template string formating pairs
+debug_template_formater = false
+
+# view metric Struct parsed config data
+###debug_metric_instances = false
+# RAW_JSON
+###debug_sensor_output = false
+# JSON value
+###debug_pointer_output = false 
+# record Struct
+###debug_metric_record = false
+
+# view influx Struct parsed config data
+debug_influx_instances = true # false
+# LINE_PROTOCOL import format
+debug_influx_lp = true # false
+###debug_influx_uri = true # false
+###debug_influx_auth = false
+# CURL stdout/stderr
+###debug_influx_output = false
+
+# query influx to verify write was successfull
+###run_flux_verify_record = true # false
+
+# display flux query
+debug_flux_query = true # false
+
+# display flux stdout
+###debug_flux_result = false
+# parse flux stdout
+###parse_flux_result = true # false
+# display warning if result line with invalid data
+###debug_flux_result_invalid_line = true # false
+
+# display pair Vec<key> Vec<value>
+###debug_flux_pairs = false
+# display whole Vec<HashMap>
+###debug_flux_records = false
+# display sample part of record
+###yield_flux_records = true # false
+
+
+# display CSV ANNOTATED data to backup
+###debug_backup = true # false
+
+
+# skip import when offline
+###influx_skip_import = false
+
+
+# search for QUERY in this CONFIG_FILE
+###run_egrep = false
+###debug_egrep = true # false
+
+
+# warning email msg
+[email]
+status = false
+
+smtp_server = ""
+port = 587
+
+source_email = ""
+v_pass = ""
+
+target_email = ""
+sms_email = ""
+
+
+#hash map
+[metrics]
+[metrics.temperature]
+flag_status = true # false
+# influx:: measurement
+measurement = "dallas"
+
+# source of metric data
+###program = "/usr/bin/sensors"
+###args = ["-j"]
+
+# metric data passed via | for aditional transformation
+###flag_pipe = false
+###pipe_program = ""
+###pipe_args = []
+
+#status: on/off
+#name: influx:: SensorId TAG -> if changed will impact flux query
+#pointer: json path
+#
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+###values = [
+###       {status=true, name="0", pointer="/coretemp-isa-0000/Core 0/temp2_input"},
+###       {status=true, name="1", pointer="/coretemp-isa-0000/Core 1/temp3_input"},
+###       {status=true, name="2", pointer="/acpitz-acpi-0/temp2/temp2_input"},
+###       {status=true, name="3", pointer="/acpitz-acpi-0/temp1/temp1_input"},
+###       ]
+
+# influx:: TAG names
+tag_machine = "Machine"
+tag_id = "SensorId"
+tag_carrier = "SensorCarrier" 
+tag_valid = "SensorValid"
+# influx:: _field
+field = "TemperatureDecimal"
+
+###annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
+###annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
+###csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
+
+#generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
+###generic_lp = "{measurement},host={host},{tags} {fields} {ts}"
+
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+###generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> limit(n:1) |> group()"
+
+
+###[metrics.memory]
+###flag_status = true # false
+# influx:: measurement
+###measurement = "memory_float"
+
+# source of metric data
+###program = "/bin/cat"
+###args = ["/proc/meminfo"]
+
+# metric data passed via | for aditional transformation
+###flag_pipe = true # false
+###pipe_program = "jq"
+###pipe_args = [
+###	  "--slurp",
+###	  "--raw-input",
+###	  "split(\"\n\") | map(select(. != \"\") | split(\":\") | {\"key\": .[0], \"value\": (.[1:]| map_values(.###[0:-3]) | join(\"\") | split(\" \") | .[1:] | join(\"\"))}) | from_entries"]
+
+#status: on/off
+#name: influx:: MemoryId TAG -> if changed will impact flux query
+#pointer: json path
+#
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+###values = [
+###       {status=true, name="memory_free", pointer="/MemFree"},
+###       {status=true, name="memory_available", pointer="/MemAvailable"}, #e #break path to cause Error when testing
+###       ]
+
+# influx:: TAG names
+###tag_machine = "Machine"
+###tag_id = "MemoryId"
+###tag_carrier = "MemoryCarrier" 
+###tag_valid = "MemoryValid"
+# influx:: _field
+###field = "MemoryDecimal"
+
+###annotated_datatype = "#datatype measurement,tag,tag,tag,tag,tag,double,dateTime:number"
+###annotated_header = "m,host,{tag_machine},{tag_id},{tag_carrier},{tag_valid},{field},time"
+###csv_annotated = '{measurement},{host},{machine},{id},{carrier},{valid},{value},{ts}'
+generic_lp = "{measurement},host={host},{tag_machine}={machine_id},{tag_id}={id},{tag_carrier}={carrier},{tag_valid}={valid} {field}={value} {ts}"
+
+#generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> drop(columns:[\"_start\", \"_stop\", \"host\", \"_measurement\",\"{tag_carrier}\", \"{tag_valid}\", \"_field\"]) |> limit(n:1) |> group()"
+###generic_query_verify_record = "from(bucket: \"{bucket}\") |> range(start: {start}) |> filter(fn: (r) => r[\"_measurement\"] == \"{measurement}\") |> filter(fn: (r) => r[\"{tag_id}\"] == \"{id}\") |> filter(fn: (r) => r[\"_time\"] == {dtif}) |> sort(columns: [\"_time\"], desc:true) |> limit(n:1) |> group()"
+
+
+[delay]
+# future_use
+###second = 60
+# future_use
+###minute = 1
+
+flux_query_sleep_duration_ms = 1000
+flux_repeat_query_count = 3
+
+
+# backup always, no flag to turn off
+###[backup]
+###dir = "csv"
+###file_extension = "csv"
+
+
+# vector of influx: Struct instances
+[all_influx]
+#name: "default"		-> instance_id
+#status: true			-> true/false <- prepare and import data
+
+#secure: 			-> http/https <- only allowed values
+#server: "ruth"			-> ip or hostname
+#port: 8086			-> port
+
+#bucket: "test_rust"		-> DO NOT FORGET TO CREATE
+#token	 			-> TOKEN
+#org: "foookin_paavel"		-> ORG
+#precision: "ms"		-> 1636918801582 / MS format len() 13
+
+#TAGS
+#machine_id: "spongebob"	-> now same as host but normaly another machine like T4_labjack / esp32 / ...
+#carrier: "cargo" 	     	-> future_use
+#flag_valid_default:  true	-> true/false <- for flux filtering invalid data before delete
+
+# DO NOT BREAK LINES IN Struct AS IT WILL !panic
+values = [
+       #RUTH
+       {name = "default", status = false, secure = "https", server = "ruth", port = 8086, bucket = "test_rust", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+
+       #JOZEFINA
+       {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_ds_test", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+
+       #PUBLIC
+       {name = "public", status = false, secure = "https", server = "komar", port = 8086, bucket = "public_test_rust", token = "TOKEN", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+
+       #ERROR_TESTER
+       {name = "ERROR_TESTER", status = false, secure = "HTTPS", server = "hrobarik", port = 8086, bucket = "BUCKET", token = "TOKEN", org = "ORG", precision = "ms", machine_id = "MACHINE_ID", carrier = "CARRIER", flag_valid_default = true},
+
+       #{name = "", status = false, secure = "", server = "", port = 8086, bucket = "", token = "", org = "", precision = "ms", machine_id = "", carrier = "", flag_valid_default = true},
+       ]
+
+
+[template]
+[template.curl]
+# curl call to influx_api
+program = "/usr/bin/curl"
+param_insecure = "--insecure"
+param_request = "--request"
+param_post = "POST"
+param_header = "--header"
+param_data = "--data-raw"
+
+# influx params
+influx_uri_api = "{secure}://{server}:{port}/api/v2/"
+influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
+influx_uri_query = "query?org={org}"
+
+# for REQWEST as Vec
+influx_auth = ["Authorization", "Token {token}"]
+influx_accept = ["Accept", "application/csv"]
+influx_content = ["Content-type", "application/vnd.flux"]
+
+
+# influx query verification to see if data were written and available -> warning msg not implemented yet
+[template.flux]
+# verification duration range
+query_verify_record_range_start = "-12h"
+query_verify_record_suffix = " |> count()"
