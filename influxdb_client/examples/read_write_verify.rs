@@ -174,10 +174,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         //.range_start(&format!("{}", (chrono::Utc::now() - chrono::Duration::hours(12)).timestamp()))
         //.range_stop("-12h")
         //.range_stop("now()")
-        .filter("_measurement", &metric.measurement)
-        //.filter("host", "spongebob")
-        //.filter(&metric.tag_id, &s_record.ds_id)
-        //.filter(&metric.tag_id, &s_record.DsId)
+        .filter("_measurement", "==", &metric.measurement)
+        //.filter("host", "==", "spongebob")
+        //.filter(&metric.tag_id, "==", &s_record.ds_id)
+        //.filter(&metric.tag_id, "==", &s_record.DsId)
         //.drop(vec!["_start", "_stop"])
         //.keep(vec!["_time"])
         //.keep(vec!["_time", &metric.tag_id])
@@ -369,10 +369,26 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             .debug(false) // display tuple_format pairs
                             .bucket(&write_config.bucket,)
                             .range_start("-12h") // FUTURE USE
-                            .filter("_measurement", &s_record._measurement)
-                            .filter("host", &s_record.host)
-                            .filter(&headers[8], &s_record.DsId)
-                            .filter("_time", &s_record._time)
+
+                            .filter("_measurement", "==",&s_record._measurement)
+                            //.filter("host", "==",&s_record.host)
+                            .filter(&headers[8], "==", &s_record.DsId)
+
+                            //.filter("_time", "==", &s_record._time)
+                            // /*
+                            .filter("_time",
+                                    ">",
+                                    &format!("{}",
+                                             (chrono::Utc::now() - chrono::Duration::minutes(15))
+                                             .to_rfc3339()
+                                    ),
+                            )
+                            // */
+                            
+                            //.filter("_value", ">", "18")
+                            //.filter("_value", "<=", "18")
+                            //.filter("_value", ">=", "18")
+
                             .drop(vec!["_start", "_stop"])
                             //.keep(vec!["_time"])
                             //.keep(vec!["_time", &headers[8]])
