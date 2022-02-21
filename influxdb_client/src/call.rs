@@ -54,23 +54,6 @@ impl <'i>InfluxCall<'i> {
         let pattern = pattern.trim();
         let old = old.trim();
         let new = new.trim();
-
-        /* wrong idea
-        [pattern, old, new]
-            .iter_mut()
-            .for_each(|m|
-                      *m = m.trim()
-            );
-        */
-        
-        /* niet goed
-        let all = vec![key, old_value, new_value]
-            .into_iter()
-            .map(|m| m.trim()) 
-            .collect::<Vec<_>>();
-
-        let [pattern, old, new] = all[..];
-        */
         
         match pattern {
             options::HOSTNAME => {
