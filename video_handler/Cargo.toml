@@ -1,0 +1,11 @@
+[package]
+name = "video_handler"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+
+
+[dependencies.actix-web]
+version = "3.3.3"
