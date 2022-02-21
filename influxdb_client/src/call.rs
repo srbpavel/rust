@@ -51,11 +51,36 @@ impl <'i>InfluxCall<'i> {
                       old: &str,
                       new: &str) -> &mut Self {
 
+        // /*
         let pattern = pattern.trim();
         let old = old.trim();
         let new = new.trim();
+        // */
+
+        /*
+        println!("B: {:?}", [pattern, old, new]);
+
+        [pattern, old, new]
+            .for_each(|&mut m|
+                      *m = m.trim()
+            );
         
-        match pattern {
+        /*
+        let _ = [pattern, old, new]
+            .into_iter()
+            //.iter_mut()
+            //.iter()
+            .map(|m|
+                 *m = m.trim()
+            )
+            .collect::<Vec<_>>();
+        */
+        */
+
+        println!("A: {:?}", [pattern, old, new]);
+        
+        //match &*pattern {
+        match &*pattern {
             options::HOSTNAME => {
                 self.uri_write = self.uri_write.replace(
                     &format!("://{old}"),
@@ -96,7 +121,7 @@ impl <'i>InfluxCall<'i> {
         tuple_formater_safe(
             template,
             &vec![
-                ("url", &self.uri_query),
+                ("url", self.uri_query),
                 ("auth", &self.auth.join(": ")),    
                 ("accept", &self.accept.join(": ")),  
                 ("content", &self.content.join(": ")),

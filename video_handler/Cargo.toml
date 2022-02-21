@@ -2,10 +2,36 @@
 name = "video_handler"
 version = "0.1.0"
 edition = "2021"
-
+authors = ["Pavel SRB <prace@srbpavel.cz>"]
 
 [dependencies]
 
-
 [dependencies.actix-web]
-version = "3.3.3"
+#version = "3.3.3"
+version = "1.0"
+
+[dependencies.env_logger]
+#version = "0.9.0"
+version = "0.6"
+
+[dependencies.chrono]
+version = "0.4.19"                            
+
+# unpublished local crate EASY_CONFIG
+[dev-dependencies.easy_config]               
+version = "^0"                               
+path = "/home/conan/soft/rust/easy_config/"  
+
+# for TOML CONFIG Serialize, Deserialize            
+[dependencies.serde]                     
+version = "1.0.136"                           
+features = ["derive"]                        
+
+[dependencies.serde_json]
+#version= "1.0.79"
+version= "1.0"
+
+# unpublished local crate TEMPLATE_FORMATER              
+[dependencies.template_formater]                 
+version = "^0"                                   
+path = "/home/conan/soft/rust/template_formater"

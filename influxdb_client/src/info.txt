@@ -1,0 +1,9 @@
+builder_pattern:
+https://www.ameyalokare.com/rust/2017/11/02/rust-builder-pattern.html
+
+https://rust-unofficial.github.io/patterns/patterns/creational/builder.html
+
+https://doc.rust-lang.org/1.0.0/style/ownership/builders.html
+
+https://github.com/rust-unofficial/patterns/blob/829f1ef061ff39702d5029bbc93f0d37ae55af33/patterns/builder.md
+

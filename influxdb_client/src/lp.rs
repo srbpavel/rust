@@ -106,7 +106,8 @@ impl LineProtocolBuilder {
         // WRONG timestamp len/format -> need config !!!
         // is correct to verify millis via len ?
         // VALIDATION WILL be performed before BUILD in future
-        if format!("{}", self.ts).len() != 13 { //13MS 10SEC {
+        //if format!("{}", self.ts).len() != 13 { //13MS 10SEC {
+        if self.ts.to_string().len() != 13 { //13MS 10SEC {
             return Err(LpError::TimeStamp)
         }
         
