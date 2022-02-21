@@ -32,3 +32,9 @@
 * [mqtt_client](mqtt_client)
   - send test msg to my mosquitto broker
   - **just started**
+
+* [influxdb_client](influxdb_client)
+  - small client to write LineProtocol and read FluxQuery
+  - in [metynka](metynka) run via commands+curl and flux query just as templates
+  - here via reqwest and flux query as builder
+  
