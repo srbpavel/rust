@@ -45,3 +45,29 @@ pub fn tuple_formater(template: &str,
     
     strfmt(&tp_template, &hash_map).unwrap()
 }
+
+/// safe as Result
+pub fn tuple_formater_safe(template: &str,
+                           pair: &Vec<(&str, &str)>,
+                           //debug: bool) -> Result<String, Box<dyn std::error::Error>> {
+                           debug: bool) -> Result<String, strfmt::FmtError> {
+    
+    let tp_template = String::from(template);
+    let mut hash_map = HashMap::new();
+    
+    if debug { println!("\n#TUPLE_FORMATER:") }
+
+    for (key,value) in pair {
+
+        if debug {
+            println!("template: {template} key: <{key}> value: <{value}>"); 
+        }
+        
+        hash_map.insert(key.trim().to_string(),
+                        value.trim().to_string(),
+        );
+    }
+    
+    //strfmt(&tp_template, &hash_map).unwrap()
+    strfmt(&tp_template, &hash_map)
+}

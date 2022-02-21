@@ -5,7 +5,8 @@
 use crate::config::InfluxConfig;
 use crate::call::InfluxCall;
 
-use template_formater::tuple_formater;
+//use template_formater::tuple_formater;
+use template_formater::tuple_formater_safe;
 
 
 pub const DEFAULT: &str = "";
@@ -51,48 +52,26 @@ impl <'d>InfluxData<'d> {
         }
     }
 
-    /// display curl version of request
+    /// display curl WRITE LP
     ///
-    /// $curl --cacert /home/conan/.ssh/ruth/influxdb-selfsigned.crt --request POST "https://ruth:8086/api/v2/write?org=foookin_paavel&bucket=bbb&precision=ms" --header "Authorization: Token ....." --data-raw "battery_adc,host=spongebob,BatSenKey=14,BatUlId=50x29196a980,BatCarrier=ttn,BatValid=true BatDecimal=7.64,BatKey=20909 1621759946147"
+    /// /usr/bin/curl --insecure --request POST 'http://jozefina:8086/api/v2/write?org=foookin_paavel&bucket=reqwest_sunday_backup_ds_test&precision=ms' --header 'Authorization: Token jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==' --data-raw 'dallas,host=ruth,DsCarrier=labjack,DsId=1052176647976,DsPin=444,Machine=mrazak,DsValid=true DsDecimal=19.3125 1645429809298'
     ///
     pub fn curl_write(&self,
-                      template: &str) -> String {
+                      template: &str,
+                      //debug: bool) -> Result<String, Box<dyn std::error::Error>> {
+                      debug: bool) -> Result<String, strfmt::FmtError> {
 
-        //println!("@CURL_WRITE_TEMPLATE:\n +{template}");
-
-        tuple_formater(
+        let curl_call = tuple_formater_safe(
             template,
             &vec![
                 ("url", &self.call.uri_write),
                 ("auth", &self.call.auth.join(": ")),    
                 ("data", &self.lp),        
-                /*
-                ("program", &config.template.curl.program),
-                ("param_insecure", &config.template.curl.param_insecure),
-                ("param_request", &config.template.curl.param_request),
-                ("param_post", &config.template.curl.param_post),  
-                
-                ("url", updated_data.call.uri_write),
-                
-                ("param_header", &config.template.curl.param_header),
-                
-                ("auth", updated_data.call.auth.join(": ")),    
-                
-                ("param_data", &config.template.curl.param_data),       
-                ("data", updated_data.lp),        
-                */
             ],
-            //self.debug,
-            true,
-            )
-        
-        /*
-        //String::from("curl")
-        format!("{program}{uri_write}{auth:?}",
-                program="ccc",
-                uri_write=&self.call.uri_write,
-                auth=&self.call.auth,
-        )
-        */
+            debug,
+        );
+
+        //Ok(curl_call)
+        curl_call
     }
 }

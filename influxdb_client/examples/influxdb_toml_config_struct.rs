@@ -182,13 +182,13 @@ pub struct TemplateCurl {
     pub curl_write: MyStr,
     pub curl_read: MyStr,
 
-    pub program: MyStr,
+    //pub program: MyStr,
 
-    pub param_insecure: MyStr,
-    pub param_request: MyStr,
-    pub param_post: MyStr,
-    pub param_header: MyStr,
-    pub param_data: MyStr,
+    //pub param_insecure: MyStr,
+    //pub param_request: MyStr,
+    //pub param_post: MyStr,
+    //pub param_header: MyStr,
+    //pub param_data: MyStr,
     
     pub influx_uri_api: MyStr,
     pub influx_uri_write: MyStr,

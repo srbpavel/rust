@@ -1,4 +1,5 @@
-use template_formater::tuple_formater;
+//use template_formater::tuple_formater;
+use template_formater::tuple_formater_safe;
 
 ///
 /// API call settings
@@ -58,17 +59,17 @@ impl <'i>InfluxCall<'i> {
         self
     }
 
-    /// display curl version of request
+    /// display curl READ FLUX_QUERY
     ///
-    /// 
+    /// /usr/bin/curl --insecure --request POST "http://jozefina:8086/api/v2/query?org=foookin_paavel" --header "Authorization: Token jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==" --header "Accept: application/csv" --header "Content-type: application/vnd.flux" --data-raw 'from(bucket:"backup_ds_test") |> range(start:-12h) |> filter(fn:(r) => r._measurement=="dallas") |> sort(columns: ["_time"], desc:true) |> limit(n:1)'
     ///
     pub fn curl_read(&self,
                      template: &str,
-                     flux_query: &str) -> String {
+                     flux_query: &str,
+                     //debug: bool) -> Result<String, Box<dyn std::error::Error>> {
+                     debug: bool) -> Result<String, strfmt::FmtError> {
 
-        //println!("@CURL_READ_TEMPLATE:\n +{template}");
-
-        tuple_formater(
+        let curl_call = tuple_formater_safe(
             template,
             &vec![
                 ("url", &self.uri_query),
@@ -77,8 +78,10 @@ impl <'i>InfluxCall<'i> {
                 ("content", &self.content.join(": ")),
                 ("data", flux_query),        
             ],
-            //self.debug,
-            true,
-            )
+            debug,
+        );
+
+        //Ok(curl_call)
+        curl_call
     }
 }
