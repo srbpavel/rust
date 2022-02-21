@@ -215,6 +215,11 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         println!("\n@{influx_call:#?}");
     }
 
+    let curl_read = influx_call.curl_read(&config.template.curl.curl_read,
+                                          &flux_query,
+    );
+                                                          
+    /*
     let curl_read = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {header} \"{accept}\" {header} \"{content}\" {data} '{raw}\'",
                             // curl
                             program=&config.template.curl.program,
@@ -235,7 +240,8 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             // flux qeuery
                             raw=flux_query,
     );
-    
+    */
+
     if config.flag.debug_influx_curl {
         println!("\n@CURL_READ\n{}",
                  curl_read,
@@ -379,7 +385,14 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             lp: data,
                         };
 
-                        let curl_write = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {data} \"{raw}\"",
+                        //let template_curl_write = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {data} \"{raw}\"");
+
+                        
+
+                        let curl_write = updated_data.curl_write(&config.template.curl.curl_write);
+                                                          
+                        /*
+                        let curl_write_old = format!("{program} {insecure} {request} {post} \"{url}\" {header} \"{auth}\" {data} \"{raw}\"",
                                                     program=&config.template.curl.program,
                                                     insecure=&config.template.curl.param_insecure,
                                                     request=&config.template.curl.param_request,
@@ -394,13 +407,16 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                                                     data=&config.template.curl.param_data,
                                                     raw=updated_data.lp,
                         );
-                        
+                        */
+
                         if config.flag.debug_influx_curl {
+                            //println!("\n@CURL_WRITE\n{}\n{}",
                             println!("\n@CURL_WRITE\n{}",
                                      curl_write,
+                                     //curl_write_old,
                             );
                         }
-                        
+
                         /*
                         println!("\n@INFLUX_DATA_UPDATE:\n+ uri_write: {:?}\n+ lp: {}",
                                  updated_data.call.uri_write,

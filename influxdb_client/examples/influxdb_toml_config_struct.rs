@@ -179,6 +179,9 @@ pub struct TemplateFlux {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TemplateCurl {
+    pub curl_write: MyStr,
+    pub curl_read: MyStr,
+
     pub program: MyStr,
 
     pub param_insecure: MyStr,

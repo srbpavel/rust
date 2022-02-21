@@ -244,6 +244,11 @@ values = [
 
 [template]
 [template.curl]
+#/usr/bin/curl --insecure --request POST "http://jozefina:8086/api/v2/query?org=foookin_paavel" --header "Authorization: Token jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==" --header "Accept: application/csv" --header "Content-type: application/vnd.flux" --data-raw 'from(bucket:"backup_ds_test") |> range(start:-12h) |> filter(fn:(r) => r._measurement=="dallas") |> sort(columns: ["_time"], desc:true) |> limit(n:1)'
+curl_read="/usr/bin/curl --insecure --request POST \"{url}\" --header \"{auth}\" --header \"{accept}\" --header \"{content}\" --data-raw '{data}'"
+
+curl_write="/usr/bin/curl --insecure --request POST \"{url}\" --header \"{auth}\" --data-raw \"{data}\""
+
 # curl call to influx_api
 program = "/usr/bin/curl"
 param_insecure = "--insecure"

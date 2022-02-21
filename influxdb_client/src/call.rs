@@ -1,3 +1,5 @@
+use template_formater::tuple_formater;
+
 ///
 /// API call settings
 ///
@@ -54,5 +56,29 @@ impl <'i>InfluxCall<'i> {
         };
 
         self
+    }
+
+    /// display curl version of request
+    ///
+    /// 
+    ///
+    pub fn curl_read(&self,
+                     template: &str,
+                     flux_query: &str) -> String {
+
+        //println!("@CURL_READ_TEMPLATE:\n +{template}");
+
+        tuple_formater(
+            template,
+            &vec![
+                ("url", &self.uri_query),
+                ("auth", &self.auth.join(": ")),    
+                ("accept", &self.accept.join(": ")),  
+                ("content", &self.content.join(": ")),
+                ("data", flux_query),        
+            ],
+            //self.debug,
+            true,
+            )
     }
 }
