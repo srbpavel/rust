@@ -279,9 +279,34 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // UPDATE InfluxCall -> same SERVER but different BUCKET
     let updated_call = influx_call
         .update_key(
+            "org",
+            &read_config.org,
+            &write_config.org,
+        )
+        .update_key(
             "bucket",
             &read_config.bucket,
             &write_config.bucket,
+        )
+        .update_key(
+            "precision",
+            &read_config.precision,
+            &write_config.precision,
+        )
+        .update_key(
+            "secure",
+            &read_config.secure,
+            &write_config.secure,
+        )
+        .update_key(
+            "hostname",
+            &read_config.server,
+            &write_config.server,
+        )
+        .update_key( // DUMMY ERROR
+            "SERVER",
+            &read_config.server,
+            &write_config.server,
         );
 
     if config.flag.debug_influx_instances {
@@ -505,10 +530,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             },
         };
         
-        /* DEBUG just to see first record
+        // /* DEBUG just to see first record
         println!("\n break");
         break
-        */
+        // */
     }
     
     Ok(())
