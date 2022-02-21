@@ -54,7 +54,7 @@ impl <'c>InfluxConfig<'c> {
         Self {
             name: "NAME",
             status: false,
-            secure: "http",
+            secure: "http", // https
             server: "localhost",
             port: 8086,
             bucket: "BUCKET",

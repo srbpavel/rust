@@ -227,7 +227,7 @@ flux_repeat_query_count = 3
 # DO NOT BREAK LINES IN Struct AS IT WILL !panic
 values = [
        #RUTH
-       {name = "default", status = false, secure = "http", server = "jozefina", port = 8086, bucket = "reqwest_sunday_backup_ds_test", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+       {name = "default", status = false, secure = " http ", server = "jozefina", port = 8086, bucket = "reqwest_sunday_backup_ds_test", token = "riMIsymqgtxF6vGnTfhpSCWPcijRRQ2ekwbS5H8BkPXHr_HtCNUqKLwOnyHpMjQB-L6ZscVFo8PsGbGgoxEFLw==", org = " foookin_paavel ", precision = " ms ", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
 
        #JOZEFINA
        {name = "backup", status = true, secure = "http", server = "jozefina", port = 8086, bucket = "backup_ds_test", token = "jbD0MXwVzetW6r6TFSQ5xIAzSFxwl3rD8tJVvzWr_Ax7ZNBJH1A0LHu38PR8WFWEpy0SuDlYpMyjYBB52riFrA==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},

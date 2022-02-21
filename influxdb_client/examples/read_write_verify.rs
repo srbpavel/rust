@@ -448,6 +448,14 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                             //.filter("_value", ">", "18")
                             //.filter("_value", "<=", "18")
                             //.filter("_value", ">=", "18")
+                            /*
+                            .filter_threshold(
+                                vec![
+                                    ("_value", ">", "18", "and"),
+                                    ("_value", "<", "19", ""),
+                                ]
+                            )
+                            */
                             .drop(vec!["_start", "_stop"])
                             //.keep(vec!["_time"])
                             //.keep(vec!["_time", &headers[8]])

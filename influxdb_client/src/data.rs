@@ -1,7 +1,3 @@
-///
-/// all data needed to call influx
-///
-
 use crate::config::InfluxConfig;
 use crate::call::InfluxCall;
 
@@ -10,8 +6,9 @@ use template_formater::tuple_formater_safe;
 
 pub const DEFAULT: &str = "";
 
-
-/// data to write
+///
+/// all data needed to call influx and write
+///
 #[derive(Debug)]
 pub struct InfluxData<'d> {
     pub config: InfluxConfig<'d>,

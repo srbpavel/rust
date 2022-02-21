@@ -166,17 +166,6 @@ impl QueryBuilder {
         self.bucket = format!("from(bucket:\"{}\")",
                               value.trim(),
         );
-        
-        /*
-        self.bucket = String::from(
-            tuple_formater("from(bucket:\"{bucket}\")",
-                           &vec![
-                               ("bucket", value.trim()),
-                           ],
-                           self.debug,
-            )
-        );
-        */
 
         self
     }
@@ -197,17 +186,6 @@ impl QueryBuilder {
         self.bucket = format!("from(bucketID:\"{}\")",
                               value.trim(),
         );
-
-        /*
-        self.bucket_id = String::from(
-            tuple_formater("from(bucketID:\"{bucket}\")",
-                           &vec![
-                               ("bucket", value.trim()),
-                           ],
-                           self.debug,
-            )
-        );
-        */
 
         self
     }
@@ -305,22 +283,49 @@ impl QueryBuilder {
         self
     }
 
-    /*
     /// filter threshold
     ///
     /// https://docs.influxdata.com/flux/v0.x/stdlib/universe/filter/
     ///
     /// filter(fn: (r) => r._value > 0 and r._value < 10 )
     /// 
-    /// key, comp_1, val_1, comp_2, val_2
+    /// vec![(key_1, comp_1, val_1, ),(key_2, comp_2, val_2)]
     ///
-    pub fn filter_threshold(&mut self) -> &mut Self {
+    ///.filter_threshold(                   
+    ///    vec![                            
+    ///        ("_value", ">", "18", "and"),
+    ///        ("_value", "<", "19", ""),   
+    ///    ]                                
+    ///)                                    
+    ///
+    /// do i need this?
+    ///
+    /// will work only for numbers
+    ///
+    pub fn filter_threshold(&mut self,
+                            quatro: Vec<(&str, &str, &str, &str)>) -> &mut Self {
 
-        // FUTURE USE
+        let mut text = String::from("");
 
+        quatro
+            .into_iter()
+            .for_each(|t| {
+                text += &format!("r.{} {} {} {} ",
+                                 t.0, // _value
+                                 t.1, // >
+                                 t.2, // 18
+                                 t.3  // and
+                );
+                
+            });
+        
+        self.filter += &format!(
+            " |> filter(fn:(r) => {})",
+            text,
+        );
+        
         self
     }
-    */
 
     /// sort
     ///

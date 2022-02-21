@@ -1,27 +1,11 @@
 use template_formater::tuple_formater_safe;
 
-/*
-const SECURE: &str = "secure";
-const HOSTNAME: &str = "hostname";
-const ORG: &str = "org";
-const BUCKET: &str = "bucket";
-const PRECISION: &str = "precision";
-*/
-
 mod options {
     pub const SECURE: &str = "secure";
     pub const HOSTNAME: &str = "hostname";
     pub const ORG: &str = "org";
     pub const BUCKET: &str = "bucket";
     pub const PRECISION: &str = "precision";
-    
-    /*
-    pub static SECURE: &str = "secure";
-    pub static HOSTNAME: &str = "hostname";
-    pub static ORG: &str = "org";
-    pub static BUCKET: &str = "bucket";
-    pub static PRECISION: &str = "precision";
-    */
 }
 
 ///
@@ -63,78 +47,56 @@ impl <'i>InfluxCall<'i> {
 
     /// object update
     pub fn update_key(&mut self,
-                      key: &str,
-                      old_value: &str,
-                      new_value: &str) -> &mut Self {
+                      pattern: &str,
+                      old: &str,
+                      new: &str) -> &mut Self {
 
-        // try with closure
-        // maybe not good to make it smaller as bucket can be HORSES / Horses
-        // 
-        let pattern = key.trim();//.to_lowercase();
-        let old = old_value.trim();//.to_lowercase();
-        let new = new_value.trim();//.to_lowercase();
+        let pattern = pattern.trim();
+        let old = old.trim();
+        let new = new.trim();
+
+        /* wrong idea
+        [pattern, old, new]
+            .iter_mut()
+            .for_each(|m|
+                      *m = m.trim()
+            );
+        */
         
-        //match pattern.as_str() {
+        /* niet goed
+        let all = vec![key, old_value, new_value]
+            .into_iter()
+            .map(|m| m.trim()) 
+            .collect::<Vec<_>>();
+
+        let [pattern, old, new] = all[..];
+        */
+        
         match pattern {
-            // http://HOSTNAME:8086/
-            //
-            //"hostname" => {
             options::HOSTNAME => {
-            //HOSTNAME => {
                 self.uri_write = self.uri_write.replace(
                     &format!("://{old}"),
                     &format!("://{new}"),
                 );
             },
-            // HTTP://hostname:8086/
-            // HTTPS://hostname:8086/
-            //
-            //"secure" => {
             options::SECURE => {
                 self.uri_write = self.uri_write.replace(
                     &format!("{old}://"),
                     &format!("{new}://"),
                 );
             },
-            // /api/v2/write?org=ORG&bucket=BUCKET&precision=MS
-            //
-            // keys: org / bucket / precicion
-            //
-            //k @ "org" | k @ "bucket" | k @ "precision" => {
-            //k @ ("org" | "bucket" | "precision") => {
             k @ (options::ORG | options::BUCKET | options::PRECISION) => {
                 self.uri_write = self.uri_write.replace(
                     &format!("{k}={old}"),
                     &format!("{k}={new}"),
                 );   
             },
-            // not found
             _ => {
                 eprintln!("\n!!! ERROR: InfluxCall.update_key() -> pattern <{}> not found",
-                          key,
+                          pattern,
                 )
             }
         }
-        
-        /*
-        if !key.eq("hostname") && !key.eq("secure") {
-            // /api/v2/write?org=ORG&bucket=BUCKET&precision=MS
-            //
-            // keys: org / bucket / precicion
-            //
-            self.uri_write = self.uri_write.replace(
-                &format!("{key}={old_value}"),
-                &format!("{key}={new_value}"),
-            )
-        } else {
-            // http://HOSTNAME:8086/
-            //
-            self.uri_write = self.uri_write.replace(
-                &format!("://{old_value}"),
-                &format!("://{new_value}"),
-            )
-        };
-        */
 
         self
     }

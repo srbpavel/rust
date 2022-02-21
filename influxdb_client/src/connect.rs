@@ -33,9 +33,11 @@ pub fn read_flux_query(client: &Client,
         .header(influx.auth[0],
                 influx.auth[1]
         )
+        // ACCEPT
         .header(influx.accept[0],
                 influx.accept[1],
         )
+        // CONTENT
         .header(influx.content[0],
                 influx.content[1],
         )
@@ -59,10 +61,6 @@ pub fn write_lp(client: &Client,
                 debug: bool) -> Result<RequestBuilder, Box<dyn Error + 'static>> {
     
     if debug {
-        /*
-        println!("\n#WRITE_LP:\n+ uri_write: {:?}\n+ lp: {lp:?}",
-                 influx.uri_write);
-        */
         println!("\n#WRITE_LP:\n+ lp: {lp:?}");
     }
 
