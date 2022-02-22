@@ -124,6 +124,9 @@ impl MessageApp {
 
 
 /// service: handler
+///
+/// we just add +1 and publish json
+///
 #[get("/")]
 fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1;
@@ -148,7 +151,10 @@ fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
 /// route.to()
 ///
-/// format msg to send
+/// add +1 to AppState.request_count / update via .set()
+/// lock messages + push .clone()
+/// build json via Struct
+///
 fn post_msg(msg: web::Json<PostInput>,
             state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
 
@@ -176,6 +182,11 @@ fn post_msg(msg: web::Json<PostInput>,
 
 
 /// service: handler
+///
+/// add +1
+/// flush messages
+/// json via Struct but with empty Vec
+///
 #[post("/clear")]
 fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1; // we still count
@@ -184,6 +195,8 @@ fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let mut ms = state.messages.lock().unwrap();
     ms.clear(); // messages are flushed
 
+    // actualy this is nearly the same as after start with no messages
+    // but few server_id and counter count
     Ok(web::Json(
         IndexResponse {
             server_id: state.server_id,

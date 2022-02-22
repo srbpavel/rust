@@ -13,6 +13,7 @@ fn main() -> std::io::Result<()> {
     );
     
     // EVEN LOG -> stdout
+    // display default datetime in Utc
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 

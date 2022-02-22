@@ -1,17 +1,33 @@
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{"message": "fookume_i"}'
+curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{"message": "fookume_i"}'
+
 {"server_id":6,"request_count":3,"message":"fookume_i"}
 
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{"message": "fookume_ii"}'
+
+
+curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{"message": "fookume_ii"}'
+
 {"server_id":3,"request_count":3,"message":"fookume_ii"}
 
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{"message": "fookume_iii"}'
+
+
+curl -X POST "http://localhost:8080/send" -H "Content-Type: application/json" -d '{
+"message": "fookume_iii"}'
+
 {"server_id":7,"request_count":3,"message":"fookume_iii"}
 
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl 'http://localhost:8080/'
+
+
+curl 'http://localhost:8080/'
+
 {"server_id":0,"request_count":4,"messages":["fookume_i","fookume_ii","fookume_iii"]}
 
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl -X POST 'http://localhost:8080/clear'
+
+curl -X POST 'http://localhost:8080/clear'
+
 {"server_id":1,"request_count":4,"messages":[]}
 
-curl_handler conan@spongebob:~/soft/rust/video_handler$ curl 'http://localhost:8080/'
+
+
+curl 'http://localhost:8080/'
+
 {"server_id":2,"request_count":4,"messages":[]}
