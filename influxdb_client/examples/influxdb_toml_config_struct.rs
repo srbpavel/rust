@@ -189,6 +189,8 @@ pub struct TemplateCurl {
     //pub param_post: MyStr,
     //pub param_header: MyStr,
     //pub param_data: MyStr,
+
+    pub influx_api: MyStr,
     
     pub influx_uri_api: MyStr,
     pub influx_uri_write: MyStr,

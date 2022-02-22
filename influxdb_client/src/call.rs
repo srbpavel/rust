@@ -77,7 +77,8 @@ impl <'i>InfluxCall<'i> {
         */
         */
 
-        println!("A: {:?}", [pattern, old, new]);
+        // DEBUG
+        //println!("A: {:?}", [pattern, old, new]);
         
         //match &*pattern {
         match &*pattern {

@@ -13,7 +13,7 @@ fn main() -> std::io::Result<()> {
     );
     
 
-    // LOG
+    // EVEN LOG -> stdout
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 

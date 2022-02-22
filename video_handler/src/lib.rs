@@ -11,31 +11,13 @@ use actix_web::{middleware,
 
 use serde::Serialize;
 
+
 #[derive(Serialize, Debug)]
 struct IndexResponse {
     message: String,
+    datetime: String,
 }
 
-#[get("/")]
-fn index(req: HttpRequest) -> Result<web::Json<IndexResponse>> {
-    // /*
-    let hello = req
-        .headers()
-        .get("hello") // -> we read HEADER 'hello: ...'
-        .and_then(|v| v.to_str().ok()) // Result -> Option
-        .unwrap_or_else(|| "world"); // -> no HEADER 'hello: ...'
-    // */
-    
-    Ok(
-        web::Json(
-            IndexResponse {
-                //message: hello.to_owned(),
-                message: String::from(hello),
-                //message: String::from(header),
-            }
-        )
-    )
-}
 
 #[derive(Debug)]
 pub struct MessageApp {
@@ -61,7 +43,6 @@ impl MessageApp {
                 .wrap(middleware::Logger::default())
                 .service(index)
         })
-            //.bind("127.0.0.1:8080")?
             .bind(
                 ("127.0.0.1",
                  self.port,
@@ -70,4 +51,26 @@ impl MessageApp {
             .workers(8)
             .run()
     }
+}
+
+#[get("/")]
+fn index(req: HttpRequest) -> Result<web::Json<IndexResponse>> {
+    let hello = req
+        .headers()
+        .get("hello") // -> we read data from HEADER 'hello: ...'
+        .and_then(|v| v.to_str().ok()) // Result -> Option
+        .unwrap_or_else(|| "world"); // -> no HEADER 'hello: ...'
+
+    Ok(
+        web::Json(
+            IndexResponse {
+                //message: hello.to_owned(),
+                message: String::from(hello),
+                //message: format!("{}", hello),
+                datetime: format!("{}",
+                                  chrono::Utc::now(),
+                ),
+            }
+        )
+    )
 }

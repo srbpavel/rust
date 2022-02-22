@@ -262,6 +262,7 @@ curl_write="/usr/bin/curl --insecure --request POST '{url}' --header '{auth}' --
 
 # influx params
 influx_uri_api = "{secure}://{server}:{port}/api/v2/"
+influx_api = "/api/v2/"
 influx_uri_write = "write?org={org}&bucket={bucket}&precision={precision}"
 influx_uri_query = "query?org={org}"
 

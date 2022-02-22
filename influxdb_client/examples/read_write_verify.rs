@@ -1,13 +1,17 @@
 use crate::influxdb_toml_config_struct::{TomlConfig};
 
 use influxdb_client::{
-    config::InfluxConfig,
+    config::{InfluxConfig,
+             //ToString // only when own Implemenetation as with more param's or whatever
+             ToUri,
+             ToUriWrite,
+    },
     call::InfluxCall,
     data::InfluxData,
     lp::LineProtocolBuilder,
     flux_query::QueryBuilder,
 
-    format::{uri_write,
+    format::{//uri_write, // in USE -> InfluxConfig Trait ToUriWrite
              uri_query,
              token,
     }
@@ -124,10 +128,26 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         read_config.flag_valid_default,
     );
 
+    let uri_write = influx_config.to_uri_write(&format!("{}{}",
+                                                        influx_config.to_uri(
+                                                            &config.template.curl.influx_api,
+                                                            config.flag.debug_template_formater,
+                                                        ),
+                                                        //"/api/v2/", //&config.template.curl.influx_uri_api,
+                                                        &config.template.curl.influx_uri_write,
+    ),
+                                               config.flag.debug_template_formater,
+    )?;
+    
     if config.flag.debug_influx_instances {
-        println!("\n@LIB InfluxConfig: {influx_config:#?}");
+        println!("\nto_string() -> {}\nto_uri_write() -> {:?}\n\n@LIB InfluxConfig: {influx_config:#?}",
+        //println!("\nto_uri_write() -> {:?}\n\n@LIB InfluxConfig: {influx_config:#?}",
+                 influx_config.to_string(),
+                 uri_write,
+        );
     }
 
+    /* via TRAIT, but make it without template + debug param's 
     // WRITE_URI: 
     let uri_write = uri_write(
         &format!("{}{}",
@@ -137,6 +157,7 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         &influx_config,
         config.flag.debug_template_formater,
     );
+    */
 
     // READ_URI
     let uri_query = uri_query(
@@ -302,12 +323,14 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             "hostname",
             &read_config.server,
             &write_config.server,
-        )
+        );
+        /*
         .update_key( // DUMMY ERROR
             "SERVER",
             &read_config.server,
             &write_config.server,
         );
+        */
 
     if config.flag.debug_influx_instances {
         println!("\n@UPDATE_CALL -> we will WRITE data to BUCKET\n+ InfluxCall.uri_write: {:?}",
