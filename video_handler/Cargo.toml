@@ -1,7 +1,8 @@
 [package]
 name = "video_handler"
 version = "0.1.0"
-edition = "2021"
+#edition = "2021"
+edition = "2018"
 authors = ["Pavel SRB <prace@srbpavel.cz>"]
 
 [dependencies]
@@ -18,13 +19,21 @@ version = "0.6"
 version = "0.4.19"                            
 
 # unpublished local crate EASY_CONFIG
+# https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+# https://github.com/rust-lang/cargo/issues/1462
 [dev-dependencies.easy_config]               
 version = "^0"                               
+# LOCAL
 path = "/home/conan/soft/rust/easy_config/"  
+# REMOTE
+#git = "https://github.com/srbpavel/rust"
+#package = "easy_config"
+#subfolder = { git = "easy_config" } # ???
 
 # for TOML CONFIG Serialize, Deserialize            
 [dependencies.serde]                     
-version = "1.0.136"                           
+#version = "1.0.136"
+version = "1.0"
 features = ["derive"]                        
 
 [dependencies.serde_json]

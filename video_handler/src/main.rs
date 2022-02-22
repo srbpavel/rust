@@ -11,7 +11,10 @@ fn main() -> std::io::Result<()> {
     println!("{}",
              sss("FoOoKuMe -> video_handler")?,
     );
-    
+
+    // VERBOSE
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     // EVEN LOG -> stdout
     // display default datetime in Utc
     std::env::set_var("RUST_LOG", "actix_web=info");
