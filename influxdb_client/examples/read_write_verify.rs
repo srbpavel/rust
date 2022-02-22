@@ -128,12 +128,12 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         read_config.flag_valid_default,
     );
 
+    // ok Trait but make it will less params !!!
     let uri_write = influx_config.to_uri_write(&format!("{}{}",
                                                         influx_config.to_uri(
                                                             &config.template.curl.influx_api,
                                                             config.flag.debug_template_formater,
                                                         ),
-                                                        //"/api/v2/", //&config.template.curl.influx_uri_api,
                                                         &config.template.curl.influx_uri_write,
     ),
                                                config.flag.debug_template_formater,
@@ -141,23 +141,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     
     if config.flag.debug_influx_instances {
         println!("\nto_string() -> {}\nto_uri_write() -> {:?}\n\n@LIB InfluxConfig: {influx_config:#?}",
-        //println!("\nto_uri_write() -> {:?}\n\n@LIB InfluxConfig: {influx_config:#?}",
                  influx_config.to_string(),
                  uri_write,
         );
     }
-
-    /* via TRAIT, but make it without template + debug param's 
-    // WRITE_URI: 
-    let uri_write = uri_write(
-        &format!("{}{}",
-                 &config.template.curl.influx_uri_api,
-                 &config.template.curl.influx_uri_write),
-        
-        &influx_config,
-        config.flag.debug_template_formater,
-    );
-    */
 
     // READ_URI
     let uri_query = uri_query(
