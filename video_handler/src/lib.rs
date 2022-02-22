@@ -104,9 +104,20 @@ impl MessageApp {
                     // create a new pointer for each thread
                     messages: messages.clone(),
                 })
-                
                 .wrap(middleware::Logger::default())
                 .service(index)
+                .service(
+                    // POST handler resourse
+                    web::resource("/send") // path
+                        .data(web::JsonConfig::default() // json extractor
+                              .limit(4096) // 4096 bytes 
+                        )
+                        .route(web::post() // HTTP POST REQ
+                               .to(post_msg) //our handler function
+                        ),
+                )
+                .service(clear)
+                
         })
             .bind(
                 ("127.0.0.1",
@@ -118,30 +129,8 @@ impl MessageApp {
     }
 }
 
-/*
-#[get("/")]
-fn index(req: HttpRequest) -> Result<web::Json<IndexResponse>> {
-    let hello = req
-        .headers()
-        .get("hello") // -> we read data from HEADER 'hello: ...'
-        .and_then(|v| v.to_str().ok()) // Result -> Option
-        .unwrap_or_else(|| "world"); // -> no HEADER 'hello: ...'
 
-    Ok(
-        web::Json(
-            IndexResponse {
-                //message: hello.to_owned(),
-                message: String::from(hello),
-                //message: format!("{}", hello),
-                datetime: format!("{}",
-                                  chrono::Utc::now(),
-                ),
-            }
-        )
-    )
-}
-*/
-#[get("/")]
+#[get("/")] // GET HANDLER
 fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     /*
     AppState {
@@ -177,4 +166,48 @@ fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
             }
         )
     )
+}
+
+
+/// format msg to send
+fn post_msg(msg: web::Json<PostInput>,
+            state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
+
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock and have access to Vec messages
+    let mut ms = state
+        .messages
+        .lock()
+        .unwrap();
+
+    // and we push are new MSG to Vec
+    ms.push(msg.message.clone()); // clone as Vec owns each element
+    
+    Ok(web::Json(
+        PostResponse {
+            server_id: state.server_id, // here is our messages: Vec
+            request_count: request_count,
+            message: msg.message.clone(), // clone 
+        }
+    ))
+}
+
+
+#[post("/clear")] // POST HANDLER
+fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    let mut ms = state.messages.lock().unwrap();
+    ms.clear();
+
+    Ok(web::Json(
+        IndexResponse {
+            server_id: state.server_id,
+            request_count: request_count,
+            messages: vec![],
+        }
+    ))
 }
