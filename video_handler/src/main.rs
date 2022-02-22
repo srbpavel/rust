@@ -12,11 +12,11 @@ fn main() -> std::io::Result<()> {
              sss("FoOoKuMe -> video_handler")?,
     );
     
-
     // EVEN LOG -> stdout
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
 
+    // LET IT ROOL
     let app = MessageApp::new(8080);
     app.run()
 }

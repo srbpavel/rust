@@ -4,7 +4,6 @@ extern crate actix_web;
 use actix_web::{middleware,
                 web,
                 App,
-                //HttpRequest, ch1
                 HttpServer,
                 Result,
 };
@@ -50,13 +49,6 @@ struct AppState {
 }
 
 
-/* ch1
-#[derive(Serialize, Debug)]
-struct IndexResponse {
-    message: String,
-    datetime: String,
-}
-*/
 #[derive(Serialize, Debug)]
 struct IndexResponse {
     server_id: usize,
@@ -71,14 +63,14 @@ pub struct MessageApp {
 }
 
 impl MessageApp {
-    /// NEW
+    /// NEW -> initial setup port + later server/...
     pub fn new(port: u16) -> Self {
         MessageApp {
             port: port
         }
     }
 
-    /// RUN
+    /// RUN -> start service
     pub fn run(&self) -> std::io::Result<()> {
         // shared msg vector for each worker
         let messages =
@@ -94,8 +86,10 @@ impl MessageApp {
         
         HttpServer::new(move || {
             App::new()
-                // this makes -> web::Data<AppState>
+                // this creates -> web::Data<AppState> and later called
+                // via .service(...)
                 .data(AppState {
+                    // 0..7
                     server_id: SERVER_COUNTER.fetch_add(1,
                                                         Ordering::SeqCst,
                     ),
@@ -105,18 +99,17 @@ impl MessageApp {
                     messages: messages.clone(),
                 })
                 .wrap(middleware::Logger::default())
-                .service(index)
-                .service(
-                    // POST handler resourse
-                    web::resource("/send") // path
+                .service(index) // -> fn index + #[get"/"]
+                .service( 
+                    web::resource("/send") // path <- instead #[..("/send")
                         .data(web::JsonConfig::default() // json extractor
                               .limit(4096) // 4096 bytes 
                         )
-                        .route(web::post() // HTTP POST REQ
-                               .to(post_msg) //our handler function
+                        .route(web::post() // HTTP POST <- instead #[post("/..")]
+                               .to(post_msg) // -> fn post_msg 
                         ),
                 )
-                .service(clear)
+                .service(clear) // -> fn clear #[post("/clear")]
                 
         })
             .bind(
@@ -130,57 +123,44 @@ impl MessageApp {
 }
 
 
-#[get("/")] // GET HANDLER
+/// service: handler
+#[get("/")]
 fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
-    /*
-    AppState {
-        server_id: usize,
-        request_count: Cell<usize>,
-        messages: Arc<Mutex<Vec<String>>>,
-    }
-    */
-
-    // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
     let msg = state
         .messages
-        .lock() // get access to data inside Mutex + blocks until another thread
-        .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
+        .lock()
+        .unwrap();
 
-    /*
-    IndexResponse {
-        server_id: usize,
-        request_count: usize,
-        messages: Vec<String>,
-    }
-    */
-    
     Ok(
         web::Json(
             IndexResponse {
                 server_id: state.server_id,
                 request_count: request_count,
-                messages: msg.clone(), // because it is shared 
+                messages: msg.clone(),
             }
         )
     )
 }
 
 
+/// route.to()
+///
 /// format msg to send
 fn post_msg(msg: web::Json<PostInput>,
             state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
 
+    // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
     // we lock and have access to Vec messages
     let mut ms = state
         .messages
-        .lock()
-        .unwrap();
+        .lock() // get access to data inside Mutex + blocks until another thread
+        .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
     // and we push are new MSG to Vec
     ms.push(msg.message.clone()); // clone as Vec owns each element
@@ -189,25 +169,26 @@ fn post_msg(msg: web::Json<PostInput>,
         PostResponse {
             server_id: state.server_id, // here is our messages: Vec
             request_count: request_count,
-            message: msg.message.clone(), // clone 
+            message: msg.message.clone(), // because it is shared 
         }
     ))
 }
 
 
-#[post("/clear")] // POST HANDLER
+/// service: handler
+#[post("/clear")]
 fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
-    let request_count = state.request_count.get() + 1;
+    let request_count = state.request_count.get() + 1; // we still count
     state.request_count.set(request_count);
 
     let mut ms = state.messages.lock().unwrap();
-    ms.clear();
+    ms.clear(); // messages are flushed
 
     Ok(web::Json(
         IndexResponse {
             server_id: state.server_id,
             request_count: request_count,
-            messages: vec![],
+            messages: vec![], // no messages for json
         }
     ))
 }
