@@ -38,6 +38,7 @@ struct LookupResponse {
     server_id: usize,
     request_count: usize,
     result: Option<String>, // None in JSON will be "null"
+    position: String,
 }
 
 
@@ -337,27 +338,105 @@ fn _post_error(err: JsonPayloadError, // what went wrong
 }
 // */
 
+///
+/// potunit kdyz budu chit vice dily Path : /1/2/3
+///
+/// naucit se at to vraci posladni kdyz dam /-1
+///
 #[get("/lookup/{index}")]
 fn lookup(state: web::Data<AppState>,
-          idx: web::Path<usize>) -> actix_web::Result<web::Json<LookupResponse>> {
+          //idx: web::Path<usize>) -> actix_web::Result<web::Json<LookupResponse>> {
+          idx: web::Path<String>) -> actix_web::Result<web::Json<LookupResponse>> {
 
+    println!("IDX: {idx:?}");
+
+    let mut position;
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    // let try if it i64 or not
+    let parsed_idx = match to_parse_idx.parse::<i64>() {
+        Ok(i) => {
+            position = format!("{}", i);
+            
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("fooking INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            position = String::from("null");
+            
+            None
+        },
+    };
+
+    println!("PARSED_IDX: {parsed_idx:?}");
+    
+    // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
+    // we lock msg vec
     let ms = state
         .messages
         .lock()
         .unwrap();
 
+    println!("MS: {ms:?}");
+
+    let result = match parsed_idx {
+        // we have positive number
+        Some(p @ 0..) => {
+            position = format!("{}", p);
+
+            ms
+                .get(p as usize) // position need to be usize
+                .cloned()
+        },
+
+        // we want exactly the last
+        Some(-1) => {
+            let target = ms.last().cloned(); // ms[ms.len()-1]
+            
+            position = format!("{:?}",
+                               ms
+                               .iter()
+                               .position(|x| {
+                                   println!("x: {:?}", target);
+
+                                   Some(x) == target.as_ref()
+                               }),
+            );
+
+            target
+        },
+
+        // bin all other
+        _ => None,
+    };
+    
+    /*
     // we get stored message via index 
     let result = ms
-        .get(idx.into_inner())
+        .get(
+            parsed_idx
+            /*
+            parsed_idx // this is our index position of msg in vec, we start at 0
+                .into_inner()
+            */
+        )
         .cloned(); // Option<&String> -> Option<String>
+    */
 
+    println!("RESULT: {result:?}");
+    
     Ok(web::Json(
+        // let's build struct for json
         LookupResponse {
             server_id: state.server_id,
             request_count:request_count,
-            result,
+            result: result,
+            position: position,
         }))
 }
