@@ -1,0 +1,35 @@
+[package]
+name = "handler_video"
+version = "0.1.0"
+edition = "2021"
+authors = ["Pavel SRB <prace@srbpavel.cz>"] 
+
+[dependencies]
+[dependencies.actix-web]   
+version = "3.3.3"         
+                           
+[dependencies.env_logger]  
+version = "0.9.0"         
+                           
+[dependencies.chrono]      
+version = "0.4.19"
+
+# unpublished local crate EASY_CONFIG                                    
+# https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html 
+# https://github.com/rust-lang/cargo/issues/1462                         
+[dependencies.easy_config]                                           
+version = "^0"                                                           
+# LOCAL                                                                  
+path = "/home/conan/soft/rust/easy_config/"
+# REMOTE
+#git = "https://github.com/srbpavel/rust"
+#package = "easy_config"
+#subfolder = { git = "easy_config" } # ???
+
+# TOML CONFIG + ACTIX -> Serialize, Deserialize
+[dependencies.serde]
+version = "1.0.136"                                                     
+features = ["derive"]                                                    
+                                                                         
+[dependencies.serde_json]                                                
+version= "1.0.79"                                                       

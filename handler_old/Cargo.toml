@@ -1,5 +1,5 @@
 [package]
-name = "video_handler"
+name = "handler_old"
 version = "0.1.0"
 #edition = "2021"
 edition = "2018"
@@ -21,7 +21,7 @@ version = "0.4.19"
 # unpublished local crate EASY_CONFIG
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
 # https://github.com/rust-lang/cargo/issues/1462
-[dev-dependencies.easy_config]               
+[dependencies.easy_config]               
 version = "^0"                               
 # LOCAL
 path = "/home/conan/soft/rust/easy_config/"  
