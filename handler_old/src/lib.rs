@@ -15,6 +15,8 @@ use actix_web::{
     },
 };
 
+//use actix_files::Files; // FUTURE USE
+
 use serde::{Deserialize,
             Serialize,
 };
@@ -40,6 +42,7 @@ struct LookupResponse {
     result: Option<String>, // None in JSON will be "null"
     //position: String,
     position: Option<String>,
+    path: String,
 }
 
 
@@ -127,6 +130,11 @@ impl MessageApp {
                 // [2022-02-22T18:08:52Z INFO  actix_web::middleware::logger] "POST /send HTTP/1.1" 400 53 "curl/7.74.0" 1.039174
                 .wrap(middleware::Logger::new(LOG_FORMAT))
                 .service(index) // -> fn index + #[get"/"]
+                /* FUTURE USE
+                .default_service(
+                    Files::new("", "./static")
+                )
+                */
                 .service( 
                     web::resource("/send") // path <- instead #[..("/send")
                         .data(web::JsonConfig::default()
@@ -145,7 +153,13 @@ impl MessageApp {
                         ),
                 )
                 .service(clear) // -> fn clear #[post("/clear")]
-                .service(lookup) // -> fn lookup
+                //.service(lookup) // -> fn lookup
+                .service( 
+                    web::resource("/lookup/{index}")
+                        .route(web::get() // HTTP GET
+                               .to(lookup)
+                        ),
+                )
                 
         })
             .bind(
@@ -340,13 +354,12 @@ fn _post_error(err: JsonPayloadError, // what went wrong
 // */
 
 ///
-/// potunit kdyz budu chit vice dily Path : /1/2/3
+/// naucit kdyz budu chit vice dily Path : /1/2/3
+/// a pouzit casti Req
 ///
-/// naucit se at to vraci posladni kdyz dam /-1
-///
-#[get("/lookup/{index}")]
+//#[get("/lookup/{index}")]
 fn lookup(state: web::Data<AppState>,
-          //idx: web::Path<usize>) -> actix_web::Result<web::Json<LookupResponse>> {
+          //url: web::Path<String>,
           idx: web::Path<String>) -> actix_web::Result<web::Json<LookupResponse>> {
 
     println!("IDX: {idx:?}");
@@ -355,11 +368,18 @@ fn lookup(state: web::Data<AppState>,
     // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
 
-    // let try if it i64 or not
+    //let path = format!("{:?}\n{}",
+    let path = format!("/lookup/{}", // take this from req
+                       //url,
+                       to_parse_idx,
+    );
+
+    
+    // let's try parse
     let parsed_idx = match to_parse_idx.parse::<i64>() {
         Ok(i) => {
             position = Some(format!("{}", i));
-            
+
             Some(i)
         },
         Err(why) => {
@@ -371,7 +391,7 @@ fn lookup(state: web::Data<AppState>,
         },
     };
 
-    println!("PARSED_IDX: {parsed_idx:?}");
+    //println!("PARSED_IDX: {parsed_idx:?}");
     
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
@@ -383,76 +403,48 @@ fn lookup(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    println!("MS: {ms:?}");
+    //println!("MS: {ms:?}");
 
     let result = match parsed_idx {
         // we have positive number
         Some(p @ 0..) => {
-            position = Some(format!("{}", p));
+            position = Some(p.to_string());
 
             ms
-                .get(p as usize) // position need to be usize
+                .get(p as usize) // position i64 need to be usize
                 .cloned()
         },
 
         // we want exactly the last
         Some(-1) => {
-            let target = ms.last().cloned(); // ms[ms.len()-1]
+            let last_msg = ms.last().cloned(); // ms[ms.len()-1]
 
             position = match ms
                 .iter()
-                .position(|x| {
-                    //println!("x: {:?}", target);
-                    
-                    Some(x) == target.as_ref()
-                    //x == target.as_ref()
-                }) {
+                .position(|x| Some(x) == last_msg.as_ref()) {
                     Some(p) => Some(p.to_string()),
                     None => None,
                 };
             
-            /*
-            position = Some(format!("{}",
-                                    ms
-                                    .iter()
-                                    .position(|x| {
-                                        println!("x: {:?}", target);
-                                        
-                                        Some(x) == target.as_ref()
-                                        //x == target.as_ref()
-                                    })
-                                    .unwrap_or(),
-            ));
-            */
-
-            target
+            last_msg
         },
 
         // bin all other
         _ => None,
     };
     
-    /*
-    // we get stored message via index 
-    let result = ms
-        .get(
-            parsed_idx
-            /*
-            parsed_idx // this is our index position of msg in vec, we start at 0
-                .into_inner()
-            */
-        )
-        .cloned(); // Option<&String> -> Option<String>
-    */
-
-    println!("RESULT: {result:?}");
+    //println!("RESULT: {result:?}");
     
-    Ok(web::Json(
-        // let's build struct for json
-        LookupResponse {
-            server_id: state.server_id,
-            request_count:request_count,
-            result: result,
-            position: position,
-        }))
+    Ok(
+        web::Json(
+            // let's build struct for json
+            LookupResponse {
+                server_id: state.server_id,
+                request_count:request_count,
+                result: result,
+                position: position,
+                path: path,
+            }
+        )
+    )
 }
