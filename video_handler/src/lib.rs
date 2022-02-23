@@ -38,7 +38,8 @@ struct LookupResponse {
     server_id: usize,
     request_count: usize,
     result: Option<String>, // None in JSON will be "null"
-    position: String,
+    //position: String,
+    position: Option<String>,
 }
 
 
@@ -349,7 +350,6 @@ fn lookup(state: web::Data<AppState>,
           idx: web::Path<String>) -> actix_web::Result<web::Json<LookupResponse>> {
 
     println!("IDX: {idx:?}");
-
     let mut position;
     
     // deconstruct to inner value
@@ -358,14 +358,14 @@ fn lookup(state: web::Data<AppState>,
     // let try if it i64 or not
     let parsed_idx = match to_parse_idx.parse::<i64>() {
         Ok(i) => {
-            position = format!("{}", i);
+            position = Some(format!("{}", i));
             
             Some(i)
         },
         Err(why) => {
             eprintln!("fooking INDEX: {to_parse_idx}\nREASON >>> {why}");
 
-            position = String::from("null");
+            position = None;
             
             None
         },
@@ -388,7 +388,7 @@ fn lookup(state: web::Data<AppState>,
     let result = match parsed_idx {
         // we have positive number
         Some(p @ 0..) => {
-            position = format!("{}", p);
+            position = Some(format!("{}", p));
 
             ms
                 .get(p as usize) // position need to be usize
@@ -398,16 +398,32 @@ fn lookup(state: web::Data<AppState>,
         // we want exactly the last
         Some(-1) => {
             let target = ms.last().cloned(); // ms[ms.len()-1]
-            
-            position = format!("{:?}",
-                               ms
-                               .iter()
-                               .position(|x| {
-                                   println!("x: {:?}", target);
 
-                                   Some(x) == target.as_ref()
-                               }),
-            );
+            position = match ms
+                .iter()
+                .position(|x| {
+                    //println!("x: {:?}", target);
+                    
+                    Some(x) == target.as_ref()
+                    //x == target.as_ref()
+                }) {
+                    Some(p) => Some(p.to_string()),
+                    None => None,
+                };
+            
+            /*
+            position = Some(format!("{}",
+                                    ms
+                                    .iter()
+                                    .position(|x| {
+                                        println!("x: {:?}", target);
+                                        
+                                        Some(x) == target.as_ref()
+                                        //x == target.as_ref()
+                                    })
+                                    .unwrap_or(),
+            ));
+            */
 
             target
         },
