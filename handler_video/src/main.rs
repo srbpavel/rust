@@ -144,7 +144,8 @@ async fn main() -> std::io::Result<()> {
     */
 
     // as we want to find via id not index
-    let mut hash_map =
+    //let mut hash_map =
+    let hash_map =
         Arc::new(                        
             Mutex::new(
                 HashMap::new()
@@ -398,7 +399,8 @@ async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexR
 /// 
 ///
 async fn search(state: web::Data<AppState>,
-                idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
+                //idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
+                idx: web::Path<String>) -> actix_web::Result<web::Json<SearchResponse>> {
 
     // our KEY
     println!("IDX: {idx:?}");
@@ -410,25 +412,21 @@ async fn search(state: web::Data<AppState>,
                        to_parse_idx,
     );
 
-    /*
+    // /*
     // let's try parse
-    let parsed_idx = match to_parse_idx.parse::<i64>() {
+    let parsed_idx = match to_parse_idx.parse::<usize>() {
         Ok(i) => {
-            position = Some(format!("{}", i));
-
             Some(i)
         },
         Err(why) => {
             eprintln!("fooking INDEX: {to_parse_idx}\nREASON >>> {why}");
 
-            position = None;
-            
             None
         },
     };
 
     println!("PARSED_IDX: {parsed_idx:?}");
-     */
+    // */
     
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
@@ -442,7 +440,24 @@ async fn search(state: web::Data<AppState>,
 
     println!("MS: {ms:?}");
 
-    let result = match ms.get(&to_parse_idx.clone()) {
+    //let result = match ms.get(&to_parse_idx.clone()) {
+    let result = match parsed_idx {
+        Some(i) =>  
+            match ms.get(&i) {
+                Some(msg) => Some(
+                    Message {
+                        id: i,
+                        body: msg.to_string(),
+                    }
+                ),
+                None => None,
+            },
+        None => None,
+    };
+    
+    /*
+    //let result = match ms.get(&to_parse_idx.clone()) {
+    let result = match ms.get(&parsed_idx.clone()) {
         Some(msg) => Some(
             Message {
                 id: to_parse_idx.clone(),
@@ -451,7 +466,8 @@ async fn search(state: web::Data<AppState>,
         ),
         None => None,
     };
-    
+    */
+
     /*
     let result = match parsed_idx {
         // we have positive number
