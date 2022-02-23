@@ -26,6 +26,8 @@ use std::sync::{Arc,
                 Mutex,              
 };
 
+use std::collections::HashMap;
+
 
 const NAME: &'static str = "HANDLER_VIDEO";
 const SERVER: &'static str = "127.0.0.1";
@@ -52,7 +54,8 @@ struct AppState {
     // Atomic reference counted pointer
     // Arc can be shared across threads
     //messages: Arc<Mutex<Vec<String>>>,
-    messages: Arc<Mutex<Vec<Message>>>, 
+    //messages: Arc<Mutex<Vec<Message>>>,
+    hash_map: Arc<Mutex<HashMap<usize, String>>>, 
 }                                      
 
 #[derive(Serialize, Debug)]
@@ -60,7 +63,8 @@ struct IndexResponse {
     server_id: usize,      
     request_count: usize,  
     //messages: Vec<String>,
-    messages: Vec<Message>, 
+    //messages: Vec<Message>,
+    hash_map: HashMap<usize, String>, 
 }
 
 #[derive(Deserialize, Debug)]
@@ -77,6 +81,7 @@ struct PostResponse {
     message: Message,
 }
 
+/* // VEC only
 #[derive(Serialize, Debug)]                               
 struct LookupResponse {                                   
     server_id: usize,                                     
@@ -84,7 +89,20 @@ struct LookupResponse {
     //result: Option<String>, // None in JSON will be "null"
     result: Option<Message>, // None in JSON will be "null"
     //position: String,                                   
-    position: Option<String>,                             
+    //position: Option<String>, // only for VEC
+    path: String,
+    //id: usize,
+}                                                         
+*/
+
+#[derive(Serialize, Debug)]                               
+struct SearchResponse {                                   
+    server_id: usize,                                     
+    request_count: usize,                                 
+    //result: Option<String>, // None in JSON will be "null"
+    result: Option<Message>, // None in JSON will be "null"
+    //position: String,                                   
+    //position: Option<String>, // only for VEC
     path: String,
     //id: usize,
 }                                                         
@@ -116,13 +134,23 @@ async fn main() -> std::io::Result<()> {
     //
     // test via Hash to accces not by index but id
     //
+    /* // VEC
     let messages =                       
         Arc::new(                        
             Mutex::new(                  
                 vec![]                   
             )                            
         );                               
+    */
 
+    // as we want to find via id not index
+    let mut hash_map =
+        Arc::new(                        
+            Mutex::new(
+                HashMap::new()
+            )
+        );
+    
     // SERVER
     HttpServer::new(move || {
         App::new()
@@ -137,7 +165,10 @@ async fn main() -> std::io::Result<()> {
                 // this is owned by each thread                     
                 request_count: Cell::new(0), // with initial value 0
                 // create a new pointer for each thread             
-                messages: messages.clone(),                         
+                // VEC
+                //messages: messages.clone(),
+                // HASH
+                hash_map: hash_map.clone(),
             })                                                      
             .wrap(middleware::Logger::new(LOG_FORMAT))
             .service(index)
@@ -153,13 +184,21 @@ async fn main() -> std::io::Result<()> {
             )
             // FLUSH all msg from Vec
             .service(clear) // -> fn clear #[post("/clear")]
-            // READ msg via index
+            /* VEC
+            // READ msg via index VEC only !!!
             .service(                            
                 web::resource("/lookup/{index}") 
                     .route(web::get() // HTTP GET
                            .to(lookup)           
                     ),                           
-            )                                    
+            ) 
+            */
+            .service(                            
+                web::resource("/search/{index}") 
+                    .route(web::get() // HTTP GET
+                           .to(search)           
+                    ),                           
+            ) 
     })
         .bind(
             format!("{}:{}",
@@ -230,7 +269,10 @@ async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     state.request_count.set(request_count);          
     
     let msg = state                                  
-        .messages                                    
+        // VEC
+        //.messages
+        // HASH
+        .hash_map
         .lock()                                      
         .unwrap();                                   
     
@@ -239,7 +281,8 @@ async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
             IndexResponse {                          
                 server_id: state.server_id,          
                 request_count: request_count,        
-                messages: msg.clone(),
+                //messages: msg.clone(),
+                hash_map: msg.clone(),
             }                                        
         )                                            
     )                                                
@@ -262,10 +305,12 @@ async fn post_msg(msg: web::Json<PostInput>,
     
     // we lock and have access to Vec messages
     let mut ms = state
-        .messages
+        //.messages //VEC
+        .hash_map // HASH
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
+    // /CLEAR do not reset counter, yet.
     let message_id = ID_COUNTER.fetch_add(1,              
                                           Ordering::SeqCst,
     );          
@@ -273,6 +318,7 @@ async fn post_msg(msg: web::Json<PostInput>,
     println!("BEFORE: {ms:?}");    
     // and we push are new MSG to Vec
     //ms.push(msg.message.clone()); // clone as Vec owns each element
+    /* VEC
     ms.push(
         //msg.message.clone()
         Message {
@@ -280,7 +326,14 @@ async fn post_msg(msg: web::Json<PostInput>,
             id: message_id,
         }
     ); // clone as Vec owns each element
+    */
 
+    // HASH
+    ms.insert(
+        message_id,
+        msg.message.clone(),
+    );
+    
     println!("AFTER: {ms:?}");
     
     Ok(web::Json(
@@ -312,11 +365,17 @@ async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexR
     state.request_count.set(request_count);
 
     let mut ms = state
-        .messages
+        // VEC
+        //.messages
+        // HASH
+        .hash_map
         .lock()
         .unwrap(); // niet goed !!! make it safe 
     
-    ms.clear(); // messages are flushed
+    // VEC
+    //ms.clear(); // messages are flushed
+    // HASH
+    ms.clear();
     
     // actualy this is nearly the same as after start with no messages
     // but few server_id and counter count
@@ -325,12 +384,122 @@ async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexR
         IndexResponse {
             server_id: state.server_id,
             request_count: request_count,
-            messages: vec![], // no messages for json
+            // VEC
+            //messages: vec![], // no messages for json
+            // HASH
+            hash_map: HashMap::new(),
         }
     ))
 }
 
 
+/// SEARCH via hash
+/// 
+/// 
+///
+async fn search(state: web::Data<AppState>,
+                idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
+
+    // our KEY
+    println!("IDX: {idx:?}");
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    let path = format!("/search/{}", // take this from req
+                       to_parse_idx,
+    );
+
+    /*
+    // let's try parse
+    let parsed_idx = match to_parse_idx.parse::<i64>() {
+        Ok(i) => {
+            position = Some(format!("{}", i));
+
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("fooking INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            position = None;
+            
+            None
+        },
+    };
+
+    println!("PARSED_IDX: {parsed_idx:?}");
+     */
+    
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec
+    let ms = state
+        .hash_map
+        .lock()
+        .unwrap();
+
+    println!("MS: {ms:?}");
+
+    let result = match ms.get(&to_parse_idx.clone()) {
+        Some(msg) => Some(
+            Message {
+                id: to_parse_idx.clone(),
+                body: msg.to_string(),
+            }
+        ),
+        None => None,
+    };
+    
+    /*
+    let result = match parsed_idx {
+        // we have positive number
+        Some(p @ 0..) => {
+            position = Some(p.to_string());
+
+            ms
+                .get(p as usize) // position i64 need to be usize
+                .cloned()
+        },
+
+        // we want exactly the last
+        Some(-1) => {
+            let last_msg = ms.last().cloned(); // ms[ms.len()-1]
+
+            position = match ms
+                .iter()
+                .position(|x| Some(x) == last_msg.as_ref()) {
+                    Some(p) => Some(p.to_string()),
+                    None => None,
+                };
+            
+            last_msg
+        },
+
+        // bin all other
+        _ => None,
+    };
+    */
+
+    println!("RESULT: {result:?}");
+    
+    Ok(
+        web::Json(
+            // let's build struct for json
+            SearchResponse {
+                server_id: state.server_id,
+                request_count:request_count,
+                result: result,
+                //position: position,
+                path: path,
+            }
+        )
+    )
+}
+
+
+/* // VEC search
 ///
 /// naucit kdyz budu chit vice dily Path : /1/2/3
 /// a pouzit casti Req
@@ -421,8 +590,9 @@ async fn lookup(state: web::Data<AppState>,
         )
     )
 }
+*/
 
-
+/*
 /// id + name DISPLAY
 ///
 /// curl -v 'http://127.0.0.1:8081/1/bijac/index.html'
@@ -432,6 +602,7 @@ async fn lookup(state: web::Data<AppState>,
 async fn id_name_path(web::Path((id, name)): web::Path<(u32, String)>) -> impl Responder {
     format!("--> /{id}/{name} >>> nazdar name: <{name}> id: <{id}>\n")
 }
+*/
 
 /*
 /// horse Struct
@@ -448,6 +619,7 @@ async fn horse(info: web::Path<Horse>) -> Result<String> {
 }
 */
 
+/*
 /// json ECHO
 ///
 /// curl -X POST 'http://127.0.0.1:8081/echo' -H "Content-Type: application/json" -d '{"msg": "msg_body"}'
@@ -482,3 +654,4 @@ async fn video_detail(path: web::Path<(u32,)>) -> HttpResponse {
             ),
         )
 }
+*/
