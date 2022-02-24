@@ -1,6 +1,4 @@
 use crate::{AppState,
-            //SERVER_COUNTER,
-            //SERVER_ORD,
             MSG_ID_COUNTER,
             MSG_ID_ORD,
 };
@@ -9,35 +7,15 @@ use actix_web::{
     get,
     post,
     web,
-    //middleware,
-    //App,
-    //HttpResponse,
-    //HttpServer,
-    //Responder,
-    // Error, // covered ?
+    // Error, // covered via JsonErr ?
     Result,
 };
-
 
 use serde::{Serialize,
             Deserialize,
 };
 
-/*
-use std::cell::Cell;                
-use std::sync::atomic::{AtomicUsize,
-                        Ordering,   
-};
-*/                                  
-
-/*
-use std::sync::{Arc,                
-                Mutex,              
-};
-*/
-
 use std::collections::HashMap;
-
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Message {
@@ -49,8 +27,6 @@ pub struct Message {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    //messages: Vec<String>,
-    //messages: Vec<Message>,
     hash_map: HashMap<usize, String>, 
 }
 
@@ -63,35 +39,15 @@ pub struct PostInput {
 pub struct PostResponse {
     server_id: usize,
     request_count: usize,
-    //message: String,
-    //id: usize,
     message: Message,
 }
-
-/* // VEC only
-#[derive(Serialize, Debug)]                               
-struct LookupResponse {                                   
-    server_id: usize,                                     
-    request_count: usize,                                 
-    //result: Option<String>, // None in JSON will be "null"
-    result: Option<Message>, // None in JSON will be "null"
-    //position: String,                                   
-    //position: Option<String>, // only for VEC
-    path: String,
-    //id: usize,
-}                                                         
-*/
 
 #[derive(Serialize, Debug)]                               
 pub struct SearchResponse {                                   
     server_id: usize,                                     
     request_count: usize,                                 
-    //result: Option<String>, // None in JSON will be "null"
     result: Option<Message>, // None in JSON will be "null"
-    //position: String,                                   
-    //position: Option<String>, // only for VEC
     path: String,
-    //id: usize,
 }
 
 
@@ -99,15 +55,8 @@ pub struct SearchResponse {
 pub struct LastResponse {                                   
     server_id: usize,                                     
     request_count: usize,                                 
-    //result: Option<String>, // None in JSON will be "null"
     result: Option<Message>, // None in JSON will be "null"
-    //position: String,                                   
-    //position: Option<String>, // only for VEC
-    //path: String,
-    //id: usize,
 }                                                         
-
-
 
 #[get("/")]
 pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
@@ -115,9 +64,6 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
     state.request_count.set(request_count);          
     
     let msg = state                                  
-        // VEC
-        //.messages
-        // HASH
         .hash_map
         .lock()                                      
         .unwrap();                                   
@@ -127,7 +73,6 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
             IndexResponse {                          
                 server_id: state.server_id,          
                 request_count: request_count,        
-                //messages: msg.clone(),
                 hash_map: msg.clone(),
             }                                        
         )                                            
@@ -151,30 +96,15 @@ pub async fn post_msg(msg: web::Json<PostInput>,
     
     // we lock and have access to Vec messages
     let mut ms = state
-        //.messages //VEC
         .hash_map // HASH
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
     // /CLEAR do not reset counter, yet.
     let message_id = MSG_ID_COUNTER.fetch_add(1,              
-                                              //Ordering::SeqCst,
                                               MSG_ID_ORD,
     );          
     
-    //println!("BEFORE: {ms:?}");    
-    // and we push are new MSG to Vec
-    //ms.push(msg.message.clone()); // clone as Vec owns each element
-    /* VEC
-    ms.push(
-        //msg.message.clone()
-        Message {
-            body: msg.message.clone(),
-            id: message_id,
-        }
-    ); // clone as Vec owns each element
-    */
-
     // HASH
     ms.insert(
         message_id,
@@ -187,8 +117,6 @@ pub async fn post_msg(msg: web::Json<PostInput>,
         PostResponse {
             server_id: state.server_id, // here is our messages: Vec
             request_count: request_count,
-            //message: msg.message.clone(), // because it is shared
-            //id: message_id,
             message: Message {
                 body: msg.message.clone(),
                 id: message_id,
@@ -212,32 +140,24 @@ pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
     state.request_count.set(request_count);
 
     let mut ms = state
-        // VEC
-        //.messages
         // HASH
         .hash_map
         .lock()
         .unwrap(); // niet goed !!! make it safe 
     
-    // VEC
-    //ms.clear(); // messages are flushed
     // HASH
     ms.clear();
     
-    // actualy this is nearly the same as after start with no messages
-    // but few server_id and counter count
-
-    Ok(web::Json(
-        IndexResponse {
-            server_id: state.server_id,
-            request_count: request_count,
-            // VEC
-            //messages: vec![], // no messages for json
-            // HASH
-            hash_map: HashMap::new(), // no need to create new as we have old
-            //hash_map: ms.clone(), // ok but still expenssive?
-        }
-    ))
+    Ok(
+        web::Json(
+            IndexResponse {
+                server_id: state.server_id,
+                request_count: request_count,
+                hash_map: HashMap::new(), // no need to create new as we have old
+                //hash_map: ms.clone(), // ok but still expenssive?
+            }
+        )
+    )
 }
 
 /// SEARCH via hash
@@ -284,7 +204,6 @@ pub async fn search(state: web::Data<AppState>,
 
     //println!("MS: {ms:?}");
 
-    //let result = match ms.get(&to_parse_idx.clone()) {
     let result = match parsed_idx {
         Some(i) =>  
             match ms.get(&i) {
@@ -299,19 +218,6 @@ pub async fn search(state: web::Data<AppState>,
         None => None,
     };
     
-    /*
-    //let result = match ms.get(&to_parse_idx.clone()) {
-    let result = match ms.get(&parsed_idx.clone()) {
-        Some(msg) => Some(
-            Message {
-                id: to_parse_idx.clone(),
-                body: msg.to_string(),
-            }
-        ),
-        None => None,
-    };
-    */
-
     //println!("RESULT: {result:?}");
     
     Ok(
@@ -339,12 +245,6 @@ pub async fn delete(state: web::Data<AppState>,
     
     // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
-
-    /* DO NOT USE HERE
-    let path = format!("/delete/{}", // take this from req
-                       to_parse_idx,
-    );
-    */
 
     // let's try parse
     let parsed_idx = match to_parse_idx.parse::<usize>() {
@@ -434,7 +334,6 @@ pub async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<Las
         .lock()
         .unwrap();
 
-    //let last_id = &MSG_ID_COUNTER.load(Ordering::SeqCst) - 1;
     let last_id = &MSG_ID_COUNTER.load(MSG_ID_ORD) - 1;
 
     //println!("LAST: {:?}", last_id);
