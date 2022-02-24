@@ -6,10 +6,10 @@ use actix_web::{
     web,
     middleware,
     App,
-    HttpResponse,
+    //HttpResponse,
     HttpServer,
-    Responder,
-    // Error, to asi volam full_path?
+    //Responder,
+    // Error, // covered ?
     Result,
 };
     
@@ -34,7 +34,7 @@ const SERVER: &'static str = "127.0.0.1";
 const PORT: u64 = 8081;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
-static ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
+static MSG_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
 const LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 
@@ -105,7 +105,21 @@ struct SearchResponse {
     //position: Option<String>, // only for VEC
     path: String,
     //id: usize,
+}
+
+
+#[derive(Serialize, Debug)]                               
+struct LastResponse {                                   
+    server_id: usize,                                     
+    request_count: usize,                                 
+    //result: Option<String>, // None in JSON will be "null"
+    result: Option<Message>, // None in JSON will be "null"
+    //position: String,                                   
+    //position: Option<String>, // only for VEC
+    //path: String,
+    //id: usize,
 }                                                         
+
 
 /*
 #[derive(Deserialize, Debug)]
@@ -194,12 +208,15 @@ async fn main() -> std::io::Result<()> {
                     ),                           
             ) 
             */
+            // SEARCH msg via Hash key: id
             .service(                            
                 web::resource("/search/{index}") 
                     .route(web::get() // HTTP GET
                            .to(search)           
                     ),                           
-            ) 
+            )
+            // LAST via highest id
+            .service(last) // -> fn last #[get("/last")]
     })
         .bind(
             format!("{}:{}",
@@ -312,8 +329,8 @@ async fn post_msg(msg: web::Json<PostInput>,
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
     // /CLEAR do not reset counter, yet.
-    let message_id = ID_COUNTER.fetch_add(1,              
-                                          Ordering::SeqCst,
+    let message_id = MSG_ID_COUNTER.fetch_add(1,              
+                                              Ordering::SeqCst,
     );          
     
     println!("BEFORE: {ms:?}");    
@@ -412,7 +429,6 @@ async fn search(state: web::Data<AppState>,
                        to_parse_idx,
     );
 
-    // /*
     // let's try parse
     let parsed_idx = match to_parse_idx.parse::<usize>() {
         Ok(i) => {
@@ -426,7 +442,6 @@ async fn search(state: web::Data<AppState>,
     };
 
     println!("PARSED_IDX: {parsed_idx:?}");
-    // */
     
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
@@ -468,36 +483,6 @@ async fn search(state: web::Data<AppState>,
     };
     */
 
-    /*
-    let result = match parsed_idx {
-        // we have positive number
-        Some(p @ 0..) => {
-            position = Some(p.to_string());
-
-            ms
-                .get(p as usize) // position i64 need to be usize
-                .cloned()
-        },
-
-        // we want exactly the last
-        Some(-1) => {
-            let last_msg = ms.last().cloned(); // ms[ms.len()-1]
-
-            position = match ms
-                .iter()
-                .position(|x| Some(x) == last_msg.as_ref()) {
-                    Some(p) => Some(p.to_string()),
-                    None => None,
-                };
-            
-            last_msg
-        },
-
-        // bin all other
-        _ => None,
-    };
-    */
-
     println!("RESULT: {result:?}");
     
     Ok(
@@ -507,8 +492,64 @@ async fn search(state: web::Data<AppState>,
                 server_id: state.server_id,
                 request_count:request_count,
                 result: result,
-                //position: position,
                 path: path,
+            }
+        )
+    )
+}
+
+
+/// LAST via highest Hash key: id
+/// 
+/// 
+///
+#[get("/last")]
+async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
+
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec
+    let ms = state
+        .hash_map
+        .lock()
+        .unwrap();
+
+    println!("MS: {ms:?}");
+
+    //let last_id = &MSG_ID_COUNTER;
+    let last_id = &MSG_ID_COUNTER.load(Ordering::SeqCst) - 1;
+
+    println!("LAST: {:?}",
+             //MSG_ID_COUNTER,
+             //last_id.load(Ordering::SeqCst) - 1,
+             last_id,
+    );
+    
+    //let result = match ms.get(&(666_i32 as usize)) {
+    //let result = match ms.get(&(last_id.load(Ordering::SeqCst) - 1)) {
+    let result = match ms.get(&last_id) {
+                Some(msg) => Some(
+                    Message {
+                        //id: 666_i32 as usize, //last_id,
+                        //id: last_id.load(Ordering::SeqCst) - 1,
+                        id: last_id,
+                        body: msg.to_string(),
+                    }
+                ),
+                None => None,
+    };
+
+    println!("RESULT: {result:?}");
+    
+    Ok(
+        web::Json(
+            // let's build struct for json
+            LastResponse {
+                server_id: state.server_id,
+                request_count:request_count,
+                result: result,
             }
         )
     )
