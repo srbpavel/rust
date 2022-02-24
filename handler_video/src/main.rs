@@ -34,7 +34,9 @@ const SERVER: &'static str = "127.0.0.1";
 const PORT: u64 = 8081;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
+static SERVER_ORD: Ordering = Ordering::SeqCst;
 static MSG_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
+static MSG_ID_ORD: Ordering = Ordering::SeqCst;
 const LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 
@@ -175,7 +177,8 @@ async fn main() -> std::io::Result<()> {
                 // use the same for msg/video id
                 //
                 server_id: SERVER_COUNTER.fetch_add(1,              
-                                                    Ordering::SeqCst,
+                                                    //Ordering::SeqCst,
+                                                    SERVER_ORD,
                 ),                                                  
                 // this is owned by each thread                     
                 request_count: Cell::new(0), // with initial value 0
@@ -315,7 +318,7 @@ async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 ///
 async fn post_msg(msg: web::Json<PostInput>,
                   state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
-    println!("POST_MSG: {state:?}");    
+    //println!("POST_MSG: {state:?}");    
 
     // Cell
     let request_count = state.request_count.get() + 1;
@@ -330,10 +333,11 @@ async fn post_msg(msg: web::Json<PostInput>,
 
     // /CLEAR do not reset counter, yet.
     let message_id = MSG_ID_COUNTER.fetch_add(1,              
-                                              Ordering::SeqCst,
+                                              //Ordering::SeqCst,
+                                              MSG_ID_ORD,
     );          
     
-    println!("BEFORE: {ms:?}");    
+    //println!("BEFORE: {ms:?}");    
     // and we push are new MSG to Vec
     //ms.push(msg.message.clone()); // clone as Vec owns each element
     /* VEC
@@ -352,7 +356,7 @@ async fn post_msg(msg: web::Json<PostInput>,
         msg.message.clone(),
     );
     
-    println!("AFTER: {ms:?}");
+    //println!("AFTER: {ms:?}");
     
     Ok(web::Json(
         PostResponse {
@@ -377,7 +381,7 @@ async fn post_msg(msg: web::Json<PostInput>,
 ///
 #[post("/clear")]
 async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
-    println!("CLEAR");
+    //println!("CLEAR");
     
     let request_count = state.request_count.get() + 1; // we still count
     state.request_count.set(request_count);
@@ -405,7 +409,8 @@ async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexR
             // VEC
             //messages: vec![], // no messages for json
             // HASH
-            hash_map: HashMap::new(),
+            hash_map: HashMap::new(), // no need to create new as we have old
+            //hash_map: ms.clone(), // ok but still expenssive?
         }
     ))
 }
@@ -413,14 +418,14 @@ async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexR
 
 /// SEARCH via hash
 /// 
-/// 
+/// path as String
+/// i did not make it work for usize because do no fing way to verify valid usize?
 ///
 async fn search(state: web::Data<AppState>,
                 //idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
                 idx: web::Path<String>) -> actix_web::Result<web::Json<SearchResponse>> {
 
-    // our KEY
-    println!("IDX: {idx:?}");
+    //println!("IDX: {idx:?}");
     
     // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
@@ -435,13 +440,13 @@ async fn search(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
-            eprintln!("fooking INDEX: {to_parse_idx}\nREASON >>> {why}");
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
 
             None
         },
     };
 
-    println!("PARSED_IDX: {parsed_idx:?}");
+    //println!("PARSED_IDX: {parsed_idx:?}");
     
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
@@ -453,7 +458,7 @@ async fn search(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    println!("MS: {ms:?}");
+    //println!("MS: {ms:?}");
 
     //let result = match ms.get(&to_parse_idx.clone()) {
     let result = match parsed_idx {
@@ -483,7 +488,7 @@ async fn search(state: web::Data<AppState>,
     };
     */
 
-    println!("RESULT: {result:?}");
+    //println!("RESULT: {result:?}");
     
     Ok(
         web::Json(
@@ -499,9 +504,7 @@ async fn search(state: web::Data<AppState>,
 }
 
 
-/// LAST via highest Hash key: id
-/// 
-/// 
+/// LAST via Hash key: id
 ///
 #[get("/last")]
 async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
@@ -516,32 +519,24 @@ async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastRes
         .lock()
         .unwrap();
 
-    println!("MS: {ms:?}");
+    //let last_id = &MSG_ID_COUNTER.load(Ordering::SeqCst) - 1;
+    let last_id = &MSG_ID_COUNTER.load(MSG_ID_ORD) - 1;
 
-    //let last_id = &MSG_ID_COUNTER;
-    let last_id = &MSG_ID_COUNTER.load(Ordering::SeqCst) - 1;
+    //println!("LAST: {:?}", last_id);
 
-    println!("LAST: {:?}",
-             //MSG_ID_COUNTER,
-             //last_id.load(Ordering::SeqCst) - 1,
-             last_id,
-    );
-    
-    //let result = match ms.get(&(666_i32 as usize)) {
-    //let result = match ms.get(&(last_id.load(Ordering::SeqCst) - 1)) {
     let result = match ms.get(&last_id) {
-                Some(msg) => Some(
-                    Message {
-                        //id: 666_i32 as usize, //last_id,
-                        //id: last_id.load(Ordering::SeqCst) - 1,
-                        id: last_id,
-                        body: msg.to_string(),
-                    }
-                ),
-                None => None,
+        Some(msg) =>
+            Some(
+                // our last msg
+                Message {
+                    id: last_id,
+                    body: msg.to_string(),
+                }
+            ),
+        None => None,
     };
 
-    println!("RESULT: {result:?}");
+    //println!("RESULT: {result:?}");
     
     Ok(
         web::Json(
