@@ -1,8 +1,8 @@
 /// HANDLER_VIDEO
 ///
 use actix_web::{
-    get,
-    post,
+    //get,
+    //post,
     web,
     middleware,
     App,
@@ -12,10 +12,16 @@ use actix_web::{
     // Error, // covered ?
     Result,
 };
-    
+
+
+mod message;
+//use message;
+
+/*
 use serde::{Serialize,
             Deserialize,
 };
+*/
 
 use std::cell::Cell;                
 use std::sync::atomic::{AtomicUsize,
@@ -42,15 +48,17 @@ static MSG_ID_ORD: Ordering = Ordering::SeqCst;
 const LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 
+/*
 #[derive(Serialize, Debug, Clone, PartialEq)]
 struct Message {
     body: String,
     id: usize,
 }
+*/
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
-struct AppState {                      
+pub struct AppState {                      
     // via thread / worker
     server_id: usize,                  
     //
@@ -62,6 +70,7 @@ struct AppState {
     hash_map: Arc<Mutex<HashMap<usize, String>>>, 
 }                                      
 
+/*
 #[derive(Serialize, Debug)]
 struct IndexResponse {     
     server_id: usize,      
@@ -84,6 +93,7 @@ struct PostResponse {
     //id: usize,
     message: Message,
 }
+*/
 
 /* // VEC only
 #[derive(Serialize, Debug)]                               
@@ -99,6 +109,7 @@ struct LookupResponse {
 }                                                         
 */
 
+/*
 #[derive(Serialize, Debug)]                               
 struct SearchResponse {                                   
     server_id: usize,                                     
@@ -123,7 +134,7 @@ struct LastResponse {
     //path: String,
     //id: usize,
 }                                                         
-
+*/
 
 /*
 #[derive(Deserialize, Debug)]
@@ -204,12 +215,12 @@ async fn main() -> std::io::Result<()> {
                           .limit(4096)                                       
                     )                                                         
                     .route(web::post() // HTTP POST <- instead #[post("/..")]
-                           .to(post_msg) // -> fn post_msg                   
+                           .to(message::post_msg) // -> fn post_msg                   
                     ),                                                       
             )
-            .service(index) // INDEX INSIDE scopes !!!
+            .service(message::index) // INDEX INSIDE scopes !!!
             // FLUSH all msg from Hash
-            .service(clear) // -> fn clear #[post("/clear")]
+            .service(message::clear) // -> fn clear #[post("/clear")]
             /* VEC
             // READ msg via index VEC only !!!
             .service(                            
@@ -223,16 +234,16 @@ async fn main() -> std::io::Result<()> {
             .service(                            
                 web::resource("/search/{index}") 
                     .route(web::get() // HTTP GET
-                           .to(search)           
+                           .to(message::search)           
                     ),                           
             )
             // LAST
-            .service(last) // -> fn last #[get("/last")]
+            .service(message::last) // -> fn last #[get("/last")]
             // DELETE via id
             .service(                            
                 web::resource("/delete/{index}") 
                     .route(web::get() // HTTP GET
-                           .to(delete)           
+                           .to(message::delete)           
                     ),                           
             )
     )}) // scope_end at start
@@ -298,7 +309,7 @@ fn welcome_msg() -> std::io::Result<String> {
     Ok(format!("FoOoKuMe -> {NAME}"))
 }
 
-
+/*
 #[get("/")]
 async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1;
@@ -386,6 +397,7 @@ async fn post_msg(msg: web::Json<PostInput>,
         }
     ))
 }
+
 
 
 /// service: handler
@@ -655,7 +667,7 @@ async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastRes
         )
     )
 }
-
+*/ // END
 
 /* // VEC search
 ///
