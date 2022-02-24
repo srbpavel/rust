@@ -1,6 +1,4 @@
 use crate::{AppState,
-            MSG_ID_COUNTER,
-            MSG_ID_ORD,
 };
 
 use actix_web::{
@@ -16,6 +14,13 @@ use serde::{Serialize,
 };
 
 use std::collections::HashMap;
+
+use std::sync::atomic::{AtomicUsize,
+                        Ordering,   
+};                                  
+
+static MSG_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
+static MSG_ID_ORD: Ordering = Ordering::SeqCst;
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Message {
@@ -284,7 +289,7 @@ pub async fn delete(state: web::Data<AppState>,
             // DELETE
             match msg.remove(&i) {
                 Some(msg) => {
-                    println!("DELETED: {msg}");
+                    //println!("DELETED: {msg}");
 
                     // later this will be another Json Response
                     Some(format!("{}: {}",
@@ -305,7 +310,7 @@ pub async fn delete(state: web::Data<AppState>,
         },
     };
     
-    //println!("RESULT: {result:?}");
+    println!("RESULT: {result:?}");
     
     Ok(
         web::Json(
