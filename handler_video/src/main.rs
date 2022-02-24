@@ -35,8 +35,10 @@ const PORT: u64 = 8081;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
+
 static MSG_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
 static MSG_ID_ORD: Ordering = Ordering::SeqCst;
+
 const LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 
@@ -159,8 +161,8 @@ async fn main() -> std::io::Result<()> {
         );                               
     */
 
+    // shared msg HashMap for each worker
     // as we want to find via id not index
-    //let mut hash_map =
     let hash_map =
         Arc::new(                        
             Mutex::new(
@@ -177,7 +179,6 @@ async fn main() -> std::io::Result<()> {
                 // use the same for msg/video id
                 //
                 server_id: SERVER_COUNTER.fetch_add(1,              
-                                                    //Ordering::SeqCst,
                                                     SERVER_ORD,
                 ),                                                  
                 // this is owned by each thread                     
@@ -188,8 +189,14 @@ async fn main() -> std::io::Result<()> {
                 // HASH
                 hash_map: hash_map.clone(),
             })                                                      
+            // LOG
             .wrap(middleware::Logger::new(LOG_FORMAT))
-            .service(index)
+            // ROOT
+            // MAIN INDEX OUTSIDE scopes !!! 
+            //.service(index) // DISABLE so ROOT return 404
+            // SCOPE for MESSAGES
+            .service(
+                web::scope("/msg")
             // ADD msg
             .service(                                                        
                 web::resource("/send") // path <- instead #[..("/send")      
@@ -200,7 +207,8 @@ async fn main() -> std::io::Result<()> {
                            .to(post_msg) // -> fn post_msg                   
                     ),                                                       
             )
-            // FLUSH all msg from Vec
+            .service(index) // INDEX INSIDE scopes !!!
+            // FLUSH all msg from Hash
             .service(clear) // -> fn clear #[post("/clear")]
             /* VEC
             // READ msg via index VEC only !!!
@@ -227,7 +235,7 @@ async fn main() -> std::io::Result<()> {
                            .to(delete)           
                     ),                           
             )
-    })
+    )}) // scope_end at start
         .bind(
             format!("{}:{}",
                     SERVER,
@@ -556,6 +564,7 @@ async fn delete(state: web::Data<AppState>,
 
     println!("MSG before DEL: {msg:?}");
 
+    // try to make it let shorter !!!
     let result = match parsed_idx {
         Some(i) =>  
             // DELETE
@@ -563,28 +572,23 @@ async fn delete(state: web::Data<AppState>,
                 Some(msg) => {
                     println!("DELETED: {msg}");
 
-                    //Some(msg)
+                    // later this will be another Json Response
                     Some(format!("{}: {}",
                                  i,
                                  msg,
                     ))
-                        
-                    /*
-                    Some(
-                        Message {
-                            id: i,
-                            body: msg.to_string(),
-                        }
-                )
-                    */
                 },
                 None => {
+                    // later this will be another Json Response
                     println!("NOT FOUND SO: {parsed_idx:?} stay");
 
                     None
                 },
             },
-        None => None,
+        None => {
+            println!("DELETE key {to_parse_idx:?} not valid Type");
+            None
+        },
     };
     
     println!("RESULT: {result:?}");
@@ -602,6 +606,11 @@ async fn delete(state: web::Data<AppState>,
 
 
 /// LAST via Hash key: id
+///
+/// beware: not correct if last was deleted as we take it MSG_ID_COUNTER
+/// and not via iter Hash_map
+///
+/// do we want/need such a method?
 ///
 #[get("/last")]
 async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
