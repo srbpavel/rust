@@ -218,8 +218,15 @@ async fn main() -> std::io::Result<()> {
                            .to(search)           
                     ),                           
             )
-            // LAST via highest id
+            // LAST
             .service(last) // -> fn last #[get("/last")]
+            // DELETE via id
+            .service(                            
+                web::resource("/delete/{index}") 
+                    .route(web::get() // HTTP GET
+                           .to(delete)           
+                    ),                           
+            )
     })
         .bind(
             format!("{}:{}",
@@ -499,6 +506,96 @@ async fn search(state: web::Data<AppState>,
                 result: result,
                 path: path,
             }
+        )
+    )
+}
+
+
+/// DELETE via id -> return all msg hash without deleted one
+/// 
+/// path as String
+///
+async fn delete(state: web::Data<AppState>,
+                idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+
+    println!("IDX: {idx:?}");
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    /* DO NOT USE HERE
+    let path = format!("/delete/{}", // take this from req
+                       to_parse_idx,
+    );
+    */
+
+    // let's try parse
+    let parsed_idx = match to_parse_idx.parse::<usize>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+
+    println!("PARSED_IDX: {parsed_idx:?}");
+    
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec, but now as MUT because we delete
+    // we did not do MUT for push ?
+    let mut msg = state
+        .hash_map
+        .lock()
+        .unwrap();
+
+    println!("MSG before DEL: {msg:?}");
+
+    let result = match parsed_idx {
+        Some(i) =>  
+            // DELETE
+            match msg.remove(&i) {
+                Some(msg) => {
+                    println!("DELETED: {msg}");
+
+                    //Some(msg)
+                    Some(format!("{}: {}",
+                                 i,
+                                 msg,
+                    ))
+                        
+                    /*
+                    Some(
+                        Message {
+                            id: i,
+                            body: msg.to_string(),
+                        }
+                )
+                    */
+                },
+                None => {
+                    println!("NOT FOUND SO: {parsed_idx:?} stay");
+
+                    None
+                },
+            },
+        None => None,
+    };
+    
+    println!("RESULT: {result:?}");
+    
+    Ok(
+        web::Json(
+            IndexResponse {                          
+                server_id: state.server_id,          
+                request_count: request_count,        
+                hash_map: msg.clone(),
+            }                                        
         )
     )
 }
