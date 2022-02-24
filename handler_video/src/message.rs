@@ -50,7 +50,6 @@ pub struct SearchResponse {
     path: String,
 }
 
-
 #[derive(Serialize, Debug)]                               
 pub struct LastResponse {                                   
     server_id: usize,                                     
@@ -58,6 +57,9 @@ pub struct LastResponse {
     result: Option<Message>, // None in JSON will be "null"
 }                                                         
 
+/// list all messages
+///
+///
 #[get("/")]
 pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1;
@@ -79,7 +81,8 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
     )                                                
 }
 
-
+/// add new Message
+///
 /// route.to()
 ///
 /// add +1 to AppState.request_count / update via .set()
@@ -160,13 +163,14 @@ pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
     )
 }
 
+
 /// SEARCH via hash
 /// 
 /// path as String
 /// i did not make it work for usize because do no fing way to verify valid usize?
 ///
 pub async fn search(state: web::Data<AppState>,
-                //idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
+                    //idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
                     idx: web::Path<String>) -> actix_web::Result<web::Json<SearchResponse>> {
 
     //println!("IDX: {idx:?}");
@@ -241,7 +245,7 @@ pub async fn search(state: web::Data<AppState>,
 pub async fn delete(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
 
-    println!("IDX: {idx:?}");
+    //println!("IDX: {idx:?}");
     
     // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
@@ -258,7 +262,7 @@ pub async fn delete(state: web::Data<AppState>,
         },
     };
 
-    println!("PARSED_IDX: {parsed_idx:?}");
+    //println!("PARSED_IDX: {parsed_idx:?}");
     
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
@@ -271,8 +275,9 @@ pub async fn delete(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    println!("MSG before DEL: {msg:?}");
+    //println!("MSG before DEL: {msg:?}");
 
+    // for now it just display to STDOUT
     // try to make it let shorter !!!
     let result = match parsed_idx {
         Some(i) =>  
@@ -300,7 +305,7 @@ pub async fn delete(state: web::Data<AppState>,
         },
     };
     
-    println!("RESULT: {result:?}");
+    //println!("RESULT: {result:?}");
     
     Ok(
         web::Json(
