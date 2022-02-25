@@ -41,7 +41,8 @@ pub struct AppState {
     request_count: Cell<usize>,        
     // Atomic reference counted pointer
     // Arc can be shared across threads
-    hash_map: Arc<Mutex<HashMap<usize, String>>>, 
+    hash_map: Arc<Mutex<HashMap<usize, String>>>,
+    video_map: Arc<Mutex<HashMap<usize, String>>>, 
 }                                      
 
 
@@ -67,6 +68,13 @@ async fn main() -> std::io::Result<()> {
                 HashMap::new()
             )
         );
+
+    let video_map =
+        Arc::new(                        
+            Mutex::new(
+                HashMap::new()
+            )
+        );
     
     // SERVER
     HttpServer::new(move || {
@@ -80,13 +88,14 @@ async fn main() -> std::io::Result<()> {
                 request_count: Cell::new(0), // initial value
                 // create a new pointer for each thread             
                 hash_map: hash_map.clone(),
+                video_map: video_map.clone(),
             })                                                      
             // LOG
             .wrap(middleware::Logger::new(LOG_FORMAT))
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)
-            // SCOPE for MESSAGES
+            // SCOPE for ####################### MESSAGES
             .service(
                 web::scope("/msg")
                     // INDEX INSIDE scopes !!!
@@ -129,13 +138,18 @@ async fn main() -> std::io::Result<()> {
                             ),                           
                     )
             )
-            // SCOPE for VIDEO
+            // SCOPE for ####################### VIDEO
             .service(
                 web::scope("/video")
                     //.service(video::index)
                     // PUT
                     .service(
+                        //web::resource("/put")
                         web::resource("/put")
+                            .data(web::JsonConfig::default()
+                                  // NO LIMIT for VIDEO
+                                  //.limit(4096)
+                            )
                             .route(web::put()
                                    .to(video::insert_video)
                             )

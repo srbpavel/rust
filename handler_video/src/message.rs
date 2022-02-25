@@ -33,7 +33,7 @@ pub struct Message {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    hash_map: HashMap<usize, String>, 
+    hash_map: HashMap<usize, String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -106,7 +106,7 @@ pub async fn post_msg(msg: web::Json<PostInput>,
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
     
-    // we lock and have access to Vec messages
+    // we lock and have access to HashMap messages
     let mut ms = state
         .hash_map // HASH
         .lock() // get access to data inside Mutex + blocks until another thread
