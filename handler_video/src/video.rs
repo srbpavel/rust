@@ -22,6 +22,9 @@ use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
 //use futures_util::stream::try_stream::TryStreamExt;
 
+use std::io::Write;
+use uuid::Uuid;
+
 /* SAVE EXAMPLE
 use std::io::Write;
 use futures_util::TryStreamExt as _;
@@ -105,39 +108,74 @@ pub async fn index() -> HttpResponse {
 /// 
 /// curl -X PUT 'http://localhost:8081/video/put
 ///
+/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F ahoj=vole -F yeah=baby
+///
+/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F ahoj=vole -F yeah=baby -F "image=@info.txt;type=text/plain"
+///
 pub async fn insert_video(mut payload: Multipart) -> Result<HttpResponse, Error> {
     println!("PUT:");
 
     // iterate over multipart stream
-    //while let std::result::Result::Ok(mut field) = payload.try_next().await/*.unwrap()*//*?*/ {
     while let Some(mut field) = payload
         .try_next()
         .await?/*.unwrap()*//*?*/ {
+            
+            let content_disposition = field.content_disposition();
+            
+            println!("CONTENT: {:?}",
+                     content_disposition,
+            );
+            
+            let fff = match content_disposition {
+                Some(f) => {
+                    println!("F: {f:?}\nfilename: {:?}\nname: {:?}",
+                             f.get_filename(),
+                             f.get_name(),
+                    );
 
-        let content_disposition = field.content_disposition();
-        
-        println!("CONTENT: {:?}",
-                 content_disposition,
-        );
+                    let filename = f
+                        .get_filename()
+                        // generate uuid as new filenamesss
+                        .map_or_else(||
+                                     Uuid::new_v4().to_string(),
+                                     sanitize_filename::sanitize,
+                        );
 
-        
-        /*
-        match field {
-            Some(f) => {
+                    let filepath = format!("./tmp/{}", filename);
 
-                // A multipart/form-data stream has to contain
-                //`content_disposition`
-                let content_disposition = f.content_disposition();
+                    println!("FILENAME:{:?}\nPATH:{:?}",
+                             filename,
+                             filepath,
+                    );
 
-                println!("CONTENT: {:?}",
-                         content_disposition,
-                );
-            },
-            None => {},
-        }
-        */
-        
-        
+                    let mut ff = web::block(||
+                                            std::fs::File::create(filepath)
+                    ).await;
+
+                    println!("F:{:?}",
+                             ff,
+                    );
+
+                    while let Some(chunk) = field
+                        .try_next()
+                        .await
+                        .unwrap()/*?*/ {
+                        // filesystem operations are blocking, we have to use threadpool
+                        f = web::block(move ||
+                                       f
+                                       .write_all(&chunk)
+                                       .map(|_| f)
+                        )
+                                .await
+                                .unwrap()
+                                .unwrap()/*??*/;
+                             
+                },
+
+                None => {},
+            };
+            
+                
         /*
         let filename = content_disposition
             .get_filename()
