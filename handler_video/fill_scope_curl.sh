@@ -42,4 +42,10 @@ echo "SEND: curl -X POST \"http://localhost:8081/msg/send\" -H \"Content-Type: a
 # HASH
 echo "ID: curl 'http://localhost:8081/msg/search/0' 2>/dev/null | jq"
 echo "CLEAR: curl -X POST 'http://localhost:8081/msg/clear' 2>/dev/null | jq"
-echo "DELETE: curl 'http://localhost:8081/msg/delete/3' 2>/dev/null | jq"
+
+# method GET
+#echo "DELETE: curl 'http://localhost:8081/msg/delete/3' 2>/dev/null | jq"
+# method DELETE
+echo "DELETE: curl -X DELETE 'http://localhost:8081/msg/delete/3'"
+
+echo "LAST_ID: curl 'http://localhost:8081/msg/last_id' 2>/dev/null | jq"

@@ -5,8 +5,16 @@ edition = "2021"
 authors = ["Pavel SRB <prace@srbpavel.cz>"] 
 
 [dependencies]
+# SAVE EXAMPLE
+#actix-multipart = "0.4.0-beta.12"
+#futures-util = "0.3"
+#sanitize-filename = "0.3"
+#uuid = { version = "0.8", features = ["v4"] }
+
 [dependencies.actix-web]   
-version = "3.3.3"         
+version = "3.3.3"
+# SAVE EXAMPLE
+#version = "4.0.0-rc.3"
                            
 [dependencies.env_logger]  
 version = "0.9.0"         

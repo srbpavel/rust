@@ -312,18 +312,18 @@ pub async fn delete(state: web::Data<AppState>,
                 },
                 None => {
                     // later this will be another Json Response
-                    println!("NOT FOUND SO: {parsed_idx:?} stay");
+                    eprintln!("NOT FOUND SO: {parsed_idx:?} stay");
 
                     None
                 },
             },
         None => {
-            println!("DELETE key {to_parse_idx:?} not valid Type");
+            eprintln!("DELETE key {to_parse_idx:?} not valid Type");
             None
         },
     };
     
-    println!("RESULT: {result:?}");
+    eprintln!("RESULT: {result:?} -> MOVE THIS to JSON response");
     
     Ok(
         web::Json(

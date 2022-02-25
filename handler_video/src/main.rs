@@ -142,10 +142,10 @@ async fn main() -> std::io::Result<()> {
                             .route(web::get()
                                    .to(video::index)
                             )
-                            /*
+                            /* SAVE EXAMPLE
                             .route(web::post()
-                                   //.to(video::save_file)),
-                                   .to(video::echo) // remove #[post...
+                                   .to(video::save_file)
+                                   //.to(video::echo) // remove #[post...
                             ),
                             */
                     )
@@ -158,6 +158,14 @@ async fn main() -> std::io::Result<()> {
                                    .to(video::echo)
                             )
                     )
+                    /*
+                    .service(
+                        web::resource("/save_file")
+                            .route(web::post()
+                                   .to(video::save_file)
+                            ),
+                    )
+                    */
             )
     }
     )
@@ -167,7 +175,8 @@ async fn main() -> std::io::Result<()> {
                     PORT,
             )             
         )?
-        .workers(8) // study more
+        //.workers(8) // study more
+        .workers(1) // study more
         .run()
         .await
             //.service(id_name_path) // GET -> greedy so i took /horse/{name}
