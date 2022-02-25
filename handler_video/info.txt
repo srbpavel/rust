@@ -44,3 +44,52 @@ https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html#associatedtype
 #HEADER
 https://actix.rs/actix-web/actix_web/http/header/constant.TE.html
 https://actix.rs/actix-web/actix_web/http/header/constant.TRANSFER_ENCODING.html
+
+<CHUNK>
+b"
+#STATUS CODES\n
+https://en.wikipedia.org/wiki/List_of_HTTP_status_codes\n
+
+#CURL\n
+https://curl.se/docs/httpscripting.html\n
+##POST HTTP +  PUT HTTP upload\n
+https://curl.se/docs/manual.html\n
+##REQ METHOD\n
+https://everything.curl.dev/libcurl-http/requests#request-method\n
+##VAR\n
+https://gist.github.com/subfuzion/08c5d85437d5d4f00e58
+
+#MULTIPART POST file upload --> unstable \n
+https://github.com/actix/examples/blob/master/forms/multipart/src/main.rs\n
+
+#http Method + scope/resource/route\n
+https://docs.rs/actix-web/latest/actix_web/web/index.html\n
+##PUT guard\n
+https://docs.rs/actix-web/latest/actix_web/web/fn.put.html\n
+App::new().service(\n
+web::resource(\"/{project_id}\")\n
+.route(web::put().to(|| HttpResponse::Ok()))\n
+)\n
+
+https://actix.rs/actix-web/actix_web/guard/fn.Put.html\n
+web::route()\n
+.guard(guard::Put())\n
+.to(|| HttpResponse::Ok());\n
+
+#nice example to limit POST with only allowed HEADER\n
+https://actix.rs/actix-web/actix_web/guard/index.html\n
+
+#TRANSFER ENCODING + chunked\n
+https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html\n
+take_payload + chunked\n
+
+#PAYLOAD\n
+https://docs.rs/actix-web/latest/actix_web/dev/enum.Payload.html\n
+
+#STREAM\n
+https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html#associatedtype.Stream\n
+
+#HEADER\n
+https://actix.rs/actix-web/actix_web/http/header/constant.TE.html\n
+https://actix.rs/actix-web/actix_web/http/header/constant.TRANSFER_ENCODING.html\n
+"
