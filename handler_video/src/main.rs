@@ -122,7 +122,9 @@ async fn main() -> std::io::Result<()> {
                     .service(                            
                         web::resource("/delete/{index}") 
                             // HTTP GET
-                            .route(web::get()
+                            //.route(web::get()
+                            // HTTP DELETE
+                            .route(web::delete()
                                    .to(message::delete)           
                             ),                           
                     )
@@ -130,7 +132,6 @@ async fn main() -> std::io::Result<()> {
             // SCOPE for VIDEO
             .service(
                 web::scope("/video")
-                    // INDEX INSIDE scopes !!!
                     //.service(video::index)
                     .service(video::all) // <- /video/all
                     .service(video::detail) // <- /video/123
@@ -150,12 +151,6 @@ async fn main() -> std::io::Result<()> {
             //.service(id_name_path) // GET -> greedy so i took /horse/{name}
             /*
             .service(horse) // GET Struct <- /horse/wonka
-            .service(echo) // POST <- /echo ... -d '{"user": "bijac"}'
-            .service( // SCOPE
-                web::scope("/video")
-                    .service(all_video) // <- /video/all
-                    .service(video_detail), // <- /video/123
-            )
             */
             /* GREEDY, solve later
             .route(

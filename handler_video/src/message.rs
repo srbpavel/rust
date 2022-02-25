@@ -62,8 +62,9 @@ pub struct LastResponse {
     result: Option<Message>, // None in JSON will be "null"
 }                                                         
 
-/// list all messages
+/// index list all messages
 ///
+/// curl 'http://localhost:8081/msg/'
 ///
 #[get("/")]
 pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
@@ -93,6 +94,8 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// add +1 to AppState.request_count / update via .set()
 /// lock messages + push .clone()
 /// build json via Struct
+///
+/// curl -X POST "http://localhost:8081/msg/send" -H "Content-Type: application/json" -d '{"message": "rambo"}'
 ///
 pub async fn post_msg(msg: web::Json<PostInput>,
                       state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
@@ -140,6 +143,8 @@ pub async fn post_msg(msg: web::Json<PostInput>,
 /// flush messages
 /// json via Struct but with empty Vec
 ///
+/// curl -X POST 'http://127.0.0.1:8081/msg/clear'
+///
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
     //println!("CLEAR");
@@ -173,6 +178,8 @@ pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
 /// 
 /// path as String
 /// i did not make it work for usize because do no fing way to verify valid usize?
+///
+/// curl 'http://localhost:8081/msg/search/{2}'
 ///
 pub async fn search(state: web::Data<AppState>,
                     //idx: web::Path<usize>) -> actix_web::Result<web::Json<SearchResponse>> {
@@ -246,6 +253,8 @@ pub async fn search(state: web::Data<AppState>,
 /// DELETE via id -> return all msg hash without deleted one
 /// 
 /// path as String
+///
+/// curl -X DELETE 'http://localhost:8081/msg/delete/{id}'
 ///
 pub async fn delete(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
@@ -327,11 +336,13 @@ pub async fn delete(state: web::Data<AppState>,
 /// LAST via Hash key: id
 ///
 /// beware: not correct if last was deleted as we take it MSG_ID_COUNTER
-/// and not via iter Hash_map
+/// and not via iter Hash_map, that is why we call this LAST_ID
 ///
 /// do we want/need such a method?
 ///
-#[get("/last")]
+/// curl 'http://localhost:8081/msg/last'
+///
+#[get("/last_id")]
 pub async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
 
     // we still add to this thread counter

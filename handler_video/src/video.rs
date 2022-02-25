@@ -60,8 +60,8 @@ async fn detail(path: web::Path<u32>) -> HttpResponse {
         .body(
             format!("video_detail: {:?}\n",
                     path
-                    .into_inner()
-                    .0,
+                    .into_inner(),
+                    //.0,
             ),
         )
 }
