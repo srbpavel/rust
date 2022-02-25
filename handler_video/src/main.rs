@@ -133,9 +133,31 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/video")
                     //.service(video::index)
+                    .service(
+                        // COMBINE BOTH as LEARN
+                        // has to be call as: /video/
+                        web::resource("/")
+                        // has to be call as: /video
+                        //web::resource("") 
+                            .route(web::get()
+                                   .to(video::index)
+                            )
+                            /*
+                            .route(web::post()
+                                   //.to(video::save_file)),
+                                   .to(video::echo) // remove #[post...
+                            ),
+                            */
+                    )
                     .service(video::all) // <- /video/all
                     .service(video::detail) // <- /video/123
-                    .service(video::echo), // <- /video/echo
+                    //.service(video::echo), // <- /video/echo
+                    .service(
+                        web::resource("/echo")
+                            .route(web::post()
+                                   .to(video::echo)
+                            )
+                    )
             )
     }
     )

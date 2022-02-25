@@ -2,7 +2,7 @@
 
 use actix_web::{
     get,
-    post,
+    //post,
     web,
     //Result,
 
@@ -34,8 +34,8 @@ pub struct Video {
 ///
 /// curl -X POST 'http://127.0.0.1:8081/echo' -H "Content-Type: application/json" -d '{"video": "123456"}'
 ///
-#[post("/echo")]
-async fn echo(req_body: String) -> impl Responder {
+//#[post("/echo")] // specify at at App + resource + route
+pub async fn echo(req_body: String) -> impl Responder {
     HttpResponse::Ok()
         .body(req_body)
 }
@@ -66,3 +66,20 @@ async fn detail(path: web::Path<u32>) -> HttpResponse {
         )
 }
 
+
+/// INDEX get info
+///
+///
+pub async fn index() -> HttpResponse {
+    let html = r#"<html>
+        <head><title>video upload test</title></head>
+        <body>
+            <form target="/" method="post" enctype="multipart/form-data">
+                <input type="file" multiple name="file"/>
+                <button type="submit">Submit</button>
+            </form>
+        </body>
+    </html>"#;
+
+    HttpResponse::Ok().body(html)
+}

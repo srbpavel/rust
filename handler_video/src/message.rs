@@ -19,6 +19,7 @@ use std::sync::atomic::{AtomicUsize,
                         Ordering,   
 };                                  
 
+// via CONFIG
 static MSG_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
 static MSG_ID_ORD: Ordering = Ordering::SeqCst;
 
@@ -255,6 +256,9 @@ pub async fn search(state: web::Data<AppState>,
 /// path as String
 ///
 /// curl -X DELETE 'http://localhost:8081/msg/delete/{id}'
+///
+/// this tells server that client expect JSON data in response
+/// -H "Accept: application/json"
 ///
 pub async fn delete(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {

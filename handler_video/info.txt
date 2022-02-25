@@ -1,0 +1,11 @@
+#STATUS CODES
+https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+
+#CURL
+https://curl.se/docs/httpscripting.html
+
+##POST HTTP +  PUT HTTP upload
+https://curl.se/docs/manual.html
+
+#REQ METHOD
+https://everything.curl.dev/libcurl-http/requests#request-method
