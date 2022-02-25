@@ -133,6 +133,14 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/video")
                     //.service(video::index)
+                    // PUT
+                    .service(
+                        web::resource("/put")
+                            .route(web::put()
+                                   .to(video::insert_video)
+                            )
+                    )
+                    // index
                     .service(
                         // COMBINE BOTH as LEARN
                         // has to be call as: /video/

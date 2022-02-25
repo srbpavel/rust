@@ -3,9 +3,44 @@ https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 
 #CURL
 https://curl.se/docs/httpscripting.html
-
 ##POST HTTP +  PUT HTTP upload
 https://curl.se/docs/manual.html
-
-#REQ METHOD
+##REQ METHOD
 https://everything.curl.dev/libcurl-http/requests#request-method
+##VAR
+https://gist.github.com/subfuzion/08c5d85437d5d4f00e58
+
+#MULTIPART POST file upload --> unstable 
+https://github.com/actix/examples/blob/master/forms/multipart/src/main.rs
+
+
+#http Method + scope/resource/route
+https://docs.rs/actix-web/latest/actix_web/web/index.html
+##PUT guard
+https://docs.rs/actix-web/latest/actix_web/web/fn.put.html
+App::new().service(
+    web::resource("/{project_id}")
+        .route(web::put().to(|| HttpResponse::Ok()))
+)
+
+https://actix.rs/actix-web/actix_web/guard/fn.Put.html
+web::route()
+    .guard(guard::Put())
+    .to(|| HttpResponse::Ok());
+
+#nice example to limit POST with only allowed HEADER
+https://actix.rs/actix-web/actix_web/guard/index.html
+
+#TRANSFER ENCODING + chunked
+https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html
+take_payload + chunked
+
+#PAYLOAD
+https://docs.rs/actix-web/latest/actix_web/dev/enum.Payload.html
+
+#STREAM
+https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html#associatedtype.Stream
+
+#HEADER
+https://actix.rs/actix-web/actix_web/http/header/constant.TE.html
+https://actix.rs/actix-web/actix_web/http/header/constant.TRANSFER_ENCODING.html
