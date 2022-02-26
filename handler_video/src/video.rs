@@ -42,6 +42,7 @@ pub struct Video {
     id: usize,
     name: String,
     path: String,
+    //binary: String,
 }
 
 
@@ -179,7 +180,19 @@ pub async fn insert_video(mut payload: Multipart,
 
                     // WE NEED AT THE END
                     full_path = filepath.clone();
-                    
+
+                    /*
+                    let text = base64::decode(&v.binary)
+                        .unwrap()
+                        .iter()
+                        .map(|b| 
+                             (*b as char)
+                             .to_string()
+                        )
+                        .collect::<Vec<_>>()
+                        .concat();
+                    */
+
                     // HASH
                     video.insert(
                         // key
@@ -189,6 +202,9 @@ pub async fn insert_video(mut payload: Multipart,
                             id:video_id,
                             name:video_name.clone().to_string(),
                             path:filepath.clone().to_string(),
+                            //binary: String::from(""),
+                            //binary: String::from("RnJpIDI1IEZlYiAyMDIyIDA2OjUwOjQ1IFBNIENFVAo="),
+                            //binary: data_coded,
                         },
                     );
                     
@@ -197,6 +213,40 @@ pub async fn insert_video(mut payload: Multipart,
                              filepath,
                     );
 
+                    /*
+                    // ### BASE64
+                    let mut f = web::block(||
+                                           //std::fs::File::create(filepath)
+                                           Ok(
+                                               String::from("")
+                                                   )
+                    ).await?;
+
+                    println!("F:{:?}",
+                             f,
+                    );
+
+                    // stream of *Bytes* object
+                    while let Some(chunk) = field.try_next().await? {
+                        //println!("CHUNK: {:#?}", chunk);
+
+                        f = web::block(move ||
+                                       Ok(
+                                           f
+                                               .push_str(
+                                                   &base64::encode(
+                                                       &chunk
+                                                   )
+                                               )
+                                               //.map(|_| f)
+                                               )
+                        )
+                            .await?//?
+                            ;
+                    };
+                    */
+          
+                    // /* ### FILE
                     // block -> future to result
                     //https://docs.rs/actix-web/latest/actix_web/web/fn.block.html
                     let mut f = web::block(||
@@ -210,15 +260,13 @@ pub async fn insert_video(mut payload: Multipart,
                     // stream of *Bytes* object
                     while let Some(chunk) = field.try_next().await? {
                         //println!("CHUNK: {:#?}", chunk);
-
                         f = web::block(move ||
                                        f
                                        .write_all(&chunk)
                                        .map(|_| f)
-                        )
-                            .await?//?
-                            ;
+                        ).await?;
                     };
+                    // */
                 },
 
                 None => {},
@@ -233,6 +281,7 @@ pub async fn insert_video(mut payload: Multipart,
                 name: video_name.clone(),
                 id: video_id,
                 path: full_path,
+                //binary: String::from("<also masked>"),
             },
         }
     ))
@@ -288,13 +337,36 @@ pub async fn detail(state: web::Data<AppState>,
     let result = match parsed_idx {
         Some(i) =>  
             match video.get(&i) {
-                Some(v) => Some(
-                    Video {
-                        id: i,
-                        name: v.name.to_string(),
-                        path: v.path.to_string(),
-                    }
-                ),
+                Some(v) => {
+                    //let mut text: String = String::from("");
+
+                    /* FUTURE USE
+                    let text = base64::decode(&v.binary)
+                        .unwrap()
+                        .iter()
+                        .map(|b| 
+                             (*b as char)
+                             .to_string()
+                        )
+                        .collect::<Vec<_>>()
+                        .concat();
+
+                    println!("BASE64: {:?}",
+                             text,
+                    );
+                    */
+
+                    Some(
+                        Video {
+                            id: i,
+                            name: v.name.to_string(),
+                            path: v.path.to_string(),
+                            //binary: v.binary.to_string(),
+                            // WE DO NOT WANT TO SEE base64
+                            //binary: String::from("<masked>"),
+                        }
+                    )
+                },
                 None => None,
             },
         None => None,
@@ -316,13 +388,13 @@ pub async fn detail(state: web::Data<AppState>,
 }
 
 
-/// PLAY via hash
+/// DOWNLOAD via hash
 /// 
-/// curl 'http://localhost:8081/video/play/{id}'
+/// curl 'http://localhost:8081/video/download/{id}'
 ///
-#[get("/play/{idx}")]
-pub async fn play(state: web::Data<AppState>,
-                  idx: web::Path<String>) -> HttpResponse {
+#[get("/download/{idx}")]
+pub async fn download(state: web::Data<AppState>,
+                      idx: web::Path<String>) -> HttpResponse {
 
     //println!("IDX: {idx:?}");
     
@@ -369,6 +441,7 @@ pub async fn play(state: web::Data<AppState>,
                         id: i,
                         name: v.name.to_string(),
                         path: v.path.to_string(),
+                        //binary: v.binary.to_string(),
                     }
                 ),
                 None => None,
@@ -425,6 +498,109 @@ pub async fn play(state: web::Data<AppState>,
     )
     */
 }
+
+/* // FUTURE USE for buffer/cursor/base64/...
+/// PLAY via hash
+/// 
+/// curl 'http://localhost:8081/video/play/{id}'
+///
+#[get("/play/{idx}")]
+pub async fn play(state: web::Data<AppState>,
+                  idx: web::Path<String>) -> HttpResponse {
+    
+    //println!("IDX: {idx:?}");
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    // let's try parse
+    let parsed_idx = match to_parse_idx.parse::<usize>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+
+    //println!("PARSED_IDX: {parsed_idx:?}");
+    
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec
+    let video = state
+        .video_map
+        .lock()
+        .unwrap();
+
+    //println!("MS: {ms:?}");
+
+    let result = match parsed_idx {
+        Some(i) =>  
+            match video.get(&i) {
+                Some(v) => Some(
+                    Video {
+                        id: i,
+                        name: v.name.to_string(),
+                        path: v.path.to_string(),
+                        //binary: v.binary.to_string(),
+                    }
+                ),
+                None => None,
+            },
+        None => None,
+    };
+
+    match result {
+        Some(v) => {
+
+            let content = format!("form-data; filename={}",
+                                  v.path,
+            );
+
+            /*
+            let data = std::fs::read(v.path)
+                .unwrap(); // NOT SAFE will panic!
+            */
+
+            let base64_data = base64::decode(&v.binary)
+                .unwrap() // NOT SAFE
+                .iter()
+                .map(|b| 
+                     (*b as char)
+                     .to_string()
+                )
+                .collect::<Vec<_>>()
+                .concat();
+            
+            HttpResponse::Ok()
+                .header("Content-Disposition",
+                        content,
+                )
+                // EXPERIMENT
+                //.chunked()
+                .body(base64_data)
+        },
+
+        None => {
+
+            HttpResponse::NotFound().json(
+                &File {
+                    name: String::from("name"),
+                    time: 1234567890,
+                    err: "error".to_string(),
+                    
+                }
+            )
+        },
+    }  
+}
+*/
+
 
 /// service: handler
 ///
