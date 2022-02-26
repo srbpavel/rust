@@ -1,4 +1,7 @@
-use crate::AppState;
+//use crate::AppState;
+
+//mod handler;
+use crate::handler::AppState;
 
 use actix_web::{
     get,
@@ -71,7 +74,7 @@ pub struct DetailResponse {
     server_id: usize,                                     
     request_count: usize,                                 
     result: Option<Video>, // None in JSON will be "null"
-    url_path: String,
+    url: String,
 }
 
 
@@ -92,7 +95,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         web::Json(                                   
             IndexResponse {                          
                 server_id: state.server_id,          
-                request_count: request_count,        
+                request_count,        
                 video_map: video.clone(),
             }                                        
         )                                            
@@ -207,87 +210,12 @@ pub async fn insert_video(mut payload: Multipart,
                         ).await?;
                     };
             };
-            
-            // we keep all content if needed in future use
-            /*
-            let _fff = match content_disposition {
-                Some(dis) => {
-                    video_name = match dis.get_name() {
-                        Some(name) => String::from(name),
-                        None => String::from("VIDEO_NAME"),
-                    };
-
-                    /*
-                    println!("DIS: {:?}\nfilename: {:?}\nname: {:?}",
-                             dis,
-                             dis.get_filename(),
-                             video_name,
-                    );
-                    */
-
-                    let filename = dis
-                        .get_filename()
-                        // if not filename -> generate uuid as new filenames
-                        .map_or_else(||
-                                     Uuid::new_v4().to_string(),
-                                     sanitize_filename::sanitize,
-                        );
-
-                    // FOR DOWNLOAD/PLAYER
-                    let filepath = format!("{}{}_{}",
-                                           STATIC_DIR,
-                                           video_id,
-                                           filename,
-                    );
-
-                    // WE NEED AT THE END
-                    full_path = filepath.clone();
-
-                    // HASH
-                    video.insert(
-                        // key
-                        video_id,
-                        //value
-                        Video {
-                            id:video_id,
-                            name:video_name.clone().to_string(),
-                            path:filepath.clone().to_string(),
-                        },
-                    );
-
-                    // ### FILE
-                    // block -> future to result
-                    //https://docs.rs/actix-web/latest/actix_web/web/fn.block.html
-                    let mut f = web::block(||
-                                           std::fs::File::create(filepath)
-                    ).await?;
-
-                    /*
-                    println!("F:{:?}",
-                             f,
-                    );
-                    */
-
-                    // stream of *Bytes* object
-                    while let Some(chunk) = field.try_next().await? {
-                        //println!("CHUNK: {:#?}", chunk);
-                        f = web::block(move ||
-                                       f
-                                       .write_all(&chunk)
-                                       .map(|_| f)
-                        ).await?;
-                    };
-                },
-
-                None => {},
-            };
-            */
         }
 
     Ok(web::Json(
         PostResponse {
             server_id: state.server_id,
-            request_count: request_count,
+            request_count,
             video: Video {
                 name: video_name.clone(),
                 id: video_id,
@@ -336,20 +264,6 @@ pub async fn detail(state: web::Data<AppState>,
 
     let result = match parsed_idx {
         Some(i) => {
-            /* clippy
-            match video.get(&i) {
-                Some(v) => {
-                    Some(
-                        Video {
-                            id: i,
-                            name: v.name.to_string(),
-                            path: v.path.to_string(),
-                        }
-                    )
-                },
-                None => None,
-            },
-            */
             video.get(&i).map(|v| Video {
                 id: i,
                 name: v.name.to_string(),
@@ -363,9 +277,9 @@ pub async fn detail(state: web::Data<AppState>,
         web::Json(
             DetailResponse {
                 server_id: state.server_id,
-                request_count:request_count,
-                result: result,
-                url_path: path,
+                request_count,
+                result,
+                url: path,
             }
         )
     )
@@ -403,18 +317,6 @@ pub async fn download(state: web::Data<AppState>,
 
     let result = match parsed_idx {
         Some(i) => {
-            /* clippy
-            match video.get(&i) {
-                Some(v) => Some(
-                    Video {
-                        id: i,
-                        name: v.name.to_string(),
-                        path: v.path.to_string(),
-                    }
-                ),
-                None => None,
-            },              
-            */
             video.get(&i).map(|v| Video {
                 id: i,
                 name: v.name.to_string(),
@@ -475,7 +377,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         web::Json(
             IndexResponse {
                 server_id: state.server_id,
-                request_count: request_count,
+                request_count,
                 video_map: HashMap::new(), // no need to create new as we have old
                 //video_map: ms.clone(), // ok but still expenssive?
             }

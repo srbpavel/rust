@@ -1,17 +1,4 @@
-mod handler;
-use handler::run;
-//use handler::AppState;
-
-mod message;
-mod video;
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    run().await
-}
-
-/*
-/// HANDLER_VIDEO
+/// HANDLER
 ///
 use actix_web::{
     web,
@@ -33,8 +20,10 @@ use std::sync::{Arc,
 
 use std::collections::HashMap;
 
-mod message;
-mod video;
+//mod message;
+//mod video;
+use crate::message;
+use crate::video;
 
 const NAME: &str = "HANDLER_VIDEO";
 const SERVER: & str = "127.0.0.1";
@@ -50,21 +39,21 @@ const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 #[derive(Debug)]                       
 pub struct AppState {                      
     // via thread / worker
-    server_id: usize,                  
+    pub server_id: usize,                  
     //
-    request_count: Cell<usize>,        
+    pub request_count: Cell<usize>,        
     // Atomic reference counted pointer
     // Arc can be shared across threads
     // Message
-    hash_map: Arc<Mutex<HashMap<usize, String>>>,
+    pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
-    video_map: Arc<Mutex<HashMap<usize, video::Video>>>, 
+    pub video_map: Arc<Mutex<HashMap<usize, video::Video>>>, 
 }                                      
 
 
-/// MAIN
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
+/// RUN
+//#[actix_web::main]
+pub async fn run() -> std::io::Result<()> {
     // DEBUG VERBOSE
     std::env::set_var("RUST_BACKTRACE", "1");
     // EVEN LOG -> stdout
@@ -215,4 +204,3 @@ fn welcome_msg() -> std::io::Result<String> {
 async fn health_check() -> impl Responder {
     HttpResponse::Ok()
 }
-*/

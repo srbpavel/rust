@@ -1,5 +1,8 @@
-use crate::{AppState,
-};
+//use crate::{AppState,
+//};
+
+//mod handler;
+use crate::handler::AppState;
 
 use actix_web::{
     get,
@@ -81,7 +84,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         web::Json(                                   
             IndexResponse {                          
                 server_id: state.server_id,          
-                request_count: request_count,        
+                request_count,        
                 hash_map: msg.clone(),
             }                                        
         )                                            
@@ -128,7 +131,7 @@ pub async fn post_msg(msg: web::Json<PostInput>,
     Ok(web::Json(
         PostResponse {
             server_id: state.server_id, // here is our messages: Vec
-            request_count: request_count,
+            request_count,
             message: Message {
                 body: msg.message.clone(),
                 id: message_id,
@@ -166,7 +169,7 @@ pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
         web::Json(
             IndexResponse {
                 server_id: state.server_id,
-                request_count: request_count,
+                request_count,
                 hash_map: HashMap::new(), // no need to create new as we have old
                 //hash_map: ms.clone(), // ok but still expenssive?
             }
@@ -251,9 +254,9 @@ pub async fn search(state: web::Data<AppState>,
             // let's build struct for json
             SearchResponse {
                 server_id: state.server_id,
-                request_count:request_count,
-                result: result,
-                path: path,
+                request_count,
+                result,
+                path,
             }
         )
     )
@@ -338,7 +341,7 @@ pub async fn delete(state: web::Data<AppState>,
         web::Json(
             IndexResponse {                          
                 server_id: state.server_id,          
-                request_count: request_count,        
+                request_count,        
                 hash_map: msg.clone(),
             }                                        
         )
@@ -398,8 +401,8 @@ pub async fn last_id(state: web::Data<AppState>) -> actix_web::Result<web::Json<
             // let's build struct for json
             LastResponse {
                 server_id: state.server_id,
-                request_count:request_count,
-                result: result,
+                request_count,
+                result,
             }
         )
     )
