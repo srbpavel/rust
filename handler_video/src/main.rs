@@ -192,6 +192,9 @@ async fn main() -> std::io::Result<()> {
                     )
                     .service(video::play) // <- /video/play/123
                     .service(video::detail) // <- /video/detail/123
+                    // FLUSH all msg from Hash
+                    // -> fn clear #[post("/clear")]
+                    .service(video::clear)
                     //.service(video::all) // <- /video/all
                     //.service(video::echo), // <- /video/echo
                     /*

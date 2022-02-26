@@ -2,7 +2,7 @@ use crate::AppState;
 
 use actix_web::{
     get,
-    //post,
+    post,
     web,
     //Result,
 
@@ -40,7 +40,6 @@ static STATIC_DIR: &str = "./tmp/";
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
     id: usize,
-    //body: String,
     name: String,
     path: String,
 }
@@ -58,8 +57,6 @@ struct File {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    //video_map: HashMap<usize, String>,
-    // if we will need more details it can be like: 
     video_map: HashMap<usize, Video>, 
 }
 
@@ -105,7 +102,6 @@ pub async fn index(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
             IndexResponse {                          
                 server_id: state.server_id,          
                 request_count: request_count,        
-                //video_map: video.clone(),
                 video_map: video.clone(),
             }                                        
         )                                            
@@ -124,8 +120,6 @@ pub async fn index(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
 ///
 /// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
-                          //state: web::Data<AppState>) -> Result<HttpResponse, Error> {
-                          //state: web::Data<AppState>) -> Result<web::Json<PostResponse, Error>> {
                           state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
     println!("PUT:");
 
@@ -143,20 +137,10 @@ pub async fn insert_video(mut payload: Multipart,
     );
 
     let mut video_name = String::from("VIDEO_NAME");
-    //let dir = "./tmp/";
+
     //let mut filepath = format!("{dir}{video_id}_{video_name}");
 
     let mut full_path = String::from("");
-    
-    /*
-    // HASH
-    video.insert(
-        video_id,
-        //msg.video.clone(), // we do no get json here
-        String::from("VIDEO_BODY")
-    );
-    */
-
     
     // iterate over multipart stream
     while let Some(mut field) = payload
@@ -175,20 +159,8 @@ pub async fn insert_video(mut payload: Multipart,
                     println!("DIS: {:?}\nfilename: {:?}\nname: {:?}",
                              dis,
                              dis.get_filename(),
-                             //dis.get_name(),
                              video_name,
                     );
-
-                    /*
-                    // HASH
-                    video.insert(
-                        video_id,
-                        //msg.video.clone(), // we do no get json here
-                        //String::from("VIDEO_BODY")
-                        //video_name.clone(),
-                        video_id.clone().to_string(),
-                    );
-                    */
 
                     let filename = dis
                         .get_filename()
@@ -200,7 +172,6 @@ pub async fn insert_video(mut payload: Multipart,
 
                     // FOR PLAYER
                     let filepath = format!("{}{}_{}",
-                                           //dir,
                                            STATIC_DIR,
                                            video_id,
                                            filename,
@@ -211,15 +182,9 @@ pub async fn insert_video(mut payload: Multipart,
                     
                     // HASH
                     video.insert(
+                        // key
                         video_id,
-                        //msg.video.clone(), // we do no get json here
-                        //String::from("VIDEO_BODY")
-                        //video_name.clone(),
-                        //ID
-                        //video_id.clone().to_string(),
-                        //PATH
-                        //filepath.clone().to_string(),
-                        //Struct
+                        //value
                         Video {
                             id:video_id,
                             name:video_name.clone().to_string(),
@@ -227,14 +192,6 @@ pub async fn insert_video(mut payload: Multipart,
                         },
                     );
                     
-                    /*
-                    filepath = format!("{}{}_{}",
-                                       dir,
-                                       video_id,
-                                       filename,
-                    );
-                    */
-
                     println!("FILENAME:{:?}\nPATH:{:?}",
                              filename,
                              filepath,
@@ -243,7 +200,6 @@ pub async fn insert_video(mut payload: Multipart,
                     // block -> future to result
                     //https://docs.rs/actix-web/latest/actix_web/web/fn.block.html
                     let mut f = web::block(||
-                                           //std::fs::File::create(filepath)
                                            std::fs::File::create(filepath)
                     ).await?;
 
@@ -269,24 +225,13 @@ pub async fn insert_video(mut payload: Multipart,
             };
         }
 
-    /*
-    Ok(
-        HttpResponse::Ok()
-            .into()
-    )
-    */
-
     Ok(web::Json(
         PostResponse {
-            server_id: state.server_id, // here is our messages: Vec
+            server_id: state.server_id,
             request_count: request_count,
             video: Video {
-                //body: msg.video.clone(),
-                //body: String::from("VIDEO_BODY"),
-                //body: video_name.clone(),
                 name: video_name.clone(),
                 id: video_id,
-                //path: video_name,//filepath.clone(),
                 path: full_path,
             },
         }
@@ -303,7 +248,6 @@ pub async fn insert_video(mut payload: Multipart,
 ///
 #[get("/detail/{id}")]
 pub async fn detail(state: web::Data<AppState>,
-                    //idx: web::Path<String>) -> actix_web::Result<web::Json<SearchResponse>> {
                     idx: web::Path<String>) -> actix_web::Result<web::Json<DetailResponse>> {
 
     //println!("IDX: {idx:?}");
@@ -347,11 +291,7 @@ pub async fn detail(state: web::Data<AppState>,
                 Some(v) => Some(
                     Video {
                         id: i,
-                        //body: v.to_string(),
-                        //name: v.to_string(),
                         name: v.name.to_string(),
-                        // FUTURE USE
-                        //path: v.to_string(),
                         path: v.path.to_string(),
                     }
                 ),
@@ -365,12 +305,10 @@ pub async fn detail(state: web::Data<AppState>,
     Ok(
         web::Json(
             // let's build struct for json
-            //SearchResponse {
             DetailResponse {
                 server_id: state.server_id,
                 request_count:request_count,
                 result: result,
-                // FUTURE USE
                 url_path: path,
             }
         )
@@ -384,7 +322,6 @@ pub async fn detail(state: web::Data<AppState>,
 ///
 #[get("/play/{idx}")]
 pub async fn play(state: web::Data<AppState>,
-                  //idx: web::Path<String>) -> actix_web::Result<web::Json<DetailResponse>> {
                   idx: web::Path<String>) -> HttpResponse {
 
     //println!("IDX: {idx:?}");
@@ -392,9 +329,11 @@ pub async fn play(state: web::Data<AppState>,
     // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
 
+    /* OBSOLETE? 
     let path = format!("/video/detail/{}", // take this from req
                        to_parse_idx,
     );
+    */
 
     // let's try parse
     let parsed_idx = match to_parse_idx.parse::<usize>() {
@@ -428,10 +367,7 @@ pub async fn play(state: web::Data<AppState>,
                 Some(v) => Some(
                     Video {
                         id: i,
-                        //body: v.to_string(),
-                        //name: v.to_string(),
                         name: v.name.to_string(),
-                        // FUTURE USE
                         path: v.path.to_string(),
                     }
                 ),
@@ -443,26 +379,15 @@ pub async fn play(state: web::Data<AppState>,
     match result {
         Some(v) => {
             let content = format!("form-data; filename={}",
-                    //info.name.to_string(),
-                                  //v.body,
-                                  //v.name,
                                   v.path,
             );
 
-            //let data = std::fs::read(v.body).unwrap();
-            //let data = std::fs::read(v.name).unwrap();
             let data = std::fs::read(v.path)
                 .unwrap(); // NOT SAFE will panic!
 
             HttpResponse::Ok()
                 .header("Content-Disposition",
                         content,
-                        /*
-                        format!("form-data; filename={}",
-                                //info.name.to_string(),
-                                v.body,
-                        )
-                        */
                 )
                 // EXPERIMENT
                 //.chunked()
@@ -501,6 +426,40 @@ pub async fn play(state: web::Data<AppState>,
     */
 }
 
+/// service: handler
+///
+/// add +1
+/// flush messages
+/// json via Struct but with empty Vec
+///
+/// curl -X POST 'http://127.0.0.1:8081/msg/clear'
+///
+#[post("/clear")]
+pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
+    //println!("CLEAR");
+    
+    let request_count = state.request_count.get() + 1; // we still count
+    state.request_count.set(request_count);
+
+    let mut all_videos = state
+        .video_map
+        .lock()
+        .unwrap(); // niet goed !!! make it safe 
+    
+    // HASH
+    all_videos.clear();
+    
+    Ok(
+        web::Json(
+            IndexResponse {
+                server_id: state.server_id,
+                request_count: request_count,
+                video_map: HashMap::new(), // no need to create new as we have old
+                //video_map: ms.clone(), // ok but still expenssive?
+            }
+        )
+    )
+}
 
 /*
 /// INDEX get info
