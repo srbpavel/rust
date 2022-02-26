@@ -1,11 +1,17 @@
 /// HANDLER_VIDEO
 ///
 use actix_web::{
+    //get,
     web,
     middleware,
     App,
     HttpServer,
+    //HttpRequest,
 };
+
+//use actix_files as fs;
+//use actix_files::NamedFile;
+//use std::path::PathBuf;
 
 mod message;
 mod video;
@@ -41,7 +47,9 @@ pub struct AppState {
     request_count: Cell<usize>,        
     // Atomic reference counted pointer
     // Arc can be shared across threads
+    // Message
     hash_map: Arc<Mutex<HashMap<usize, String>>>,
+    // Video
     video_map: Arc<Mutex<HashMap<usize, String>>>, 
 }                                      
 
@@ -62,6 +70,7 @@ async fn main() -> std::io::Result<()> {
 
     // shared msg HashMap for each worker
     // as we want to find via id not index
+    // Message
     let hash_map =
         Arc::new(                        
             Mutex::new(
@@ -69,6 +78,7 @@ async fn main() -> std::io::Result<()> {
             )
         );
 
+    // Video
     let video_map =
         Arc::new(                        
             Mutex::new(
@@ -95,6 +105,14 @@ async fn main() -> std::io::Result<()> {
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)
+            // STATIC files @@@@@@@@@@@@@@
+            //.service(tmp_files)
+            /*
+            .service(
+                fs::Files::new("/static", ".")
+                    .show_files_listing()
+            )
+            */
             // SCOPE for ####################### MESSAGES
             .service(
                 web::scope("/msg")
@@ -171,15 +189,18 @@ async fn main() -> std::io::Result<()> {
                             ),
                             */
                     )
-                    .service(video::all) // <- /video/all
-                    .service(video::detail) // <- /video/123
+                    .service(video::play) // <- /video/play/123
+                    .service(video::detail) // <- /video/detail/123
+                    //.service(video::all) // <- /video/all
                     //.service(video::echo), // <- /video/echo
+                    /*
                     .service(
                         web::resource("/echo")
                             .route(web::post()
                                    .to(video::echo)
                             )
                     )
+                    */
                     /*
                     .service(
                         web::resource("/save_file")
@@ -278,4 +299,15 @@ async fn horse(info: web::Path<Horse>) -> Result<String> {
 */
 
 
-
+/* STATIC
+/// https://actix.rs/docs/static-files/
+#[get("/temp")]
+async fn tmp_files(_req: HttpRequest) -> actix_web::Result<NamedFile> {
+    let path: PathBuf = "./tmp/"
+        .parse()
+        .unwrap();
+    Ok(
+        NamedFile::open(path)?
+    )
+}
+ */
