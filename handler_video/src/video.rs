@@ -40,10 +40,13 @@ static STATIC_DIR: &str = "./tmp/";
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
     id: usize,
-    body: String,
+    //body: String,
+    name: String,
     path: String,
 }
 
+
+// FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
     name: String,
@@ -55,9 +58,9 @@ struct File {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    video_map: HashMap<usize, String>,
+    //video_map: HashMap<usize, String>,
     // if we will need more details it can be like: 
-    //video_map: HashMap<usize, Video>, 
+    video_map: HashMap<usize, Video>, 
 }
 
 /* // FUTURE USE -> this was for json message post_msg / OBSOLETE here ?
@@ -102,6 +105,7 @@ pub async fn index(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
             IndexResponse {                          
                 server_id: state.server_id,          
                 request_count: request_count,        
+                //video_map: video.clone(),
                 video_map: video.clone(),
             }                                        
         )                                            
@@ -214,7 +218,13 @@ pub async fn insert_video(mut payload: Multipart,
                         //ID
                         //video_id.clone().to_string(),
                         //PATH
-                        filepath.clone().to_string(),
+                        //filepath.clone().to_string(),
+                        //Struct
+                        Video {
+                            id:video_id,
+                            name:video_name.clone().to_string(),
+                            path:filepath.clone().to_string(),
+                        },
                     );
                     
                     /*
@@ -273,7 +283,8 @@ pub async fn insert_video(mut payload: Multipart,
             video: Video {
                 //body: msg.video.clone(),
                 //body: String::from("VIDEO_BODY"),
-                body: video_name.clone(),
+                //body: video_name.clone(),
+                name: video_name.clone(),
                 id: video_id,
                 //path: video_name,//filepath.clone(),
                 path: full_path,
@@ -336,9 +347,12 @@ pub async fn detail(state: web::Data<AppState>,
                 Some(v) => Some(
                     Video {
                         id: i,
-                        body: v.to_string(),
+                        //body: v.to_string(),
+                        //name: v.to_string(),
+                        name: v.name.to_string(),
                         // FUTURE USE
-                        path: v.to_string(),
+                        //path: v.to_string(),
+                        path: v.path.to_string(),
                     }
                 ),
                 None => None,
@@ -414,9 +428,11 @@ pub async fn play(state: web::Data<AppState>,
                 Some(v) => Some(
                     Video {
                         id: i,
-                        body: v.to_string(),
+                        //body: v.to_string(),
+                        //name: v.to_string(),
+                        name: v.name.to_string(),
                         // FUTURE USE
-                        path: v.to_string(),
+                        path: v.path.to_string(),
                     }
                 ),
                 None => None,
@@ -428,10 +444,15 @@ pub async fn play(state: web::Data<AppState>,
         Some(v) => {
             let content = format!("form-data; filename={}",
                     //info.name.to_string(),
-                    v.body,
+                                  //v.body,
+                                  //v.name,
+                                  v.path,
             );
 
-            let data = std::fs::read(v.body).unwrap();
+            //let data = std::fs::read(v.body).unwrap();
+            //let data = std::fs::read(v.name).unwrap();
+            let data = std::fs::read(v.path)
+                .unwrap(); // NOT SAFE will panic!
 
             HttpResponse::Ok()
                 .header("Content-Disposition",
@@ -443,6 +464,8 @@ pub async fn play(state: web::Data<AppState>,
                         )
                         */
                 )
+                // EXPERIMENT
+                //.chunked()
                 .body(data)
         },
 

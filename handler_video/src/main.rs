@@ -50,7 +50,8 @@ pub struct AppState {
     // Message
     hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
-    video_map: Arc<Mutex<HashMap<usize, String>>>, 
+    //video_map: Arc<Mutex<HashMap<usize, String>>>,
+    video_map: Arc<Mutex<HashMap<usize, video::Video>>>, 
 }                                      
 
 
