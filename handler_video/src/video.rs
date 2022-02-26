@@ -6,10 +6,8 @@ use actix_web::{
     web,
 
     Result,
-    //Error,
     
     HttpResponse,
-    //Responder,
 };
 
 use actix_multipart::Multipart;
@@ -38,7 +36,6 @@ pub struct Video {
     id: usize,
     name: String,
     path: String,
-    //binary: String,
 }
 
 
@@ -105,6 +102,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 }
 
 
+/// PUT new video
 /// 
 /// curl -X PUT 'http://localhost:8081/video/put
 ///
@@ -116,27 +114,24 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 ///
 /// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
-                          //state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
                           state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
-    println!("PUT:");
+    //println!("PUT:");
 
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
     // we lock and have access to HashMap messages
     let mut video = state
-        .video_map // HASH
+        .video_map
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
-    // /CLEAR do not reset counter, yet.
+    // /CLEAR do not reset counter yet, as for Curl testing
     let video_id = VIDEO_ID_COUNTER.fetch_add(1,              
                                               VIDEO_ID_ORD,
     );
 
+    // as for content which is not file
     let mut video_name = String::from("VIDEO_NAME");
-
-    //let mut filepath = format!("{dir}{video_id}_{video_name}");
-
     let mut full_path = String::from("");
     
     // iterate over multipart stream
@@ -145,7 +140,8 @@ pub async fn insert_video(mut payload: Multipart,
         .await? {
 
             let content_disposition = field.content_disposition();
-            
+
+            // we keep all content if needed in future use
             let _fff = match content_disposition {
                 Some(dis) => {
                     video_name = match dis.get_name() {
@@ -153,11 +149,13 @@ pub async fn insert_video(mut payload: Multipart,
                         None => String::from("VIDEO_NAME"),
                     };
 
+                    /*
                     println!("DIS: {:?}\nfilename: {:?}\nname: {:?}",
                              dis,
                              dis.get_filename(),
                              video_name,
                     );
+                    */
 
                     let filename = dis
                         .get_filename()
@@ -167,7 +165,7 @@ pub async fn insert_video(mut payload: Multipart,
                                      sanitize_filename::sanitize,
                         );
 
-                    // FOR PLAYER
+                    // FOR DOWNLOAD/PLAYER
                     let filepath = format!("{}{}_{}",
                                            STATIC_DIR,
                                            video_id,
@@ -203,11 +201,13 @@ pub async fn insert_video(mut payload: Multipart,
                             //binary: data_coded,
                         },
                     );
-                    
+
+                    /*
                     println!("FILENAME:{:?}\nPATH:{:?}",
                              filename,
                              filepath,
                     );
+                    */
 
                     /*
                     // ### BASE64
@@ -249,9 +249,11 @@ pub async fn insert_video(mut payload: Multipart,
                                            std::fs::File::create(filepath)
                     ).await?;
 
+                    /*
                     println!("F:{:?}",
                              f,
                     );
+                    */
 
                     // stream of *Bytes* object
                     while let Some(chunk) = field.try_next().await? {
@@ -284,16 +286,15 @@ pub async fn insert_video(mut payload: Multipart,
 }
 
 
-/// SEARCH via hash
+/// DETAIL via hash
 /// 
 /// path as String
-/// i did not make it work for usize because do no fing way to verify valid usize?
+/// i did not make it work for usize because do no find way to verify valid usize?
 ///
 /// curl 'http://localhost:8081/video/detail/{idx}'
 ///
 #[get("/detail/{id}")]
 pub async fn detail(state: web::Data<AppState>,
-                    //idx: web::Path<String>) -> actix_web::Result<web::Json<DetailResponse>> {
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
     //println!("IDX: {idx:?}");
@@ -608,7 +609,6 @@ pub async fn play(state: web::Data<AppState>,
 /// curl -X POST 'http://127.0.0.1:8081/msg/clear'
 ///
 #[post("/clear")]
-//pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     //println!("CLEAR");
     
