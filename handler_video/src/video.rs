@@ -4,16 +4,12 @@ use actix_web::{
     get,
     post,
     web,
-    //Result,
 
+    Result,
+    //Error,
+    
     HttpResponse,
     //Responder,
-
-    /* SAVE EXAMPLE
-    middleware,
-    HttpServer,
-    */
-    //Error,
 };
 
 use actix_multipart::Multipart;
@@ -88,8 +84,7 @@ pub struct DetailResponse {
 ///
 /// curl 'http://localhost:8081/video/'
 ///
-//#[get("/")]
-pub async fn index(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
+pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);          
     
@@ -121,7 +116,8 @@ pub async fn index(state: web::Data<AppState>) -> actix_web::Result<web::Json<In
 ///
 /// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
-                          state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
+                          //state: web::Data<AppState>) -> actix_web::Result<web::Json<PostResponse>> {
+                          state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
     println!("PUT:");
 
     // Cell
@@ -297,7 +293,8 @@ pub async fn insert_video(mut payload: Multipart,
 ///
 #[get("/detail/{id}")]
 pub async fn detail(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> actix_web::Result<web::Json<DetailResponse>> {
+                    //idx: web::Path<String>) -> actix_web::Result<web::Json<DetailResponse>> {
+                    idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
     //println!("IDX: {idx:?}");
     
@@ -611,7 +608,8 @@ pub async fn play(state: web::Data<AppState>,
 /// curl -X POST 'http://127.0.0.1:8081/msg/clear'
 ///
 #[post("/clear")]
-pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
+//pub async fn clear(state: web::Data<AppState>) -> actix_web::Result<web::Json<IndexResponse>> {
+pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     //println!("CLEAR");
     
     let request_count = state.request_count.get() + 1; // we still count
