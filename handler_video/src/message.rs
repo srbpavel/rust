@@ -223,6 +223,7 @@ pub async fn search(state: web::Data<AppState>,
 
     let result = match parsed_idx {
         Some(i) =>  
+            /* clippy
             match ms.get(&i) {
                 Some(msg) => Some(
                     Message {
@@ -232,9 +233,17 @@ pub async fn search(state: web::Data<AppState>,
                 ),
                 None => None,
             },
+            */
+
+            ms.get(&i).map(|msg| Message {
+                id: i,
+                body: msg.to_string(),
+            }),
+        
         None => None,
     };
-    
+
+   
     //println!("RESULT: {result:?}");
     
     Ok(
@@ -363,6 +372,7 @@ pub async fn last_id(state: web::Data<AppState>) -> actix_web::Result<web::Json<
 
     //println!("LAST: {:?}", last_id);
 
+    /* clippy
     let result = match ms.get(&last_id) {
         Some(msg) =>
             Some(
@@ -374,8 +384,14 @@ pub async fn last_id(state: web::Data<AppState>) -> actix_web::Result<web::Json<
             ),
         None => None,
     };
+    */
 
-    //println!("RESULT: {result:?}");
+    let result = ms.get(&last_id).map(|msg| Message {
+                id: last_id,
+                body: msg.to_string(),
+            });
+    
+    println!("RESULT: {result:?}");
     
     Ok(
         web::Json(

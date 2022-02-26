@@ -5,6 +5,8 @@ use actix_web::{
     middleware,
     App,
     HttpServer,
+    HttpResponse,
+    Responder,
 };
 
 use std::cell::Cell;                
@@ -21,14 +23,14 @@ use std::collections::HashMap;
 mod message;
 mod video;
 
-const NAME: &'static str = "HANDLER_VIDEO";
-const SERVER: &'static str = "127.0.0.1";
+const NAME: &str = "HANDLER_VIDEO";
+const SERVER: & str = "127.0.0.1";
 const PORT: u64 = 8081;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
 
-const LOG_FORMAT: &'static str = r#""%r" %s %b "%{User-Agent}i" %D"#;
+const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
 
 /// this is for each WORKER thread     
@@ -98,6 +100,11 @@ async fn main() -> std::io::Result<()> {
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)
+            // HEALTH
+            .route("/health_check",
+                   web::get()
+                   .to(health_check)
+            )
             // SCOPE for ####################### MESSAGES
             .service(
                 web::scope("/msg")
@@ -184,4 +191,14 @@ async fn main() -> std::io::Result<()> {
 /// welcome msg
 fn welcome_msg() -> std::io::Result<String> {
     Ok(format!("FoOoKuMe -> {NAME}"))
+}
+
+
+///
+/// curl -v http://localhost:8081/health_check
+///
+/// HTTP/1.1 200 OK
+///
+async fn health_check() -> impl Responder {
+    HttpResponse::Ok()
 }
