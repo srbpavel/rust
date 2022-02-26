@@ -339,15 +339,15 @@ pub async fn delete(state: web::Data<AppState>,
 
 /// LAST via Hash key: id
 ///
-/// beware: not correct if last was deleted as we take it MSG_ID_COUNTER
+/// beware: not correct if last_id was deleted as we take it MSG_ID_COUNTER
 /// and not via iter Hash_map, that is why we call this LAST_ID
 ///
 /// do we want/need such a method?
 ///
-/// curl 'http://localhost:8081/msg/last'
+/// curl 'http://localhost:8081/msg/last_id'
 ///
 #[get("/last_id")]
-pub async fn last(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
+pub async fn last_id(state: web::Data<AppState>) -> actix_web::Result<web::Json<LastResponse>> {
 
     // we still add to this thread counter
     let request_count = state.request_count.get() + 1;

@@ -115,7 +115,6 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
-    //println!("PUT:");
 
     // Cell
     let request_count = state.request_count.get() + 1;
@@ -175,18 +174,6 @@ pub async fn insert_video(mut payload: Multipart,
                     // WE NEED AT THE END
                     full_path = filepath.clone();
 
-                    /*
-                    let text = base64::decode(&v.binary)
-                        .unwrap()
-                        .iter()
-                        .map(|b| 
-                             (*b as char)
-                             .to_string()
-                        )
-                        .collect::<Vec<_>>()
-                        .concat();
-                    */
-
                     // HASH
                     video.insert(
                         // key
@@ -196,52 +183,9 @@ pub async fn insert_video(mut payload: Multipart,
                             id:video_id,
                             name:video_name.clone().to_string(),
                             path:filepath.clone().to_string(),
-                            //binary: String::from(""),
-                            //binary: String::from("RnJpIDI1IEZlYiAyMDIyIDA2OjUwOjQ1IFBNIENFVAo="),
-                            //binary: data_coded,
                         },
                     );
 
-                    /*
-                    println!("FILENAME:{:?}\nPATH:{:?}",
-                             filename,
-                             filepath,
-                    );
-                    */
-
-                    /*
-                    // ### BASE64
-                    let mut f = web::block(||
-                                           //std::fs::File::create(filepath)
-                                           Ok(
-                                               String::from("")
-                                                   )
-                    ).await?;
-
-                    println!("F:{:?}",
-                             f,
-                    );
-
-                    // stream of *Bytes* object
-                    while let Some(chunk) = field.try_next().await? {
-                        //println!("CHUNK: {:#?}", chunk);
-
-                        f = web::block(move ||
-                                       Ok(
-                                           f
-                                               .push_str(
-                                                   &base64::encode(
-                                                       &chunk
-                                                   )
-                                               )
-                                               //.map(|_| f)
-                                               )
-                        )
-                            .await?//?
-                            ;
-                    };
-                    */
-          
                     // /* ### FILE
                     // block -> future to result
                     //https://docs.rs/actix-web/latest/actix_web/web/fn.block.html
@@ -264,7 +208,6 @@ pub async fn insert_video(mut payload: Multipart,
                                        .map(|_| f)
                         ).await?;
                     };
-                    // */
                 },
 
                 None => {},
@@ -279,7 +222,6 @@ pub async fn insert_video(mut payload: Multipart,
                 name: video_name.clone(),
                 id: video_id,
                 path: full_path,
-                //binary: String::from("<also masked>"),
             },
         }
     ))
@@ -297,16 +239,12 @@ pub async fn insert_video(mut payload: Multipart,
 pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
-    //println!("IDX: {idx:?}");
-    
-    // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
 
-    let path = format!("/video/detail/{}", // take this from req
+    let path = format!("/video/detail/{}", // take this from req or ... ?
                        to_parse_idx,
     );
 
-    // let's try parse
     let parsed_idx = match to_parse_idx.parse::<usize>() {
         Ok(i) => {
             Some(i)
@@ -318,50 +256,23 @@ pub async fn detail(state: web::Data<AppState>,
         },
     };
 
-    //println!("PARSED_IDX: {parsed_idx:?}");
-    
-    // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
-    // we lock msg vec
     let video = state
         .video_map
         .lock()
         .unwrap();
 
-    //println!("MS: {ms:?}");
-
     let result = match parsed_idx {
         Some(i) =>  
             match video.get(&i) {
                 Some(v) => {
-                    //let mut text: String = String::from("");
-
-                    /* FUTURE USE
-                    let text = base64::decode(&v.binary)
-                        .unwrap()
-                        .iter()
-                        .map(|b| 
-                             (*b as char)
-                             .to_string()
-                        )
-                        .collect::<Vec<_>>()
-                        .concat();
-
-                    println!("BASE64: {:?}",
-                             text,
-                    );
-                    */
-
                     Some(
                         Video {
                             id: i,
                             name: v.name.to_string(),
                             path: v.path.to_string(),
-                            //binary: v.binary.to_string(),
-                            // WE DO NOT WANT TO SEE base64
-                            //binary: String::from("<masked>"),
                         }
                     )
                 },
@@ -370,11 +281,8 @@ pub async fn detail(state: web::Data<AppState>,
         None => None,
     };
     
-    //println!("RESULT: {result:?}");
-    
     Ok(
         web::Json(
-            // let's build struct for json
             DetailResponse {
                 server_id: state.server_id,
                 request_count:request_count,
@@ -394,18 +302,8 @@ pub async fn detail(state: web::Data<AppState>,
 pub async fn download(state: web::Data<AppState>,
                       idx: web::Path<String>) -> HttpResponse {
 
-    //println!("IDX: {idx:?}");
-    
-    // deconstruct to inner value
     let to_parse_idx = idx.into_inner();
 
-    /* OBSOLETE? 
-    let path = format!("/video/detail/{}", // take this from req
-                       to_parse_idx,
-    );
-    */
-
-    // let's try parse
     let parsed_idx = match to_parse_idx.parse::<usize>() {
         Ok(i) => {
             Some(i)
@@ -417,19 +315,13 @@ pub async fn download(state: web::Data<AppState>,
         },
     };
 
-    //println!("PARSED_IDX: {parsed_idx:?}");
-    
-    // we still add to this thread counter
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
-    // we lock msg vec
     let video = state
         .video_map
         .lock()
         .unwrap();
-
-    //println!("MS: {ms:?}");
 
     let result = match parsed_idx {
         Some(i) =>  
@@ -439,7 +331,6 @@ pub async fn download(state: web::Data<AppState>,
                         id: i,
                         name: v.name.to_string(),
                         path: v.path.to_string(),
-                        //binary: v.binary.to_string(),
                     }
                 ),
                 None => None,
@@ -460,8 +351,6 @@ pub async fn download(state: web::Data<AppState>,
                 .header("Content-Disposition",
                         content,
                 )
-                // EXPERIMENT
-                //.chunked()
                 .body(data)
         },
 
@@ -477,142 +366,16 @@ pub async fn download(state: web::Data<AppState>,
             )
         },
     }  
-    
-    //println!("RESULT: {result:?}");
-
-    /* // JSON
-    Ok(
-        web::Json(
-            // let's build struct for json
-            //SearchResponse {
-            DetailResponse {
-                server_id: state.server_id,
-                request_count:request_count,
-                result: result,
-                // FUTURE USE
-                url_path: path,
-            }
-        )
-    )
-    */
 }
 
-/* // FUTURE USE for buffer/cursor/base64/...
-/// PLAY via hash
-/// 
-/// curl 'http://localhost:8081/video/play/{id}'
+
+/// flush video_map Hash
 ///
-#[get("/play/{idx}")]
-pub async fn play(state: web::Data<AppState>,
-                  idx: web::Path<String>) -> HttpResponse {
-    
-    //println!("IDX: {idx:?}");
-    
-    // deconstruct to inner value
-    let to_parse_idx = idx.into_inner();
-
-    // let's try parse
-    let parsed_idx = match to_parse_idx.parse::<usize>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
-        },
-    };
-
-    //println!("PARSED_IDX: {parsed_idx:?}");
-    
-    // we still add to this thread counter
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
-
-    // we lock msg vec
-    let video = state
-        .video_map
-        .lock()
-        .unwrap();
-
-    //println!("MS: {ms:?}");
-
-    let result = match parsed_idx {
-        Some(i) =>  
-            match video.get(&i) {
-                Some(v) => Some(
-                    Video {
-                        id: i,
-                        name: v.name.to_string(),
-                        path: v.path.to_string(),
-                        //binary: v.binary.to_string(),
-                    }
-                ),
-                None => None,
-            },
-        None => None,
-    };
-
-    match result {
-        Some(v) => {
-
-            let content = format!("form-data; filename={}",
-                                  v.path,
-            );
-
-            /*
-            let data = std::fs::read(v.path)
-                .unwrap(); // NOT SAFE will panic!
-            */
-
-            let base64_data = base64::decode(&v.binary)
-                .unwrap() // NOT SAFE
-                .iter()
-                .map(|b| 
-                     (*b as char)
-                     .to_string()
-                )
-                .collect::<Vec<_>>()
-                .concat();
-            
-            HttpResponse::Ok()
-                .header("Content-Disposition",
-                        content,
-                )
-                // EXPERIMENT
-                //.chunked()
-                .body(base64_data)
-        },
-
-        None => {
-
-            HttpResponse::NotFound().json(
-                &File {
-                    name: String::from("name"),
-                    time: 1234567890,
-                    err: "error".to_string(),
-                    
-                }
-            )
-        },
-    }  
-}
-*/
-
-
-/// service: handler
-///
-/// add +1
-/// flush messages
-/// json via Struct but with empty Vec
-///
-/// curl -X POST 'http://127.0.0.1:8081/msg/clear'
+/// curl -X POST 'http://127.0.0.1:8081/video/clear'
 ///
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
-    //println!("CLEAR");
-    
-    let request_count = state.request_count.get() + 1; // we still count
+    let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
     let mut all_videos = state
@@ -620,7 +383,6 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .lock()
         .unwrap(); // niet goed !!! make it safe 
     
-    // HASH
     all_videos.clear();
     
     Ok(
@@ -634,66 +396,3 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         )
     )
 }
-
-/*
-/// INDEX get info
-///
-///
-pub async fn index() -> HttpResponse {
-    let html = r#"<html>
-        <head><title>video upload test</title></head>
-        <body>
-            <form target="/" method="post" enctype="multipart/form-data">
-                <input type="file" multiple name="file"/>
-                <button type="submit">Submit</button>
-            </form>
-        </body>
-    </html>"#;
-
-    HttpResponse::Ok().body(html)
-}
-*/
-
-
-/* FUTURE USE
-/// json ECHO
-///
-/// curl -X POST 'http://127.0.0.1:8081/echo' -H "Content-Type: application/json" -d '{"video": "123456"}'
-///
-//#[post("/echo")] // specify at at App + resource + route
-pub async fn echo(req_body: String) -> impl Responder {
-    HttpResponse::Ok()
-        .body(req_body)
-}
-*/
-
-/* FUTURE USE 
-/// list all VIDEO's
-///
-/// curl 'http://127.0.0.1:8081/video/all'
-///
-#[get("/all")]
-async fn all() -> HttpResponse {
-    HttpResponse::Ok()
-        .body("list: all video\n")
-}
-*/
-
-/*
-/// single VIDEO detail
-///
-/// curl 'http://127.0.0.1:8081/video/{id}'
-///
-#[get("/detail/{id}")]
-async fn detail(path: web::Path<u32>) -> HttpResponse {
-    HttpResponse::Ok()
-        .body(
-            format!("video_detail: {:?}\n",
-                    path
-                    .into_inner(),
-                    //.0,
-            ),
-        )
-}
- */
-

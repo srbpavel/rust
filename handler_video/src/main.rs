@@ -1,20 +1,11 @@
 /// HANDLER_VIDEO
 ///
 use actix_web::{
-    //get,
     web,
     middleware,
     App,
     HttpServer,
-    //HttpRequest,
 };
-
-//use actix_files as fs;
-//use actix_files::NamedFile;
-//use std::path::PathBuf;
-
-mod message;
-mod video;
 
 use std::cell::Cell;                
 use std::sync::atomic::{AtomicUsize,
@@ -27,6 +18,8 @@ use std::sync::{Arc,
 
 use std::collections::HashMap;
 
+mod message;
+mod video;
 
 const NAME: &'static str = "HANDLER_VIDEO";
 const SERVER: &'static str = "127.0.0.1";
@@ -50,7 +43,6 @@ pub struct AppState {
     // Message
     hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
-    //video_map: Arc<Mutex<HashMap<usize, String>>>,
     video_map: Arc<Mutex<HashMap<usize, video::Video>>>, 
 }                                      
 
@@ -106,14 +98,6 @@ async fn main() -> std::io::Result<()> {
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)
-            // STATIC files @@@@@@@@@@@@@@
-            //.service(tmp_files)
-            /*
-            .service(
-                fs::Files::new("/static", ".")
-                    .show_files_listing()
-            )
-            */
             // SCOPE for ####################### MESSAGES
             .service(
                 web::scope("/msg")
@@ -121,19 +105,16 @@ async fn main() -> std::io::Result<()> {
                     .service(message::index)
                     // ADD msg
                     .service(
-                        // path <- instead #[..("/send")
                         web::resource("/send")
                             .data(web::JsonConfig::default()
                                   .limit(4096)
                             )
-                            // HTTP POST <- instead #[post("/..")]
                             .route(web::post()
                                    // -> fn post_msg
                                    .to(message::post_msg)
                             ),
                     )
                     // FLUSH all msg from Hash
-                    // -> fn clear #[post("/clear")]
                     .service(message::clear)
                     // SEARCH msg via Hash key: id
                     .service(                            
@@ -143,14 +124,12 @@ async fn main() -> std::io::Result<()> {
                                    .to(message::search)           
                             ),                           
                     )
-                    // LAST
+                    // LAST_ID
                     // -> fn last #[get("/last")]
-                    .service(message::last)
+                    .service(message::last_id)
                     // DELETE via id
                     .service(                            
                         web::resource("/delete/{index}") 
-                            // HTTP GET
-                            //.route(web::get()
                             // HTTP DELETE
                             .route(web::delete()
                                    .to(message::delete)           
@@ -160,10 +139,8 @@ async fn main() -> std::io::Result<()> {
             // SCOPE for ####################### VIDEO
             .service(
                 web::scope("/video")
-                    //.service(video::index)
                     // PUT
                     .service(
-                        //web::resource("/put")
                         web::resource("/put")
                             .data(web::JsonConfig::default()
                                   // NO LIMIT for VIDEO
@@ -175,7 +152,7 @@ async fn main() -> std::io::Result<()> {
                     )
                     // index
                     .service(
-                        // COMBINE BOTH as LEARN
+                        // COMBINE BOTH as you LEARN
                         // has to be call as: /video/
                         web::resource("/")
                         // has to be call as: /video
@@ -183,37 +160,12 @@ async fn main() -> std::io::Result<()> {
                             .route(web::get()
                                    .to(video::index)
                             )
-                            /* SAVE EXAMPLE
-                            .route(web::post()
-                                   .to(video::save_file)
-                                   //.to(video::echo) // remove #[post...
-                            ),
-                            */
                     )
                     .service(video::download) // <- /video/download/123
-                    //.service(video::play) // <- /video/play/123
                     .service(video::detail) // <- /video/detail/123
                     // FLUSH all msg from Hash
                     // -> fn clear #[post("/clear")]
                     .service(video::clear)
-                    //.service(video::all) // <- /video/all
-                    //.service(video::echo), // <- /video/echo
-                    /*
-                    .service(
-                        web::resource("/echo")
-                            .route(web::post()
-                                   .to(video::echo)
-                            )
-                    )
-                    */
-                    /*
-                    .service(
-                        web::resource("/save_file")
-                            .route(web::post()
-                                   .to(video::save_file)
-                            ),
-                    )
-                    */
             )
     }
     )
@@ -223,96 +175,13 @@ async fn main() -> std::io::Result<()> {
                     PORT,
             )             
         )?
-        //.workers(8) // study more
-        .workers(1) // study more
+        .workers(1) // (8) // study more
         .run()
         .await
-            //.service(id_name_path) // GET -> greedy so i took /horse/{name}
-            /*
-            .service(horse) // GET Struct <- /horse/wonka
-            */
-            /* GREEDY, solve later
-            .route(
-                    "/{filename:.*}", // '/' /index.html /index.txt ...
-                    web::get()
-                        .to(index)
-            )
-            */
-            /*
-            .service(
-                web::resource("/index.html")
-                    .route(
-                        web::get()
-                            .to(index)
-                    )
-            )
-            */
-            /* NOT THERE YET
-            .service( // RESOURCE
-                web::resource("/user/{name}")
-                    .name("user_detail")
-                    .guard(
-                        guard::Post())
-                    .guard(
-                        guard::Header("content-type", "application/json"))
-                    .to(|| HttpResponse::Ok()),
-                    /*
-                    .route(
-                        web::get().to(|| HttpResponse::Ok()))
-                    .route(
-                        web::put().to(|| HttpResponse::Ok())),
-                    */
-            )
-            */
 }
 
 
 /// welcome msg
-//fn welcome_msg(value: &str) -> std::io::Result<String> {
 fn welcome_msg() -> std::io::Result<String> {
-    //Ok(String::from(value))
     Ok(format!("FoOoKuMe -> {NAME}"))
 }
-
-
-// FUTURE USE -> CODE parts
-/*
-/// id + name DISPLAY
-///
-/// curl -v 'http://127.0.0.1:8081/1/bijac/index.html'
-///
-//#[get("/{id}/{name}/index.html")]
-#[get("/{id}/{name}")] // Path parameters
-async fn id_name_path(web::Path((id, name)): web::Path<(u32, String)>) -> impl Responder {
-    format!("--> /{id}/{name} >>> nazdar name: <{name}> id: <{id}>\n")
-}
-*/
-
-/*
-/// horse Struct
-///
-/// curl 'http://127.0.0.1:8081/horse/matylda'
-///
-#[get("/horse/{name}/{sex}/{age}")]
-async fn horse(info: web::Path<Horse>) -> Result<String> {
-    Ok(
-        format!("{:?}\n",
-                info,
-        )
-    )
-}
-*/
-
-
-/* STATIC
-/// https://actix.rs/docs/static-files/
-#[get("/temp")]
-async fn tmp_files(_req: HttpRequest) -> actix_web::Result<NamedFile> {
-    let path: PathBuf = "./tmp/"
-        .parse()
-        .unwrap();
-    Ok(
-        NamedFile::open(path)?
-    )
-}
- */
