@@ -144,7 +144,8 @@ pub async fn run() -> std::io::Result<()> {
             )
             // SCOPE for ####################### VIDEO
             .service(
-                web::scope("/video")
+                //web::scope("/video")
+                web::scope(video::SCOPE)
                     // PUT
                     .service(
                         web::resource("/put")

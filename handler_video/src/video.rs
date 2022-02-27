@@ -6,15 +6,12 @@ use actix_web::{
     web,
     Result,
     HttpResponse,
-    //Responder,
-    Error,
 };
 
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
 
 use std::io::Write;
-use uuid::Uuid;
 
 use serde::{Serialize,
             Deserialize,
@@ -31,6 +28,9 @@ static VIDEO_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static VIDEO_ID_ORD: Ordering = Ordering::SeqCst;
 
 static STATIC_DIR: &str = "./tmp/";
+
+pub const SCOPE: &str = "/video";
+
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
@@ -107,10 +107,6 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// 
 /// curl -X PUT 'http://localhost:8081/video/put
 ///
-/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F ahoj=vole -F yeah=baby
-///
-/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F ahoj=vole -F yeah=baby -F "image=@info.txt;type=text/plain"
-///
 /// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F "now_text=@now.txt;type=text/plain"
 ///
 /// curl -X PUT -H 'Content-type: multipart/form-data' http://localhost:8081/video/put -F 'munch_roses_extended_remix=@/home/conan/video/youtube/munch_roses_extended_remix.mp4;type=video/mp4'
@@ -129,13 +125,13 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
-    // CLEAR do not reset counter yet, as for Curl testing
+    // CLEAR do not reset counter yet, as needed for Curl testing
     let video_id = VIDEO_ID_COUNTER.fetch_add(1,              
                                               VIDEO_ID_ORD,
     );
 
-    // as for content which is not file
-    let mut video_name = String::from("VIDEO_NAME");
+    // as for content which is not file until we will have error msg
+    let mut video_name = String::from("");
     let mut full_path = String::from("");
     
     // iterate over multipart stream
@@ -146,7 +142,6 @@ pub async fn insert_video(mut payload: Multipart,
 
             let content_disposition = field.content_disposition();
 
-            // STREAM
             /*
             println!("headers: {:?} type: {:?}",
                      field.headers(),
@@ -156,14 +151,6 @@ pub async fn insert_video(mut payload: Multipart,
             */
 
             if let Some (dis) = content_disposition {
-                /*
-                video_name = match dis.get_name() {
-                    Some(name) => {
-                        String::from(name)
-                    },
-                    None => String::from("VIDEO_NAME"),
-                };
-                */
 
                 // verify filename was in form
                 match dis.get_filename() {
@@ -178,12 +165,15 @@ pub async fn insert_video(mut payload: Multipart,
                         // another clone but WE NEED AT THE very END
                         full_path = filepath.clone();
 
-                        // 
                         video_name = match dis.get_name() {
                             Some(name) => {
                                 String::from(name)
                             },
-                            None => String::from("VIDEO_NAME"),
+                            // curl --form "=@smack.mp4;type=video/mp4" ...
+                            None => {
+                                //println!("name for filename not provided");
+                                String::from("VIDEO_NAME")
+                            },
                         };
                         
                         // HASH
@@ -198,16 +188,14 @@ pub async fn insert_video(mut payload: Multipart,
                             },
                         );
                         
-                        // /* ### FILE
+                        // ### FILE
                         // block -> future to result
                         let mut f = web::block(||
                                                std::fs::File::create(filepath)
                         ).await?;
                         
                         /*
-                        println!("F:{:?}",
-                                 f,
-                        );
+                        println!("F: {f:?}");
                         */
                         
                         // stream of *Bytes* object
@@ -222,69 +210,13 @@ pub async fn insert_video(mut payload: Multipart,
                     },
                     None => {
                         // FUTURE USE
-                        // here we can verify that name can be like:
+                        // here we can verify that 'name' can be like:
                         // stream=stream_001 so we will have group_id
                         // and filter/list videos via that
-                        
+                        //
                         // there will be more error handling
-                        //video_name = "filename not provided".to_string()
                     },
                 }
-
-                /* ORIGINAL 
-                let filename = dis
-                    .get_filename()
-                    // if not filename -> generate uuid as new filenames
-                    .map_or_else(||
-                        Uuid::new_v4().to_string(),
-                        sanitize_filename::sanitize,
-                    );
-                
-                // FOR DOWNLOAD/PLAYER
-                let filepath = format!("{}{}_{}",
-                                       STATIC_DIR,
-                                       video_id,
-                                       filename,
-                );
-                
-                // WE NEED AT THE END
-                full_path = filepath.clone();
-                
-                // HASH
-                video.insert(
-                    // KEY
-                    video_id,
-                    // VALUE
-                    Video {
-                        id:video_id,
-                        name:video_name.clone().to_string(),
-                        path:filepath.clone().to_string(),
-                    },
-                );
-                
-                // ### FILE
-                // block -> future to result
-                //https://docs.rs/actix-web/latest/actix_web/web/fn.block.html
-                let mut f = web::block(||
-                                       std::fs::File::create(filepath)
-                    ).await?;
-                
-                // /*
-                println!("F:{:?}",
-                f,
-                );
-                // */
-                
-                // stream of *Bytes* object
-                while let Some(chunk) = field.try_next().await? {
-                    //println!("CHUNK: {:#?}", chunk);
-                    f = web::block(move ||
-                                   f
-                                   .write_all(&chunk)
-                                   .map(|_| f)
-                    ).await?;
-                };
-                */ // END
             };
         }
 
@@ -315,7 +247,8 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let path = format!("/video/detail/{}", // take this from req or ... ?
+    let path = format!("{}/detail/{}",
+                       SCOPE,
                        to_parse_idx,
     );
 
@@ -369,7 +302,6 @@ pub async fn detail(state: web::Data<AppState>,
 #[get("/download/{idx}")]
 pub async fn download(state: web::Data<AppState>,
                       idx: web::Path<String>) -> HttpResponse {
-                      //idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = idx.into_inner();
 
@@ -412,20 +344,14 @@ pub async fn download(state: web::Data<AppState>,
             let data = std::fs::read(v.path)
                 .unwrap(); // NOT SAFE will panic!
 
-            // /*
             HttpResponse::Ok()
                 .header("Content-Disposition",
                         content,
                 )
                 .body(data)
-            // */
-            //web::Bytes::as_ptr(data)
-            //data
         },
 
         None => {
-
-            // /*
             HttpResponse::NotFound().json(
                 &File {
                     name: String::from("name"),
@@ -434,9 +360,6 @@ pub async fn download(state: web::Data<AppState>,
                     
                 }
             )
-            // */
-            //web::Bytes::from_static(b"not valid filename".to_vec())
-            //b"not valid filename".to_vec()
         },
     }
 }
@@ -454,7 +377,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
     let mut all_videos = state
         .video_map
         .lock()
-        .unwrap(); // niet goed !!! make it safe 
+        .unwrap();
     
     all_videos.clear();
     
