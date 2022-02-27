@@ -1,5 +1,8 @@
 /// HANDLER
 ///
+use crate::message;
+use crate::video;
+
 use actix_web::{
     web,
     middleware,
@@ -19,11 +22,6 @@ use std::sync::{Arc,
 };
 
 use std::collections::HashMap;
-
-//mod message;
-//mod video;
-use crate::message;
-use crate::video;
 
 const NAME: &str = "HANDLER_VIDEO";
 const SERVER: & str = "127.0.0.1";
@@ -52,7 +50,6 @@ pub struct AppState {
 
 
 /// RUN
-//#[actix_web::main]
 pub async fn run() -> std::io::Result<()> {
     // DEBUG VERBOSE
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -134,7 +131,7 @@ pub async fn run() -> std::io::Result<()> {
                             ),                           
                     )
                     // LAST_ID
-                    // -> fn last #[get("/last")]
+                    // -> fn last #[get("/last_id")]
                     .service(message::last_id)
                     // DELETE via id
                     .service(                            
@@ -178,13 +175,17 @@ pub async fn run() -> std::io::Result<()> {
             )
     }
     )
+        // https://actix.rs/docs/server/
         .bind(
             format!("{}:{}",
                     SERVER,
                     PORT,
             )             
         )?
-        .workers(1) // (8) // study more
+        // number of logical CPUs in the system
+        // each thread process is blocking
+        // non-cpu-bound operation should be expressed as futures or asynchronous
+        .workers(4) //
         .run()
         .await
 }

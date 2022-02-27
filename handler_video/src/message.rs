@@ -1,7 +1,3 @@
-//use crate::{AppState,
-//};
-
-//mod handler;
 use crate::handler::AppState;
 
 use actix_web::{
@@ -349,12 +345,12 @@ pub async fn delete(state: web::Data<AppState>,
 }
 
 
-/// LAST via Hash key: id
+/// LAST_ID via Hash key: id
 ///
 /// beware: not correct if last_id was deleted as we take it MSG_ID_COUNTER
 /// and not via iter Hash_map, that is why we call this LAST_ID
 ///
-/// do we want/need such a method?
+/// do we want/need such a method? just for learning purpose now
 ///
 /// curl 'http://localhost:8081/msg/last_id'
 ///
