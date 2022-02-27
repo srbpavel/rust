@@ -32,19 +32,46 @@ static STATIC_DIR: &str = "./tmp/";
 pub const SCOPE: &str = "/video";
 
 
+/// flux_query error
+#[derive(Debug)]
+pub enum VideoStatus {
+    Init,
+    Ok,
+    EmptyName,
+    EmptyFilename,
+    TooManyForms,
+}
+
+
+/// video_status -> msg
+///
+impl VideoStatus {
+    // can have as &str but then full of lifetime, time will proof
+    //pub fn as_str(&self) -> &str {
+    pub fn as_string(&self) -> String {
+        match *self {
+            VideoStatus::Init => String::from("Init"),
+            VideoStatus::Ok => String::from("Ok"),
+            VideoStatus::EmptyName => String::from("STREAM for filename not provided"),
+            VideoStatus::EmptyFilename => String::from("FILENAME not provided"),
+
+            VideoStatus::TooManyForms => String::from("TOO MANY FORMS we accept only one"),
+         }
+    }
+}
+
+
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
     id: usize,
-    name: String,
+    stream: String,
     path: String,
 }
-
 
 // FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
-    name: String,
-    time: u64,
+    stream: String,
     err: String,
 }
 
@@ -67,6 +94,7 @@ pub struct PostResponse {
     server_id: usize,
     request_count: usize,
     video: Video,
+    status: String,
 }
 
 #[derive(Serialize, Debug)]                               
@@ -131,28 +159,36 @@ pub async fn insert_video(mut payload: Multipart,
     );
 
     // as for content which is not file until we will have error msg
-    let mut video_name = String::from("");
-    let mut full_path = String::from("");
+    let mut video_stream = String::from("init_stream");
+    let mut full_path = String::from("init_path");
+    let mut status = VideoStatus::Init.as_string();
+
+    let mut content_counter = 0;
     
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
+    // decide if we want just one ore more forms?
     while let Some(mut field) = payload
         .try_next()
         .await? {
 
+            content_counter += 1;
+            
             let content_disposition = field.content_disposition();
 
             /*
-            println!("headers: {:?} type: {:?}",
+            println!("headers: {:?} type: {:?} counter: {:?}",
                      field.headers(),
                      field.content_type(),
+                     content_counter,
                      
             );
             */
 
             if let Some (dis) = content_disposition {
-
-                // verify filename was in form
+                status = VideoStatus::Ok.as_string();
+                
+                // verify if filename was in form
                 match dis.get_filename() {
                     Some(filename) => {
                         // FOR DOWNLOAD/PLAYER or ... url
@@ -165,14 +201,16 @@ pub async fn insert_video(mut payload: Multipart,
                         // another clone but WE NEED AT THE very END
                         full_path = filepath.clone();
 
-                        video_name = match dis.get_name() {
-                            Some(name) => {
-                                String::from(name)
+                        video_stream = match dis.get_name() {
+                            Some(stream) => {
+                                String::from(stream)
                             },
+                            // simulate:
                             // curl --form "=@smack.mp4;type=video/mp4" ...
                             None => {
-                                //println!("name for filename not provided");
-                                String::from("VIDEO_NAME")
+                                status = VideoStatus::EmptyName.as_string();
+                                
+                                String::from("")
                             },
                         };
                         
@@ -183,7 +221,7 @@ pub async fn insert_video(mut payload: Multipart,
                             // VALUE
                             Video {
                                 id:video_id,
-                                name:video_name.clone().to_string(),
+                                stream:video_stream.clone().to_string(),
                                 path:filepath.clone().to_string(),
                             },
                         );
@@ -215,20 +253,28 @@ pub async fn insert_video(mut payload: Multipart,
                         // and filter/list videos via that
                         //
                         // there will be more error handling
+
+                        // now stream is name for filename
+                        status = VideoStatus::EmptyFilename.as_string()
                     },
                 }
             };
         }
 
+    if content_counter > 1 {
+        status = VideoStatus::TooManyForms.as_string()
+    }
+    
     Ok(web::Json(
         PostResponse {
             server_id: state.server_id,
             request_count,
             video: Video {
-                name: video_name.clone(),
+                stream: video_stream.clone(),
                 id: video_id,
                 path: full_path,
             },
+            status,
         }
     ))
 }
@@ -275,7 +321,7 @@ pub async fn detail(state: web::Data<AppState>,
         Some(i) => {
             video.get(&i).map(|v| Video {
                 id: i,
-                name: v.name.to_string(),
+                stream: v.stream.to_string(),
                 path: v.path.to_string(),
             })
         },
@@ -324,11 +370,12 @@ pub async fn download(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
+    // join these two together
     let result = match parsed_idx {
         Some(i) => {
             video.get(&i).map(|v| Video {
                 id: i,
-                name: v.name.to_string(),
+                stream: v.stream.to_string(),
                 path: v.path.to_string(),
             })
         },
@@ -354,8 +401,7 @@ pub async fn download(state: web::Data<AppState>,
         None => {
             HttpResponse::NotFound().json(
                 &File {
-                    name: String::from("name"),
-                    time: 1234567890,
+                    stream: String::from("stream"),
                     err: "error".to_string(),
                     
                 }
