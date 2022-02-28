@@ -7,7 +7,12 @@ use actix_web::{
     Result,
     HttpResponse,
     HttpRequest,
+    //Responder,
+    //Error,
+    //error::{ResponseError},
 };
+
+//use actix_web::error::ReadlinesError::ContentTypeError;
 
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
@@ -32,6 +37,12 @@ static STATIC_DIR: &str = "./tmp/";
 
 pub const SCOPE: &str = "/video";
 
+/*
+struct VideoError {
+    //code: usize,
+    message: String,
+}
+*/
 
 /// flux_query error
 #[derive(Debug)]
@@ -65,6 +76,7 @@ impl VideoStatus {
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
     id: usize,
+    //id: String,
     stream: String,
     path: String,
 }
@@ -92,10 +104,29 @@ pub struct PostInput {
 
 #[derive(Serialize, Debug)]
 pub struct PostResponse {
+    result: Option<PostOk>
+    /*
     server_id: usize,
     request_count: usize,
     video: Video,
     status: String,
+    */
+}
+
+#[derive(Serialize, Debug)]
+pub struct PostOk {
+    server_id: usize,
+    request_count: usize,
+    video: Video,
+    status: String,
+}
+
+#[derive(Serialize)]
+struct PostError {
+    msg: String,
+    //server_id: usize,
+    //request_count: usize,
+    //error: String,
 }
 
 #[derive(Serialize, Debug)]                               
@@ -144,14 +175,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest) -> Result<web::Json<PostResponse>> {
-
-    println!("REQ: {:?}\n\nid: {:?}\ngroup: {:?}",
-             req.headers(),
-             req.headers().get("video_id"),
-             req.headers().get("group"),
-    );
-    
-    
+                          
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
@@ -162,6 +186,54 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
+
+    let mut new_video = Video {
+        stream: String::from(""),
+        id: 0,
+        path: String::from(""),
+    };
+    
+    /* // HEADERS
+    println!("REQ: {:?}\n\nid: {:?}\ngroup: {:?}",
+             req.headers(),
+             req.headers().get("video_id"),
+             req.headers().get("group"),
+    );
+    */
+    //let h_video_id = match req.headers().get("video_id") {
+    match req.headers().get("video_id") {
+        Some(id) => {  // HeaderValue
+            new_video.id = id.to_str().unwrap().parse::<usize>().unwrap();
+                
+        },
+        None => {
+            //println!("###ERROR: no VIDEO_ID");
+            //"ERROR: no VIDEO_ID"
+            // curl: (55) Send failure: Connection reset by peer
+            return Ok(
+                web::Json(
+                    PostResponse {
+                        result: None
+                    }
+                )
+            )
+        },
+    }
+
+    match req.headers().get("group") {
+        Some(group) => {  // HeaderValue
+            new_video.stream = group.to_str().unwrap().to_string()
+                
+        },
+        None => {
+            println!("###ERROR: no GROUP");
+        },
+    }
+    
+    println!("NEW_VIDEO: {:?}",
+             new_video,
+    );
+    
     // CLEAR do not reset counter yet, as needed for Curl testing
     let video_id = VIDEO_ID_COUNTER.fetch_add(1,              
                                               VIDEO_ID_ORD,
@@ -284,7 +356,8 @@ pub async fn insert_video(mut payload: Multipart,
     if content_counter > 1 {
         status = VideoStatus::TooManyForms.as_string()
     }
-    
+
+    /*
     Ok(web::Json(
         PostResponse {
             server_id: state.server_id,
@@ -297,6 +370,25 @@ pub async fn insert_video(mut payload: Multipart,
             status,
         }
     ))
+    */
+    Ok(
+        web::Json(
+            PostResponse {
+                result: Some(
+                    PostOk {
+                        server_id: state.server_id,
+                        request_count,
+                        video: Video {
+                            stream: video_stream.clone(),
+                            id: video_id,
+                            path: full_path,
+                        },
+                        status,
+                    }
+                )
+            }
+        )
+    )
 }
 
 
