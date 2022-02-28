@@ -6,6 +6,7 @@ use actix_web::{
     web,
     Result,
     HttpResponse,
+    HttpRequest,
 };
 
 use actix_multipart::Multipart;
@@ -141,8 +142,16 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 ///
 /// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
-                          state: web::Data<AppState>) -> Result<web::Json<PostResponse>> {
+                          state: web::Data<AppState>,
+                          req: HttpRequest) -> Result<web::Json<PostResponse>> {
 
+    println!("REQ: {:?}\n\nid: {:?}\ngroup: {:?}",
+             req.headers(),
+             req.headers().get("video_id"),
+             req.headers().get("group"),
+    );
+    
+    
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
@@ -177,7 +186,7 @@ pub async fn insert_video(mut payload: Multipart,
             let content_disposition = field.content_disposition();
 
             /*
-            println!("headers: {:?} type: {:?} counter: {:?}",
+            println!("headers: {:?}\ntype: {:?}\ncounter: {:?}",
                      field.headers(),
                      field.content_type(),
                      content_counter,
@@ -187,6 +196,17 @@ pub async fn insert_video(mut payload: Multipart,
 
             if let Some (dis) = content_disposition {
                 status = VideoStatus::Ok.as_string();
+
+
+                // /*
+                println!("\ndis: {:?}",
+                         dis,
+                         //field.headers(),
+                         //field.content_type(),
+                         //content_counter,
+                         
+                );
+                // */
                 
                 // verify if filename was in form
                 match dis.get_filename() {
