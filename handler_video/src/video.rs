@@ -138,6 +138,11 @@ pub struct DetailResponse {
     url: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct UpdateInput {
+    video_id: String,
+    group_id: String,
+}
 
 /// GET index list all videos
 ///
@@ -495,6 +500,243 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
             }
         )
     )
+}
+
+
+/// DELETE via id -> return all msg hash without deleted one
+/// 
+/// path as String
+///
+/// curl -X DELETE 'http://localhost:8081/video/delete/{id}'
+///
+/// this tells server that client expect JSON data in response
+/// -H "Accept: application/json"
+///
+/// only delete Struct and not filename -> as for my curl test
+///
+pub async fn delete(state: web::Data<AppState>,
+                    idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+
+    //println!("IDX: {idx:?}");
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    // let's try parse
+    //let parsed_idx = match to_parse_idx.parse::<usize>() {
+    let parsed_idx = match to_parse_idx.parse::<String>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+
+    //println!("PARSED_IDX: {parsed_idx:?}");
+    
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec, but now as MUT because we delete
+    // we did not do MUT for push ?
+    let mut video_hashmap = state
+        .video_map
+        .lock()
+        .unwrap();
+
+    //println!("MSG before DEL: {msg:?}");
+
+    // for now it just display to STDOUT
+    // try to make it let shorter !!!
+    let _result = match parsed_idx {
+        Some(i) =>  
+            // DELETE
+            match video_hashmap.remove(&i) {
+                Some(video) => {
+                    //println!("DELETED: {video:?}");
+
+                    // later this will be another Json Response
+                    Some(format!("{}: {:?}",
+                                 i,
+                                 video,
+                    ))
+                },
+                None => {
+                    // later this will be another Json Response
+                    //eprintln!("NOT FOUND SO: {i:?} stay");
+                    None
+                },
+            },
+        None => {
+            //eprintln!("DELETE key {to_parse_idx:?} not valid Type");
+            None
+        },
+    };
+    
+    //eprintln!("RESULT: {result:?} -> MOVE THIS to JSON response");
+    
+    Ok(
+        web::Json(
+            IndexResponse {                          
+                server_id: state.server_id,          
+                request_count,        
+                video_map: video_hashmap.clone(),
+            }                                        
+        )
+    )
+}
+
+
+/// UPDATE group_id for video
+/// 
+/// curl -X POST 'http://localhost:8081/video/update/group/{id}'
+///
+/// this tells server that client expect JSON data in response
+/// -H "Accept: application/json"
+///
+pub async fn update_group(update: web::Json<UpdateInput>,
+                          state: web::Data<AppState>) -> actix_web::Result<web::Json<DetailResponse>> {
+    
+    //println!("UPDATE_VIDEO: {update:?}");    
+
+    // Cell
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+    
+    // we lock and have access to HashMap messages
+    let mut video_hashmap = state
+        .video_map // HASH
+        .lock() // get access to data inside Mutex + blocks until another thread
+        .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
+
+    let result = match video_hashmap.get_mut(&update.video_id) {
+        Some(video) => {
+            //println!("Video: {video:#?}");
+
+            // video group update
+            video.group = update.group_id.to_string();
+
+            Some(
+                Video {
+                    id: video.id.clone(),
+                    group: update.group_id.to_string(),
+                    //group: update.group_id.clone().to_string(),
+                    path: video.path.clone(),
+                }
+            )
+        },
+        None => None,
+    };
+    
+    /*
+    let result = video_hashmap
+        .get(&update.video_id).map(|v| {
+
+            println!("V: {:?}",
+                     v,
+            );
+
+            Video {
+                id: v.id.clone(),
+                group: update.group_id.to_string(),
+                path: v.path.clone(),
+            }
+        });
+    */
+
+    println!("AFTER: {result:?}");
+    
+    // /*
+    Ok(
+        web::Json(
+            DetailResponse {
+                server_id: state.server_id,
+                request_count,
+                result,
+                //result: None,
+                url: String::from("URL"),
+            }
+        )
+    )
+    // */
+
+    /*
+    //println!("IDX: {idx:?}");
+    
+    // deconstruct to inner value
+    let to_parse_idx = idx.into_inner();
+
+    // let's try parse
+    //let parsed_idx = match to_parse_idx.parse::<usize>() {
+    let parsed_idx = match to_parse_idx.parse::<String>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+
+    //println!("PARSED_IDX: {parsed_idx:?}");
+    
+    // we still add to this thread counter
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock msg vec, but now as MUT because we delete
+    // we did not do MUT for push ?
+    let mut video_hashmap = state
+        .video_map
+        .lock()
+        .unwrap();
+
+    //println!("MSG before DEL: {msg:?}");
+
+    // for now it just display to STDOUT
+    // try to make it let shorter !!!
+    let result = match parsed_idx {
+        Some(i) =>  
+            // DELETE
+            match video_hashmap.remove(&i) {
+                Some(video) => {
+                    //println!("DELETED: {video:?}");
+
+                    // later this will be another Json Response
+                    Some(format!("{}: {:?}",
+                                 i,
+                                 video,
+                    ))
+                },
+                None => {
+                    // later this will be another Json Response
+                    //eprintln!("NOT FOUND SO: {i:?} stay");
+                    None
+                },
+            },
+        None => {
+            //eprintln!("DELETE key {to_parse_idx:?} not valid Type");
+            None
+        },
+    };
+    
+    //eprintln!("RESULT: {result:?} -> MOVE THIS to JSON response");
+    
+    Ok(
+        web::Json(
+            IndexResponse {                          
+                server_id: state.server_id,          
+                request_count,        
+                video_map: video_hashmap.clone(),
+            }                                        
+        )
+    )
+    */
 }
 
 

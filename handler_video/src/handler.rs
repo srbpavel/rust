@@ -27,8 +27,6 @@ use std::collections::HashMap;
 /// counters
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
-//const LOG_FORMAT: &str = r#""%r" %s %b "%{User-Agent}i" %D"#;
-//const LOG_FORMAT: &str = "\"%r\" %s %b \"%{User-Agent}i\" %D";
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -43,12 +41,12 @@ pub struct AppState {
     pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
-    // Config
-    pub config: Config,
+    // DataConfig for SCOPE
+    pub config: DataConfig,
 }                                      
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct DataConfig {
     pub static_dir: String,
 }
 
@@ -61,10 +59,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     env_logger::init();
     
     println!("{}",
-             welcome_msg(
-                 &config.name,
-                 &config.host,
-             )?,
+             welcome_msg(&config)?,
     );
 
     // shared msg HashMap for each worker
@@ -88,7 +83,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     // SERVER
     HttpServer::new(move || {
         App::new()
-            //.data(settings.clone())
             .data(AppState {                                        
                 // persistent server counter
                 server_id: SERVER_COUNTER.fetch_add(1,              
@@ -102,7 +96,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 // video
                 video_map: video_map.clone(),
                 // config
-                config: Config {
+                config: DataConfig {
                     static_dir: String::from(config.static_dir.clone()),
                 },
             })                                                      
@@ -184,8 +178,27 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::detail) // <- /video/detail/123
                     // FLUSH all msg from Hash
                     .service(video::clear)
+                    // DELETE via id
+                    .service(                            
+                        web::resource("/delete/{index}") 
+                        // HTTP DELETE
+                            .route(web::delete()
+                                   .to(video::delete)           
+                            ),                           
+                    )
                     // LIST group members
                     .service(video::list_group)
+                    // UPDATE group_id for single video
+                    //.service(video::update_group)
+                    .service(
+                        web::resource("/update/group")
+                            .data(web::JsonConfig::default()
+                                  .limit(4096)
+                            )
+                            .route(web::post()
+                                   .to(video::update_group)
+                            ),
+                    )
             )
     }
     )
@@ -209,9 +222,14 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
 
 /// welcome msg
-fn welcome_msg(name: &str,
-               host: &str) -> std::io::Result<String> {
-    Ok(format!("start -> {name} at {host}"))
+fn welcome_msg(config: &TomlConfig) -> std::io::Result<String> {
+    Ok(
+        format!("start -> {} at {} / {}",
+                &config.name,
+                &config.host,
+                &config.server,
+        )
+    )
 }
 
 

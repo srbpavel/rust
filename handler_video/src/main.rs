@@ -20,4 +20,3 @@ async fn main() -> std::io::Result<()> {
     //HANDLER
     run(config).await
 }
-
