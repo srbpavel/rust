@@ -1,6 +1,5 @@
 use crate::handler::{
     AppState,
-    //STATIC_DIR,
 };
 
 use actix_web::{
@@ -11,26 +10,16 @@ use actix_web::{
     HttpResponse,
     HttpRequest,
 };
-
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
-
 use std::io::Write;
-
 use serde::{Serialize,
             Deserialize,
 };
-
 use std::collections::HashMap;
-
 use std::path::{Path,
                 PathBuf,
 };
-
-/*
-/// storage as fullpath
-static STATIC_DIR: &str = "/home/conan/soft/rust/handler_video/storage/";
-*/
 
 /// scope
 pub const SCOPE: &str = "/video";
@@ -265,17 +254,10 @@ pub async fn insert_video(mut payload: Multipart,
                     match dis.get_filename() {
                         Some(filename) => {
                             // FOR DOWNLOAD/PLAYER or ... url
-
-                            //new_video.path = Path::new(STATIC_DIR)
-                            //let lock_set = settings
-                            //    .lock()
-                            //    .unwrap();
-
                             new_video.path = Path::new(
-                                //&video_hashmap
-                                &state
-                                    .config
-                                    .static_dir)
+                                // STORAGE via config
+                                // find better way then in .data() !!!
+                                &state.config.static_dir)
                                 .join(
                                     format!("{}_{}",
                                             new_video.id,
@@ -293,7 +275,6 @@ pub async fn insert_video(mut payload: Multipart,
                             let filepath = new_video.path.clone();
                             
                             // HASH
-                            //video_hashmap.insert(
                             video_hashmap
                                 .insert(
                                     new_video.id.clone(), // KEY: video.id

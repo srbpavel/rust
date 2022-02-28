@@ -24,17 +24,11 @@ use std::sync::{Arc,
 
 use std::collections::HashMap;
 
-// CONFIG
-//const NAME: &str = "HANDLER_VIDEO";
-//const SERVER: & str = "127.0.0.1";
-//const PORT: u64 = 8081;
-//const WORKERS: usize = 4;
 /// counters
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
-const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
-/// storage as fullpath
-//pub static STATIC_DIR: &str = "/home/conan/soft/rust/handler_video/storage/";
+//const LOG_FORMAT: &str = r#""%r" %s %b "%{User-Agent}i" %D"#;
+//const LOG_FORMAT: &str = "\"%r\" %s %b \"%{User-Agent}i\" %D";
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -50,22 +44,16 @@ pub struct AppState {
     // Video
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     // Config
-    pub config: MyConfig,
+    pub config: Config,
 }                                      
 
 #[derive(Debug, Clone)]
-pub struct MyConfig {
+pub struct Config {
     pub static_dir: String,
 }
 
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
-    /*
-    println!("RUN_CONFIG: {:?}",
-             config.host,
-    );
-    */
-
     // DEBUG VERBOSE
     std::env::set_var("RUST_BACKTRACE", "1");
     // EVEN LOG -> stdout
@@ -114,12 +102,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 // video
                 video_map: video_map.clone(),
                 // config
-                config: MyConfig {
+                config: Config {
                     static_dir: String::from(config.static_dir.clone()),
                 },
             })                                                      
             // LOG
-            .wrap(middleware::Logger::new(LOG_FORMAT))
+            //.wrap(middleware::Logger::new(LOG_FORMAT))
+            .wrap(middleware::Logger::new(&config.log_format))
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)

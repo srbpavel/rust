@@ -1,7 +1,6 @@
 extern crate easy_config;
 extern crate serde;
 
-// EASY_CONFIG          
 mod config;
 mod handler_video_toml_config_struct;
 

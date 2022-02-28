@@ -18,6 +18,7 @@ pub struct TomlConfig {
     pub workers: usize,
 
     pub static_dir: MyStr,
+    pub log_format: MyStr,
     
     //iter via HASH key
     //pub metrics: HashMap<MyStr, TemplateSensors>,
