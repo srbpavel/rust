@@ -23,15 +23,15 @@ use std::sync::{Arc,
 
 use std::collections::HashMap;
 
+// CONFIG
 const NAME: &str = "HANDLER_VIDEO";
 const SERVER: & str = "127.0.0.1";
 const PORT: u64 = 8081;
 const WORKERS: usize = 4;
-
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
-
 const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
+
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -90,7 +90,9 @@ pub async fn run() -> std::io::Result<()> {
                 // this is owned by each thread                     
                 request_count: Cell::new(0), // initial value
                 // create a new pointer for each thread             
+                // message
                 hash_map: hash_map.clone(),
+                // video
                 video_map: video_map.clone(),
             })                                                      
             // LOG
@@ -157,7 +159,7 @@ pub async fn run() -> std::io::Result<()> {
                     )
                     // INDEX
                     .service(
-                        // COMBINE BOTH as you LEARN
+                        // TRY COMBINE BOTH as you LEARN
                         // has to be call as: /video/
                         web::resource("/")
                         // has to be call as: /video

@@ -22,8 +22,12 @@ use serde::{Serialize,
 
 use std::collections::HashMap;
 
-/// storage path // rather fullpath? as systemd or ... can break relative ? test it
-static STATIC_DIR: &str = "./tmp/";
+use std::path::{Path,
+                PathBuf,
+};
+
+/// storage as fullpath
+static STATIC_DIR: &str = "/home/conan/soft/rust/handler_video/storage/";
 
 /// scope
 pub const SCOPE: &str = "/video";
@@ -74,7 +78,8 @@ impl VideoStatus {
 pub struct Video {
     id: String,
     group: String,
-    path: String,
+    //path: String,
+    path: PathBuf,
 }
 
 impl Video {
@@ -83,7 +88,8 @@ impl Video {
         Self {
             group: String::from(""),
             id: String::from(""),
-            path: String::from(""),
+            //path: String::from(""),
+            path: PathBuf::new(),
         }
     }
 }
@@ -257,10 +263,23 @@ pub async fn insert_video(mut payload: Multipart,
                     match dis.get_filename() {
                         Some(filename) => {
                             // FOR DOWNLOAD/PLAYER or ... url
+                            /*
                             new_video.path = format!("{}{}_{}",
                                                      STATIC_DIR,
                                                      new_video.id,
                                                      filename,
+                            );
+                            */
+                            new_video.path = Path::new(STATIC_DIR)
+                                .join(
+                                    format!("{}_{}",
+                                            new_video.id,
+                                            filename,
+                                    )
+                                );
+
+                            println!("\nFULL_PATHs: {:?}",
+                                     new_video.path,
                             );
                             
                             // another clone but WE NEED AT THE very END
@@ -275,6 +294,9 @@ pub async fn insert_video(mut payload: Multipart,
                             // ### FILE
                             // block -> future to result
                             let mut f = web::block(||
+                                                   // we should also verify:
+                                                   // we can write
+                                                   // have access
                                                    std::fs::File::create(filepath)
                             ).await?;
                             //println!("F: {f:?}");
@@ -355,7 +377,8 @@ pub async fn detail(state: web::Data<AppState>,
             video.get(&i).map(|v| Video {
                 id: i,
                 group: v.group.to_string(),
-                path: v.path.to_string(),
+                //path: v.path.to_string(),
+                path: v.path.clone(),
             })
         },
         None => None,
@@ -409,7 +432,8 @@ pub async fn download(state: web::Data<AppState>,
             video.get(&i).map(|v| Video {
                 id: i.to_string(),
                 group: v.group.to_string(),
-                path: v.path.to_string(),
+                //path: v.path.to_string(),
+                path: v.path.clone(),
             })
         },
         None => None,
@@ -417,12 +441,27 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
-            let content = format!("form-data; filename={}",
-                                  v.path,
+            /*
+            let content = format!("form-data; filename={:?}",
+                                  //v.path,
+                                  v.path.to_str(),
             );
+            */
 
-            match std::fs::read(v.path) {
+            // same as .exists() -> bool but here -> Result
+            // also durring reading io::ErrorKind::Interrupted
+            match std::fs::read(v.path.clone()) {
                 Ok(data) => {
+                    let content = format!("form-data; filename={}",
+                                          match v.path.to_str() {
+                                              Some(p) => p,
+                                              // should not occure?
+                                              None => "",
+                                          },
+                    );
+
+                    println!("CONTENT: {content:?}");
+                    
                     HttpResponse::Ok()
                         .header("Content-Disposition",
                                 content,
