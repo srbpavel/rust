@@ -1,5 +1,6 @@
 /// HANDLER
 ///
+use crate::handler_video_toml_config_struct::{TomlConfig};
 use crate::message;
 use crate::video;
 
@@ -24,14 +25,16 @@ use std::sync::{Arc,
 use std::collections::HashMap;
 
 // CONFIG
-const NAME: &str = "HANDLER_VIDEO";
-const SERVER: & str = "127.0.0.1";
-const PORT: u64 = 8081;
-const WORKERS: usize = 4;
+//const NAME: &str = "HANDLER_VIDEO";
+//const SERVER: & str = "127.0.0.1";
+//const PORT: u64 = 8081;
+//const WORKERS: usize = 4;
+/// counters
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
 const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
-
+/// storage as fullpath
+//pub static STATIC_DIR: &str = "/home/conan/soft/rust/handler_video/storage/";
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -45,12 +48,24 @@ pub struct AppState {
     // Message
     pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
-    pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>, 
+    pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
+    // Config
+    pub config: MyConfig,
 }                                      
 
+#[derive(Debug, Clone)]
+pub struct MyConfig {
+    pub static_dir: String,
+}
 
 /// RUN
-pub async fn run() -> std::io::Result<()> {
+pub async fn run(config: TomlConfig) -> std::io::Result<()> {
+    /*
+    println!("RUN_CONFIG: {:?}",
+             config.host,
+    );
+    */
+
     // DEBUG VERBOSE
     std::env::set_var("RUST_BACKTRACE", "1");
     // EVEN LOG -> stdout
@@ -58,7 +73,10 @@ pub async fn run() -> std::io::Result<()> {
     env_logger::init();
     
     println!("{}",
-             welcome_msg()?,
+             welcome_msg(
+                 &config.name,
+                 &config.host,
+             )?,
     );
 
     // shared msg HashMap for each worker
@@ -78,10 +96,11 @@ pub async fn run() -> std::io::Result<()> {
                 HashMap::new()
             )
         );
-    
+
     // SERVER
     HttpServer::new(move || {
         App::new()
+            //.data(settings.clone())
             .data(AppState {                                        
                 // persistent server counter
                 server_id: SERVER_COUNTER.fetch_add(1,              
@@ -94,6 +113,10 @@ pub async fn run() -> std::io::Result<()> {
                 hash_map: hash_map.clone(),
                 // video
                 video_map: video_map.clone(),
+                // config
+                config: MyConfig {
+                    static_dir: String::from(config.static_dir.clone()),
+                },
             })                                                      
             // LOG
             .wrap(middleware::Logger::new(LOG_FORMAT))
@@ -180,22 +203,26 @@ pub async fn run() -> std::io::Result<()> {
         // https://actix.rs/docs/server/
         .bind(
             format!("{}:{}",
-                    SERVER,
-                    PORT,
+                    //SERVER,
+                    &config.server,
+                    //PORT,
+                    config.port,
             )             
         )?
         // number of logical CPUs in the system
         // each thread process is blocking
         // non-cpu-bound operation should be expressed as futures or asynchronous
-        .workers(WORKERS) //
+        //.workers(WORKERS) //
+        .workers(config.workers) //
         .run()
         .await
 }
 
 
 /// welcome msg
-fn welcome_msg() -> std::io::Result<String> {
-    Ok(format!("start -> {NAME}"))
+fn welcome_msg(name: &str,
+               host: &str) -> std::io::Result<String> {
+    Ok(format!("start -> {name} at {host}"))
 }
 
 

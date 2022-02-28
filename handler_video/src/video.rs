@@ -1,5 +1,6 @@
 use crate::handler::{
     AppState,
+    //STATIC_DIR,
 };
 
 use actix_web::{
@@ -26,8 +27,10 @@ use std::path::{Path,
                 PathBuf,
 };
 
+/*
 /// storage as fullpath
 static STATIC_DIR: &str = "/home/conan/soft/rust/handler_video/storage/";
+*/
 
 /// scope
 pub const SCOPE: &str = "/video";
@@ -48,6 +51,8 @@ pub enum VideoStatus {
     //EmptyName
     EmptyFilename,
     TooManyForms,
+    //AccessPermission
+    //NotEnoughSpace
 }
 
 /// video_status -> msg
@@ -59,7 +64,7 @@ impl VideoStatus {
         match *self {
             VideoStatus::Init => String::from("Init"),
             VideoStatus::Ok => String::from("Ok"),
-            //VideoStatus::EmptyName => String::from("STREAM for filename not provided"),
+            //VideoStatus::EmptyName => String::from("'form 'name' for filename not provided"),
             VideoStatus::EmptyVideoId => String::from("header 'video_id' not provided"),
             VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
             VideoStatus::EmptyFilename => String::from("form 'filename' not provided"),
@@ -78,7 +83,6 @@ impl VideoStatus {
 pub struct Video {
     id: String,
     group: String,
-    //path: String,
     path: PathBuf,
 }
 
@@ -88,7 +92,6 @@ impl Video {
         Self {
             group: String::from(""),
             id: String::from(""),
-            //path: String::from(""),
             path: PathBuf::new(),
         }
     }
@@ -97,7 +100,6 @@ impl Video {
 /// file error // FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
-    //group: String,
     err: String,
 }
 
@@ -231,7 +233,7 @@ pub async fn insert_video(mut payload: Multipart,
                 web::Json(
                     PostResponse {
                         result: None,
-                         status: VideoStatus::EmptyGroupId.as_string(),
+                        status: VideoStatus::EmptyGroupId.as_string(),
                     }
                 )
             )
@@ -263,14 +265,17 @@ pub async fn insert_video(mut payload: Multipart,
                     match dis.get_filename() {
                         Some(filename) => {
                             // FOR DOWNLOAD/PLAYER or ... url
-                            /*
-                            new_video.path = format!("{}{}_{}",
-                                                     STATIC_DIR,
-                                                     new_video.id,
-                                                     filename,
-                            );
-                            */
-                            new_video.path = Path::new(STATIC_DIR)
+
+                            //new_video.path = Path::new(STATIC_DIR)
+                            //let lock_set = settings
+                            //    .lock()
+                            //    .unwrap();
+
+                            new_video.path = Path::new(
+                                //&video_hashmap
+                                &state
+                                    .config
+                                    .static_dir)
                                 .join(
                                     format!("{}_{}",
                                             new_video.id,
@@ -278,25 +283,28 @@ pub async fn insert_video(mut payload: Multipart,
                                     )
                                 );
 
+                            /*
                             println!("\nFULL_PATHs: {:?}",
                                      new_video.path,
                             );
+                            */
                             
                             // another clone but WE NEED AT THE very END
                             let filepath = new_video.path.clone();
                             
                             // HASH
-                            video_hashmap.insert(
-                                new_video.id.clone(), // KEY: video.id
-                                new_video.clone(), // VALUE: Video {}
-                            );
+                            //video_hashmap.insert(
+                            video_hashmap
+                                .insert(
+                                    new_video.id.clone(), // KEY: video.id
+                                    new_video.clone(), // VALUE: Video {}
+                                );
                             
                             // ### FILE
                             // block -> future to result
                             let mut f = web::block(||
                                                    // we should also verify:
-                                                   // we can write
-                                                   // have access
+                                                   // access/write/disc not full
                                                    std::fs::File::create(filepath)
                             ).await?;
                             //println!("F: {f:?}");
@@ -348,9 +356,9 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let path = format!("{}/detail/{}",
-                       SCOPE,
-                       to_parse_idx,
+    let url = format!("{}/detail/{}",
+                      SCOPE,
+                      to_parse_idx,
     );
 
     let parsed_idx = match to_parse_idx.parse::<String>() {
@@ -377,7 +385,6 @@ pub async fn detail(state: web::Data<AppState>,
             video.get(&i).map(|v| Video {
                 id: i,
                 group: v.group.to_string(),
-                //path: v.path.to_string(),
                 path: v.path.clone(),
             })
         },
@@ -390,7 +397,7 @@ pub async fn detail(state: web::Data<AppState>,
                 server_id: state.server_id,
                 request_count,
                 result,
-                url: path,
+                url,
             }
         )
     )
@@ -432,7 +439,6 @@ pub async fn download(state: web::Data<AppState>,
             video.get(&i).map(|v| Video {
                 id: i.to_string(),
                 group: v.group.to_string(),
-                //path: v.path.to_string(),
                 path: v.path.clone(),
             })
         },
@@ -441,26 +447,18 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
-            /*
-            let content = format!("form-data; filename={:?}",
-                                  //v.path,
-                                  v.path.to_str(),
-            );
-            */
-
-            // same as .exists() -> bool but here -> Result
-            // also durring reading io::ErrorKind::Interrupted
             match std::fs::read(v.path.clone()) {
                 Ok(data) => {
+                    // should this be just filename without path?
                     let content = format!("form-data; filename={}",
                                           match v.path.to_str() {
                                               Some(p) => p,
-                                              // should not occure?
+                                              // should not occure as verified?
                                               None => "",
                                           },
                     );
 
-                    println!("CONTENT: {content:?}");
+                    //println!("CONTENT: {content:?}");
                     
                     HttpResponse::Ok()
                         .header("Content-Disposition",
@@ -471,57 +469,16 @@ pub async fn download(state: web::Data<AppState>,
                 Err(why) => {
                     HttpResponse::NotFound().json(
                         &File {
-                            //err: "path does not exists".to_string(),
                             err: format!("{why:?}")
                         }
                     )
                 },
             }
-            
-            /*
-            let video_path = std::path::Path::new(&v.path); 
-
-            if video_path.exists() {
-                let data = std::fs::read(video_path)
-                    .unwrap(); // NOT SAFE will panic!
-
-                let content = format!("form-data; filename={}",
-                                      v.path,
-                );
-                
-                HttpResponse::Ok()
-                    .header("Content-Disposition",
-                            content,
-                    )
-                    .body(data)
-            } else {
-                HttpResponse::NotFound().json(
-                    &File {
-                        err: "path does not exists".to_string(),
-                        
-                    }
-                )
-            }
-            */
-
-            //match 
-
-            /*
-            let data = std::fs::read(v.path)
-                .unwrap(); // NOT SAFE will panic!
-
-            HttpResponse::Ok()
-                .header("Content-Disposition",
-                        content,
-                )
-                .body(data)
-            */
         },
 
         None => {
             HttpResponse::NotFound().json(
                 &File {
-                    //group: String::from("stream"),
                     err: "id does not exist".to_string(),
                     
                 }
@@ -578,30 +535,6 @@ pub async fn list_group(state: web::Data<AppState>,
         .lock()                                      
         .unwrap();                                   
 
-    /*
-    // this should not occure ?
-    let result = if !to_parse_idx.eq("") {
-            let mut group_map = HashMap::new();
-
-            video
-                .iter()
-                .for_each(|(key,value)| 
-                     if value.group.eq(&to_parse_idx) {
-                         // because &, but expensive
-                         group_map.insert(
-                             key.clone(),
-                             value.clone(),
-                         );
-                     }
-                );
-            
-        Some(group_map)
-    } else {
-        None
-    };
-    */
-
-    // /*
     let mut group_map = HashMap::new();
 
     video
@@ -615,7 +548,6 @@ pub async fn list_group(state: web::Data<AppState>,
                       );
                   }
         );
-    // */
 
     // as to have empty result as Json 'null' not {}
     let result = if group_map.is_empty() {
