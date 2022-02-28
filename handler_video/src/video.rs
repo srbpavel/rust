@@ -593,16 +593,18 @@ pub async fn delete(state: web::Data<AppState>,
 
 /// UPDATE group_id for video
 /// 
-/// curl -X POST 'http://localhost:8081/video/update/group/{id}'
+/// curl -X POST "http://localhost:8081/video/update/group" -H "Content-Type: application/json" -d '{"video_id": "123", "group_id": "video_on_demand"}' 2>/dev/null | jq
 ///
-/// this tells server that client expect JSON data in response
-/// -H "Accept: application/json"
 ///
 pub async fn update_group(update: web::Json<UpdateInput>,
                           state: web::Data<AppState>) -> actix_web::Result<web::Json<DetailResponse>> {
     
     //println!("UPDATE_VIDEO: {update:?}");    
 
+    let url = format!("{}/update/group",
+                      SCOPE,
+    );
+    
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
@@ -617,14 +619,13 @@ pub async fn update_group(update: web::Json<UpdateInput>,
         Some(video) => {
             //println!("Video: {video:#?}");
 
-            // video group update
+            // update
             video.group = update.group_id.to_string();
 
             Some(
                 Video {
                     id: video.id.clone(),
                     group: update.group_id.to_string(),
-                    //group: update.group_id.clone().to_string(),
                     path: video.path.clone(),
                 }
             )
@@ -632,111 +633,16 @@ pub async fn update_group(update: web::Json<UpdateInput>,
         None => None,
     };
     
-    /*
-    let result = video_hashmap
-        .get(&update.video_id).map(|v| {
-
-            println!("V: {:?}",
-                     v,
-            );
-
-            Video {
-                id: v.id.clone(),
-                group: update.group_id.to_string(),
-                path: v.path.clone(),
-            }
-        });
-    */
-
-    println!("AFTER: {result:?}");
-    
-    // /*
     Ok(
         web::Json(
             DetailResponse {
                 server_id: state.server_id,
                 request_count,
                 result,
-                //result: None,
-                url: String::from("URL"),
+                url,
             }
         )
     )
-    // */
-
-    /*
-    //println!("IDX: {idx:?}");
-    
-    // deconstruct to inner value
-    let to_parse_idx = idx.into_inner();
-
-    // let's try parse
-    //let parsed_idx = match to_parse_idx.parse::<usize>() {
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
-        },
-    };
-
-    //println!("PARSED_IDX: {parsed_idx:?}");
-    
-    // we still add to this thread counter
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
-
-    // we lock msg vec, but now as MUT because we delete
-    // we did not do MUT for push ?
-    let mut video_hashmap = state
-        .video_map
-        .lock()
-        .unwrap();
-
-    //println!("MSG before DEL: {msg:?}");
-
-    // for now it just display to STDOUT
-    // try to make it let shorter !!!
-    let result = match parsed_idx {
-        Some(i) =>  
-            // DELETE
-            match video_hashmap.remove(&i) {
-                Some(video) => {
-                    //println!("DELETED: {video:?}");
-
-                    // later this will be another Json Response
-                    Some(format!("{}: {:?}",
-                                 i,
-                                 video,
-                    ))
-                },
-                None => {
-                    // later this will be another Json Response
-                    //eprintln!("NOT FOUND SO: {i:?} stay");
-                    None
-                },
-            },
-        None => {
-            //eprintln!("DELETE key {to_parse_idx:?} not valid Type");
-            None
-        },
-    };
-    
-    //eprintln!("RESULT: {result:?} -> MOVE THIS to JSON response");
-    
-    Ok(
-        web::Json(
-            IndexResponse {                          
-                server_id: state.server_id,          
-                request_count,        
-                video_map: video_hashmap.clone(),
-            }                                        
-        )
-    )
-    */
 }
 
 
