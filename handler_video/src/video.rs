@@ -1,7 +1,5 @@
 use crate::handler::{
     AppState,
-    //VideoKey,
-    //VideoValue,
 };
 
 use actix_web::{
@@ -11,12 +9,7 @@ use actix_web::{
     Result,
     HttpResponse,
     HttpRequest,
-    //Responder,
-    //Error,
-    //error::{ResponseError},
 };
-
-//use actix_web::error::ReadlinesError::ContentTypeError;
 
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
@@ -29,34 +22,26 @@ use serde::{Serialize,
 
 use std::collections::HashMap;
 
-/* OBSOLETE as id not via increment but header
-use std::sync::atomic::{AtomicUsize,
-                        Ordering,   
-};                                  
-*/
-
-// OBSOLETE
-//static VIDEO_ID_COUNTER: AtomicUsize = AtomicUsize::new(0);            
-//static VIDEO_ID_ORD: Ordering = Ordering::SeqCst;
-
+/// storage path // rather fullpath? as systemd or ... can break? test it
 static STATIC_DIR: &str = "./tmp/";
 
+/// scope
 pub const SCOPE: &str = "/video";
 
-/*
-struct VideoError {
-    //code: usize,
-    message: String,
-}
-*/
+/// types for video hash_map
+pub type VideoKey = String;
+pub type VideoValue = Video;
 
-/*
-/// flux_query error
+
+/// video status
 #[derive(Debug)]
 pub enum VideoStatus {
     Init,
     Ok,
-    EmptyName,
+    EmptyVideoId,
+    EmptyGroupId,
+    // in case we want to have video_id as filename name -F "video_id=@video.mp4"
+    //EmptyName
     EmptyFilename,
     TooManyForms,
 }
@@ -70,87 +55,71 @@ impl VideoStatus {
         match *self {
             VideoStatus::Init => String::from("Init"),
             VideoStatus::Ok => String::from("Ok"),
-            VideoStatus::EmptyName => String::from("STREAM for filename not provided"),
+            //VideoStatus::EmptyName => String::from("STREAM for filename not provided"),
+            VideoStatus::EmptyVideoId => String::from("VIDEO_ID not provided"),
+            VideoStatus::EmptyGroupId => String::from("GROUP_ID not provided"),
             VideoStatus::EmptyFilename => String::from("FILENAME not provided"),
 
-            VideoStatus::TooManyForms => String::from("TOO MANY FORMS we accept only one"),
+            VideoStatus::TooManyForms => String::from("TOO MANY FORMS we accept only ONE"),
          }
     }
 }
-*/
 
+
+/// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
-    //id: usize,
     id: String,
-    //stream: String,
     group: String,
     path: String,
 }
 
-// FUTURE USE
+/// file error // FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
     group: String,
     err: String,
 }
 
-pub type VideoKey = String;
-pub type VideoValue = Video;
-
+/// all videos
 #[derive(Serialize, Debug)]
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    //video_map: HashMap<usize, Video>,
-    //video_map: HashMap<String, Video>,
     video_map: HashMap<VideoKey, VideoValue>, 
 }
 
+
+/// group members
 #[derive(Serialize, Debug)]
 pub struct ListResponse {     
     server_id: usize,      
     request_count: usize,  
-    //video_map: HashMap<usize, Video>,
-    //video_map: HashMap<String, Video>,
     result: Option<HashMap<VideoKey, VideoValue>>, 
 }
 
-/* // FUTURE USE -> this was for json message post_msg / OBSOLETE here ?
-#[derive(Deserialize, Debug)]
-pub struct PostInput {
-    video: String, 
-}
-*/
-
+/// upload 
 #[derive(Serialize, Debug)]
 pub struct PostResponse {
-    result: Option<PostOk>
-    /*
-    server_id: usize,
-    request_count: usize,
-    video: Video,
+    result: Option<PostOk>,
     status: String,
-    */
 }
 
+/// valid upload
 #[derive(Serialize, Debug)]
 pub struct PostOk {
     server_id: usize,
     request_count: usize,
     video: Video,
-    // OBSOLETE ?
-    //status: String,
 }
 
+/// invalid upload
 #[derive(Serialize)]
 struct PostError {
     msg: String,
-    //server_id: usize,
-    //request_count: usize,
-    //error: String,
 }
 
+/// detail
 #[derive(Serialize, Debug)]                               
 pub struct DetailResponse {                                   
     server_id: usize,                                     
@@ -209,15 +178,15 @@ pub async fn insert_video(mut payload: Multipart,
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
 
-    // IMPLEMENT
+    let mut status = VideoStatus::Init.as_string();
+
+    // IMPLEMENT new+default
     let mut new_video = Video {
-        //stream: String::from(""),
         group: String::from(""),
-        //id: 0,
         id: String::from(""),
         path: String::from(""),
     };
-    
+
     /* // HEADERS
     println!("REQ: {:?}\n\nid: {:?}\ngroup: {:?}",
              req.headers(),
@@ -227,16 +196,20 @@ pub async fn insert_video(mut payload: Multipart,
     */
     match req.headers().get("video_id") {
         Some(id) => {  // HeaderValue
-            //new_video.id = id.to_str().unwrap().parse::<usize>().unwrap();
-            new_video.id = id.to_str().unwrap().to_string();
+            new_video.id = id
+                .to_str()
+                .unwrap() // NOT SAFE
+                .to_string();
         },
         None => {
-            println!("###ERROR: no VIDEO_ID");
+            //println!("###ERROR: no VIDEO_ID");
             // curl: (55) Send failure: Connection reset by peer
+            // but still we receive JSON response with status
             return Ok(
                 web::Json(
                     PostResponse {
-                        result: None
+                        result: None,
+                        status: VideoStatus::EmptyVideoId.as_string(),
                     }
                 )
             )
@@ -244,17 +217,19 @@ pub async fn insert_video(mut payload: Multipart,
     }
 
     match req.headers().get("group") {
-        Some(group) => {  // HeaderValue
-            new_video.group = group.to_str().unwrap().to_string()
+        Some(group) => {
+            new_video.group = group
+                .to_str()
+                .unwrap()
+                .to_string()
                 
         },
         None => {
-            println!("###ERROR: no GROUP");
-            // curl: (55) Send failure: Connection reset by peer
             return Ok(
                 web::Json(
                     PostResponse {
-                        result: None
+                        result: None,
+                         status: VideoStatus::EmptyGroupId.as_string(),
                     }
                 )
             )
@@ -265,20 +240,6 @@ pub async fn insert_video(mut payload: Multipart,
              new_video,
     );
 
-    /* OBSOLETE
-    // CLEAR do not reset counter yet, as needed for Curl testing
-    let video_id = VIDEO_ID_COUNTER.fetch_add(1,              
-                                              VIDEO_ID_ORD,
-    );
-    */
-
-    /* OBSOLETE
-    // as for content which is not file until we will have error msg
-    let mut video_stream = String::from("init_stream");
-    let mut full_path = String::from("init_path");
-    let mut status = VideoStatus::Init.as_string();
-    */
-
     let mut content_counter = 0;
     
     // iterate over multipart stream
@@ -287,8 +248,9 @@ pub async fn insert_video(mut payload: Multipart,
     while let Some(mut field) = payload
         .try_next()
         .await? {
-
             content_counter += 1;
+
+            if content_counter == 1 {
             
             let content_disposition = field.content_disposition();
 
@@ -351,17 +313,8 @@ pub async fn insert_video(mut payload: Multipart,
                         // HASH
                         video.insert(
                             // KEY
-                            //video_id,
                             new_video.id.clone(),
-                            // VALUE
-                            /* OBSOLETE
-                            Video {
-                                id:video_id,
-                                //stream:video_stream.clone().to_string(),
-                                group:video_stream.clone().to_string(),
-                                path:filepath.clone().to_string(),
-                            },
-                            */
+                            // VALUE: Video
                             new_video.clone(),
                         );
                         
@@ -369,7 +322,6 @@ pub async fn insert_video(mut payload: Multipart,
                         // block -> future to result
                         let mut f = web::block(||
                                                std::fs::File::create(filepath)
-                                               //std::fs::File::create(new_video.path.clone())
                         ).await?;
                         
                         /*
@@ -396,10 +348,13 @@ pub async fn insert_video(mut payload: Multipart,
 
                         // now stream is name for filename
                         // OBSOLETE
-                        //status = VideoStatus::EmptyFilename.as_string()
+                        status = VideoStatus::EmptyFilename.as_string()
                     },
                 }
             };
+            } else {
+                status = VideoStatus::TooManyForms.as_string()
+            }
         }
 
     /* OBSOLETE
@@ -408,20 +363,6 @@ pub async fn insert_video(mut payload: Multipart,
     }
     */
 
-    /*
-    Ok(web::Json(
-        PostResponse {
-            server_id: state.server_id,
-            request_count,
-            video: Video {
-                stream: video_stream.clone(),
-                id: video_id,
-                path: full_path,
-            },
-            status,
-        }
-    ))
-    */
     Ok(
         web::Json(
             PostResponse {
@@ -429,18 +370,10 @@ pub async fn insert_video(mut payload: Multipart,
                     PostOk {
                         server_id: state.server_id,
                         request_count,
-                        /*
-                        video: Video {
-                            //stream: video_stream.clone(),
-                            group: video_stream.clone(),
-                            id: video_id,
-                            path: full_path,
-                        },
-                        status,
-                        */
                         video: new_video,
                     }
-                )
+                ),
+                status
             }
         )
     )
@@ -449,12 +382,9 @@ pub async fn insert_video(mut payload: Multipart,
 
 /// DETAIL via hash
 /// 
-/// path as String
-/// i did not make it work for usize because do no find way to verify valid usize?
+/// curl 'http://localhost:8081/video/detail/{video_id}'
 ///
-/// curl 'http://localhost:8081/video/detail/{idx}'
-///
-#[get("/detail/{id}")]
+#[get("/detail/{idx}")]
 pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
@@ -620,20 +550,6 @@ pub async fn list_group(state: web::Data<AppState>,
                         idx: web::Path<String>) -> Result<web::Json<ListResponse>> {
 
     let to_parse_idx = idx.into_inner();
-    //println!("LIST: {to_parse_idx:?}");
-
-    /*
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
-        },
-    };
-    */
 
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);          
@@ -658,39 +574,11 @@ pub async fn list_group(state: web::Data<AppState>,
                      }
                 );
             
-            //println!("GROUP_MAP: {group_map:?}");
-            
-            Some(group_map)
+        Some(group_map)
     } else {
         None
     };
     
-    /*
-    let result = match parsed_idx {
-        Some(group_id) => {
-
-            let mut group_map = HashMap::new();
-
-            video
-                .iter()
-                .for_each(|(key,value)| 
-                     if value.group.eq(&group_id) {
-                         // as &, but expensive
-                         group_map.insert(
-                             key.clone(),
-                             value.clone(),
-                         );
-                     }
-                );
-            
-            //println!("GROUP_MAP: {group_map:?}");
-            
-            Some(group_map)
-        },
-        None => None,
-    };
-    */
-
     Ok(                                              
         web::Json(                                   
             ListResponse {                          
