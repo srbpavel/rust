@@ -74,6 +74,17 @@ pub struct Video {
     path: String,
 }
 
+impl Video {
+    /// default
+    pub fn default() -> Self {
+        Self {
+            group: String::from(""),
+            id: String::from(""),
+            path: String::from(""),
+        }
+    }
+}
+
 /// file error // FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
@@ -177,23 +188,20 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
-
     let mut status = VideoStatus::Init.as_string();
 
     // IMPLEMENT new+default
+    let mut new_video = Video::default();
+    /*
     let mut new_video = Video {
         group: String::from(""),
         id: String::from(""),
         path: String::from(""),
     };
-
-    /* // HEADERS
-    println!("REQ: {:?}\n\nid: {:?}\ngroup: {:?}",
-             req.headers(),
-             req.headers().get("video_id"),
-             req.headers().get("group"),
-    );
     */
+
+    //println!("HEADERS: {:?}", req.headers());
+    
     match req.headers().get("video_id") {
         Some(id) => {  // HeaderValue
             new_video.id = id
@@ -202,7 +210,6 @@ pub async fn insert_video(mut payload: Multipart,
                 .to_string();
         },
         None => {
-            //println!("###ERROR: no VIDEO_ID");
             // curl: (55) Send failure: Connection reset by peer
             // but still we receive JSON response with status
             return Ok(
@@ -220,7 +227,7 @@ pub async fn insert_video(mut payload: Multipart,
         Some(group) => {
             new_video.group = group
                 .to_str()
-                .unwrap()
+                .unwrap() // NOT SAFE
                 .to_string()
                 
         },
@@ -236,132 +243,75 @@ pub async fn insert_video(mut payload: Multipart,
         },
     }
     
-    println!("NEW_VIDEO: {:?}",
-             new_video,
-    );
+    //println!("NEW_VIDEO: {new_video:?}");
 
-    let mut content_counter = 0;
-    
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
-    // decide if we want just one ore more forms?
+    let mut content_counter = 0;
+
     while let Some(mut field) = payload
         .try_next()
         .await? {
             content_counter += 1;
 
+            // we only accept one file via form
             if content_counter == 1 {
-            
-            let content_disposition = field.content_disposition();
-
-            /*
-            println!("headers: {:?}\ntype: {:?}\ncounter: {:?}",
-                     field.headers(),
-                     field.content_type(),
-                     content_counter,
-                     
-            );
-            */
-
-            if let Some (dis) = content_disposition {
-                // OBSOLETE
-                //status = VideoStatus::Ok.as_string();
-
-
-                // /*
-                println!("\ndis: {:?}",
-                         dis,
-                         //field.headers(),
-                         //field.content_type(),
-                         //content_counter,
-                         
-                );
-                // */
                 
-                // verify if filename was in form
-                match dis.get_filename() {
-                    Some(filename) => {
-                        // FOR DOWNLOAD/PLAYER or ... url
-                        //let filepath = format!("{}{}_{}",
-                        new_video.path = format!("{}{}_{}",
-                                                 STATIC_DIR,
-                                                 //video_id,
-                                                 new_video.id,
-                                                 filename,
-                        );
-                        
-                        // another clone but WE NEED AT THE very END
-                        //full_path = filepath.clone();
-                        //full_path = new_video.path.clone();
-                        let filepath = new_video.path.clone();
-
-                        /* OBSOLETE
-                        video_stream = match dis.get_name() {
-                            Some(stream) => {
-                                String::from(stream)
-                            },
-                            // simulate:
-                            // curl --form "=@smack.mp4;type=video/mp4" ...
-                            None => {
-                                status = VideoStatus::EmptyName.as_string();
-                                
-                                String::from("")
-                            },
-                        };
-                        */
-                        
-                        // HASH
-                        video.insert(
-                            // KEY
-                            new_video.id.clone(),
-                            // VALUE: Video
-                            new_video.clone(),
-                        );
-                        
-                        // ### FILE
-                        // block -> future to result
-                        let mut f = web::block(||
-                                               std::fs::File::create(filepath)
-                        ).await?;
-                        
-                        /*
-                        println!("F: {f:?}");
-                        */
-                        
-                        // stream of *Bytes* object
-                        while let Some(chunk) = field.try_next().await? {
-                            //println!("CHUNK: {:#?}", chunk);
-                            f = web::block(move ||
-                                           f
-                                           .write_all(&chunk)
-                                           .map(|_| f)
+                let content_disposition = field.content_disposition();
+                
+                if let Some (dis) = content_disposition {
+                    // OBSOLETE
+                    status = VideoStatus::Ok.as_string();
+                    
+                    //println!("\ndis: {dis:?}");
+                    
+                    // verify if filename was in form
+                    match dis.get_filename() {
+                        Some(filename) => {
+                            // FOR DOWNLOAD/PLAYER or ... url
+                            new_video.path = format!("{}{}_{}",
+                                                     STATIC_DIR,
+                                                     new_video.id,
+                                                     filename,
+                            );
+                            
+                            // another clone but WE NEED AT THE very END
+                            let filepath = new_video.path.clone();
+                            
+                            // HASH
+                            video.insert(
+                                // KEY
+                                new_video.id.clone(),
+                                // VALUE: Video
+                                new_video.clone(),
+                            );
+                            
+                            // ### FILE
+                            // block -> future to result
+                            let mut f = web::block(||
+                                                   std::fs::File::create(filepath)
                             ).await?;
-                        };
-                    },
-                    None => {
-                        // FUTURE USE
-                        // here we can verify that 'name' can be like:
-                        // stream=stream_001 so we will have group_id
-                        // and filter/list videos via that
-                        //
-                        // there will be more error handling
-
-                        // now stream is name for filename
-                        // OBSOLETE
-                        status = VideoStatus::EmptyFilename.as_string()
-                    },
-                }
-            };
+                            //println!("F: {f:?}");
+                            
+                            // stream of *Bytes* object
+                            while let Some(chunk) = field.try_next().await? {
+                                //println!("CHUNK: {:#?}", chunk);
+                                f = web::block(move ||
+                                               f
+                                               .write_all(&chunk)
+                                               .map(|_| f)
+                                ).await?;
+                            };
+                        },
+                        None => {
+                            status = VideoStatus::EmptyFilename.as_string()
+                        },
+                    }
+                };
             } else {
                 status = VideoStatus::TooManyForms.as_string()
             }
         }
-
-    /* OBSOLETE
-    if content_counter > 1 {
-        status = VideoStatus::TooManyForms.as_string()
-    }
-    */
 
     Ok(
         web::Json(
@@ -384,7 +334,7 @@ pub async fn insert_video(mut payload: Multipart,
 /// 
 /// curl 'http://localhost:8081/video/detail/{video_id}'
 ///
-#[get("/detail/{idx}")]
+#[get("/detail/{video_id}")]
 pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
@@ -395,7 +345,6 @@ pub async fn detail(state: web::Data<AppState>,
                        to_parse_idx,
     );
 
-    //let parsed_idx = match to_parse_idx.parse::<usize>() {
     let parsed_idx = match to_parse_idx.parse::<String>() {
         Ok(i) => {
             Some(i)
@@ -418,7 +367,6 @@ pub async fn detail(state: web::Data<AppState>,
     let result = match parsed_idx {
         Some(i) => {
             video.get(&i).map(|v| Video {
-            //video.find_equiv(&i).map(|v| Video {
                 id: i,
                 group: v.group.to_string(),
                 path: v.path.to_string(),
@@ -450,7 +398,6 @@ pub async fn download(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    //let parsed_idx = match to_parse_idx.parse::<usize>() {
     let parsed_idx = match to_parse_idx.parse::<String>() {
         Ok(i) => {
             Some(i)
@@ -474,7 +421,6 @@ pub async fn download(state: web::Data<AppState>,
     let result = match parsed_idx {
         Some(i) => {
             video.get(&i).map(|v| Video {
-                //id: i,
                 id: i.to_string(),
                 group: v.group.to_string(),
                 path: v.path.to_string(),
@@ -534,7 +480,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
                 server_id: state.server_id,
                 request_count,
                 video_map: HashMap::new(), // no need to create new as we have old
-                //video_map: ms.clone(), // ok but still expenssive?
+                //video_map: ms.clone(), // ok but expenssive?
             }
         )
     )
@@ -559,6 +505,8 @@ pub async fn list_group(state: web::Data<AppState>,
         .lock()                                      
         .unwrap();                                   
 
+    /*
+    // this should not occure ?
     let result = if !to_parse_idx.eq("") {
             let mut group_map = HashMap::new();
 
@@ -566,7 +514,7 @@ pub async fn list_group(state: web::Data<AppState>,
                 .iter()
                 .for_each(|(key,value)| 
                      if value.group.eq(&to_parse_idx) {
-                         // as &, but expensive
+                         // because &, but expensive
                          group_map.insert(
                              key.clone(),
                              value.clone(),
@@ -577,6 +525,30 @@ pub async fn list_group(state: web::Data<AppState>,
         Some(group_map)
     } else {
         None
+    };
+    */
+
+    // /*
+    let mut group_map = HashMap::new();
+
+    video
+        .iter()
+        .for_each(|(key,value)| 
+                  if value.group.eq(&to_parse_idx) {
+                      // because &, but expensive
+                      group_map.insert(
+                          key.clone(),
+                          value.clone(),
+                      );
+                  }
+        );
+    // */
+
+    // as to have empty result as Json 'null' not {}
+    let result = if group_map.is_empty() {
+        None
+    } else {
+        Some(group_map)
     };
     
     Ok(                                              
