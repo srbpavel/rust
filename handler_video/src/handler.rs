@@ -32,6 +32,8 @@ static SERVER_ORD: Ordering = Ordering::SeqCst;
 
 const LOG_FORMAT: & str = r#""%r" %s %b "%{User-Agent}i" %D"#;
 
+//pub type VideoKey = String;
+//pub type VideoValue = video::Video;
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -45,7 +47,9 @@ pub struct AppState {
     // Message
     pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
-    pub video_map: Arc<Mutex<HashMap<usize, video::Video>>>, 
+    //pub video_map: Arc<Mutex<HashMap<usize, video::Video>>>,
+    //pub video_map: Arc<Mutex<HashMap<String, video::Video>>>,
+    pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>, 
 }                                      
 
 
