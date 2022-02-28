@@ -107,6 +107,15 @@ pub struct IndexResponse {
     video_map: HashMap<VideoKey, VideoValue>, 
 }
 
+#[derive(Serialize, Debug)]
+pub struct ListResponse {     
+    server_id: usize,      
+    request_count: usize,  
+    //video_map: HashMap<usize, Video>,
+    //video_map: HashMap<String, Video>,
+    result: Option<HashMap<VideoKey, VideoValue>>, 
+}
+
 /* // FUTURE USE -> this was for json message post_msg / OBSOLETE here ?
 #[derive(Deserialize, Debug)]
 pub struct PostInput {
@@ -599,4 +608,109 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
             }
         )
     )
+}
+
+
+/// list group members
+///
+/// curl 'http://localhost:8081/list/{group_id}'
+///
+#[get("/list/{group_id}")]
+pub async fn list_group(state: web::Data<AppState>,
+                        idx: web::Path<String>) -> Result<web::Json<ListResponse>> {
+
+    let to_parse_idx = idx.into_inner();
+
+    println!("LIST: {to_parse_idx}");
+    
+    let parsed_idx = match to_parse_idx.parse::<String>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+    
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);          
+    
+    let video = state                                  
+        .video_map
+        .lock()                                      
+        .unwrap();                                   
+
+    let result = match parsed_idx {
+        Some(i) => {
+
+            let mut group_map = HashMap::new();
+
+            video
+                .iter()
+                .for_each(|(key,value)| 
+                     if value.group.eq(&i) {
+                         // as &, but expensive
+                         group_map.insert(
+                             key.clone(),
+                             value.clone(),
+                         );
+                     }
+                );
+            
+            /*
+            let rrr = video
+                .iter()
+                .map(|(key,value)| 
+                     //if value.group.eq(&to_parse_idx) {
+                     if value.group.eq(&i) {
+                         //println!("MAP true: {key:?}\n{value:?}");
+
+                         // as &, but expensive
+                         group_map.insert(
+                             key.clone(),
+                             value.clone(),
+                         );
+                         
+                         /*
+                         video.get(&to_parse_idx).map(|v| Video {
+                             id: to_parse_idx,
+                             group: v.group.to_string(),
+                             path: v.path.to_string(),
+                         })
+                         */
+                     } //else {
+                         //println!("MAP true: {key:?}\n{value:?}");
+                         
+                         /*
+                         video.get(&to_parse_idx).map(|v| Video {
+                             id: to_parse_idx,
+                             group: v.group.to_string(),
+                             path: v.path.to_string(),
+                         })
+                         */
+                     //}
+                )
+                //.collect::<HashMap<VideoKey, VideoValue>>()
+                .collect::<()>();
+            */
+
+            println!("GROUP_MAP: {group_map:?}");
+            
+            //None
+            Some(group_map)
+        },
+        None => None,
+    };
+    
+    Ok(                                              
+        web::Json(                                   
+            ListResponse {                          
+                server_id: state.server_id,          
+                request_count,        
+                result,
+            }                                        
+        )                                            
+    )                                                
 }
