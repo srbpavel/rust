@@ -22,7 +22,7 @@ use serde::{Serialize,
 
 use std::collections::HashMap;
 
-/// storage path // rather fullpath? as systemd or ... can break? test it
+/// storage path // rather fullpath? as systemd or ... can break relative ? test it
 static STATIC_DIR: &str = "./tmp/";
 
 /// scope
@@ -56,11 +56,14 @@ impl VideoStatus {
             VideoStatus::Init => String::from("Init"),
             VideoStatus::Ok => String::from("Ok"),
             //VideoStatus::EmptyName => String::from("STREAM for filename not provided"),
-            VideoStatus::EmptyVideoId => String::from("VIDEO_ID not provided"),
-            VideoStatus::EmptyGroupId => String::from("GROUP_ID not provided"),
-            VideoStatus::EmptyFilename => String::from("FILENAME not provided"),
+            VideoStatus::EmptyVideoId => String::from("header 'video_id' not provided"),
+            VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
+            VideoStatus::EmptyFilename => String::from("form 'filename' not provided"),
 
             VideoStatus::TooManyForms => String::from("TOO MANY FORMS we accept only ONE"),
+            // curl with now form -F -> Multipart boundary is not found
+            // status code 400
+            //VideoStatus::EmptyForms => String::from("'form' not provided"),
          }
     }
 }
@@ -88,7 +91,7 @@ impl Video {
 /// file error // FUTURE USE
 #[derive(Serialize, Deserialize)]
 struct File {
-    group: String,
+    //group: String,
     err: String,
 }
 
@@ -99,7 +102,6 @@ pub struct IndexResponse {
     request_count: usize,  
     video_map: HashMap<VideoKey, VideoValue>, 
 }
-
 
 /// group members
 #[derive(Serialize, Debug)]
@@ -140,7 +142,7 @@ pub struct DetailResponse {
 }
 
 
-/// index list all videos
+/// GET index list all videos
 ///
 /// curl 'http://localhost:8081/video/'
 ///
@@ -169,11 +171,8 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// 
 /// curl -X PUT 'http://localhost:8081/video/put
 ///
-/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F "now_text=@now.txt;type=text/plain"
+/// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F "video_name=@/home/conan/video/youtube/munch_roses_extended_remix.mp4;type=video/mp4" -H "video_id: 789" -H "group: stream_002" 2>/dev/null | jq
 ///
-/// curl -X PUT -H 'Content-type: multipart/form-data' http://localhost:8081/video/put -F 'munch_roses_extended_remix=@/home/conan/video/youtube/munch_roses_extended_remix.mp4;type=video/mp4'
-///
-/// WE DO NOT get JSON here as we get data via PayLOAD, will be enough?
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest) -> Result<web::Json<PostResponse>> {
@@ -183,25 +182,15 @@ pub async fn insert_video(mut payload: Multipart,
     state.request_count.set(request_count);
 
     // we lock and have access to HashMap messages
-    let mut video = state
+    let mut video_hashmap = state
         .video_map
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
     let mut status = VideoStatus::Init.as_string();
-
-    // IMPLEMENT new+default
     let mut new_video = Video::default();
-    /*
-    let mut new_video = Video {
-        group: String::from(""),
-        id: String::from(""),
-        path: String::from(""),
-    };
-    */
 
     //println!("HEADERS: {:?}", req.headers());
-    
     match req.headers().get("video_id") {
         Some(id) => {  // HeaderValue
             new_video.id = id
@@ -254,16 +243,15 @@ pub async fn insert_video(mut payload: Multipart,
         .await? {
             content_counter += 1;
 
-            // we only accept one file via form
+            // we only accept one form with file
             if content_counter == 1 {
                 
                 let content_disposition = field.content_disposition();
                 
                 if let Some (dis) = content_disposition {
-                    // OBSOLETE
-                    status = VideoStatus::Ok.as_string();
-                    
                     //println!("\ndis: {dis:?}");
+
+                    status = VideoStatus::Ok.as_string();
                     
                     // verify if filename was in form
                     match dis.get_filename() {
@@ -279,11 +267,9 @@ pub async fn insert_video(mut payload: Multipart,
                             let filepath = new_video.path.clone();
                             
                             // HASH
-                            video.insert(
-                                // KEY
-                                new_video.id.clone(),
-                                // VALUE: Video
-                                new_video.clone(),
+                            video_hashmap.insert(
+                                new_video.id.clone(), // KEY: video.id
+                                new_video.clone(), // VALUE: Video {}
                             );
                             
                             // ### FILE
@@ -435,6 +421,53 @@ pub async fn download(state: web::Data<AppState>,
                                   v.path,
             );
 
+            match std::fs::read(v.path) {
+                Ok(data) => {
+                    HttpResponse::Ok()
+                        .header("Content-Disposition",
+                                content,
+                        )
+                        .body(data)
+                },
+                Err(why) => {
+                    HttpResponse::NotFound().json(
+                        &File {
+                            //err: "path does not exists".to_string(),
+                            err: format!("{why:?}")
+                        }
+                    )
+                },
+            }
+            
+            /*
+            let video_path = std::path::Path::new(&v.path); 
+
+            if video_path.exists() {
+                let data = std::fs::read(video_path)
+                    .unwrap(); // NOT SAFE will panic!
+
+                let content = format!("form-data; filename={}",
+                                      v.path,
+                );
+                
+                HttpResponse::Ok()
+                    .header("Content-Disposition",
+                            content,
+                    )
+                    .body(data)
+            } else {
+                HttpResponse::NotFound().json(
+                    &File {
+                        err: "path does not exists".to_string(),
+                        
+                    }
+                )
+            }
+            */
+
+            //match 
+
+            /*
             let data = std::fs::read(v.path)
                 .unwrap(); // NOT SAFE will panic!
 
@@ -443,13 +476,14 @@ pub async fn download(state: web::Data<AppState>,
                         content,
                 )
                 .body(data)
+            */
         },
 
         None => {
             HttpResponse::NotFound().json(
                 &File {
-                    group: String::from("stream"),
-                    err: "error".to_string(),
+                    //group: String::from("stream"),
+                    err: "id does not exist".to_string(),
                     
                 }
             )

@@ -26,6 +26,7 @@ use std::collections::HashMap;
 const NAME: &str = "HANDLER_VIDEO";
 const SERVER: & str = "127.0.0.1";
 const PORT: u64 = 8081;
+const WORKERS: usize = 4;
 
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
@@ -53,7 +54,6 @@ pub async fn run() -> std::io::Result<()> {
     // DEBUG VERBOSE
     std::env::set_var("RUST_BACKTRACE", "1");
     // EVEN LOG -> stdout
-    //std::env::set_var("RUST_LOG", "actix_web=info");
     std::env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
     env_logger::init();
     
@@ -98,7 +98,7 @@ pub async fn run() -> std::io::Result<()> {
             // ROOT INDEX OUTSIDE scopes !!! 
             // DISABLE so ROOT return 404
             //.service(index)
-            // HEALTH
+            // HEALTH // FUTURE USE
             .route("/health_check",
                    web::get()
                    .to(health_check)
@@ -143,9 +143,8 @@ pub async fn run() -> std::io::Result<()> {
             )
             // SCOPE for ####################### VIDEO
             .service(
-                //web::scope("/video")
                 web::scope(video::SCOPE)
-                    // PUT
+                    // UPLOAD
                     .service(
                         web::resource("/put")
                             .data(web::JsonConfig::default()
@@ -156,7 +155,7 @@ pub async fn run() -> std::io::Result<()> {
                                    .to(video::insert_video)
                             )
                     )
-                    // index
+                    // INDEX
                     .service(
                         // COMBINE BOTH as you LEARN
                         // has to be call as: /video/
@@ -170,10 +169,8 @@ pub async fn run() -> std::io::Result<()> {
                     .service(video::download) // <- /video/download/123
                     .service(video::detail) // <- /video/detail/123
                     // FLUSH all msg from Hash
-                    // -> fn clear #[post("/clear")]
                     .service(video::clear)
                     // LIST group members
-                    // -> fn list_groupr #[get("/list/{group}")]
                     .service(video::list_group)
             )
     }
@@ -188,7 +185,7 @@ pub async fn run() -> std::io::Result<()> {
         // number of logical CPUs in the system
         // each thread process is blocking
         // non-cpu-bound operation should be expressed as futures or asynchronous
-        .workers(4) //
+        .workers(WORKERS) //
         .run()
         .await
 }
@@ -196,7 +193,7 @@ pub async fn run() -> std::io::Result<()> {
 
 /// welcome msg
 fn welcome_msg() -> std::io::Result<String> {
-    Ok(format!("FoOoKuMe -> {NAME}"))
+    Ok(format!("start -> {NAME}"))
 }
 
 
