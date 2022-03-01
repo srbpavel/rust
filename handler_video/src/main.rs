@@ -16,6 +16,31 @@ const CONFIG_FILENAME: &str = "/home/conan/soft/rust/handler_video/src/handler_v
 async fn main() -> std::io::Result<()> {
     // CONFIG
     let config = config::sample_config(CONFIG_FILENAME);
+
+    //TEST DIR
+    let storage = std::path::Path::new(&*config.static_dir);
+    
+    if !storage.exists() {
+        eprintln!("Error: video_storage directory does not exists: {}",
+                  &config.static_dir,
+        );
+
+        std::process::exit(1)
+    } else {
+        match std::fs::File::create(
+            storage.join("writer.log")
+        ) {
+            Ok(_) => {},
+            Err(why) => {
+                eprintln!("Error: write permission to: {}\nREASON >>> {:?}",
+                          &config.static_dir,
+                          why,
+                );
+
+                std::process::exit(1)
+            },
+        }
+    }
     
     //HANDLER
     run(config).await
