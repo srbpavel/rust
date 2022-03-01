@@ -22,6 +22,8 @@ use std::path::{Path,
                 PathBuf,
 };
 
+use uuid::Uuid;
+
 /// scope
 pub const SCOPE: &str = "/video";
 
@@ -90,8 +92,8 @@ impl Video {
     /// default
     pub fn default() -> Self {
         Self {
-            group: String::from(""),
             id: String::from(""),
+            group: String::from(""),
             path: PathBuf::new(),
         }
     }
@@ -238,7 +240,11 @@ pub async fn insert_video(mut payload: Multipart,
         Some(id) => {  // HeaderValue
             new_video.id = id
                 .to_str()
-                .unwrap() // NOT SAFE
+                //.unwrap() // NOT SAFE
+                // but we will rather return Err msg instead, as i learn
+                .unwrap_or(&Uuid::new_v4()
+                           .to_string()
+                )
                 .to_string();
         },
         None => {
@@ -325,7 +331,27 @@ pub async fn insert_video(mut payload: Multipart,
                                     new_video.id.clone(), // KEY: video.id
                                     new_video.clone(), // VALUE: Video {}
                                 );
+
+                            // ### BUF
+                            let mut f = web::block(||
+                                                   std::fs::File::create(filepath)
+                                                   /*
+                                                   std::result::Result::Ok(
+                                                   )
+                                                   */
+                            ).await?;
+                            //println!("F: {f:?}");
                             
+                            while let Some(chunk) = field.try_next().await? {
+                                f = web::block(move ||
+                                               f
+                                               .write_all(&chunk)
+                                               .map(|_| f)
+                                ).await?;
+                            };
+                            // #_
+                            
+                            /*
                             // ### FILE
                             // block -> future to result
                             let mut f = web::block(||
@@ -344,6 +370,7 @@ pub async fn insert_video(mut payload: Multipart,
                                                .map(|_| f)
                                 ).await?;
                             };
+                            */
                         },
                         None => {
                             status = VideoStatus::EmptyFilename.as_string()

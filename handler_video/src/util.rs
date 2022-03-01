@@ -3,7 +3,11 @@ use std::{path::PathBuf,
               Error,
               ErrorKind,
           },
+          env,
 };
+
+/// verify command args len
+const ARG_COUNT: usize = 2;
 
 
 /// directory status messages
@@ -13,6 +17,7 @@ pub enum DirStatus {
     DirNotFound,
     AccessPermission,
 }
+
 
 /// directory_status -> msg
 ///
@@ -75,4 +80,32 @@ pub fn verify_dir(storage: &PathBuf,
     }
     
     Ok(())
+}
+
+
+/// config file as cmd arg
+///
+/// just single arg, no need for clap
+///
+pub fn prepare_config(mut cmd_args: env::Args) -> Result<String, &'static str> {
+    
+    if cmd_args.len() != ARG_COUNT {
+        return Err("we want exactly one enough\n example: $cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml");
+    }
+
+    let _program = match cmd_args.next() { // FUTURE_USE
+        Some(arg) => arg,
+        None => {
+            return Err("should not fail unless wrong cargo run");
+        }
+    };
+    
+    let config_file = match cmd_args.next() {
+        Some(arg) => arg,
+        None => {
+            return Err("no CONFIG FILE");
+        }
+    };
+
+    Ok(config_file)
 }
