@@ -1,5 +1,6 @@
-use crate::handler::{
-    AppState,
+use crate::{
+    handler::AppState,
+    util,
 };
 
 use actix_web::{
@@ -196,7 +197,32 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest) -> Result<web::Json<PostResponse>> {
-                          
+
+    //VERIFY STORAGE
+    //match util::verify_dir(&storage.to_path_buf(), true) {
+    let path_to_verify = PathBuf::from(&*state.config.static_dir);
+
+    match util::verify_dir(&path_to_verify, true) {
+        Ok(_) => {},
+        Err(err) => {
+            // to LOG later
+            eprintln!("VERIFY STORAGE for single video: {}", err);
+            
+            //std::process::exit(1)
+            //return Err(err)
+            return Ok(
+                web::Json(
+                    PostResponse {
+                        result: None,
+                        //status: VideoStatus::EmptyGroupId.as_string(),
+                        status: err.to_string(),
+                    }
+                )
+            )
+        },
+    };
+    
+    
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
