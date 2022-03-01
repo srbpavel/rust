@@ -29,7 +29,8 @@ pub type VideoKey = String;
 pub type VideoValue = Video;
 
 
-/// video status
+/// video status messages
+/// very raw for now, will unit when the right time comes
 #[derive(Debug)]
 pub enum VideoStatus {
     Init,
@@ -62,12 +63,10 @@ impl VideoStatus {
             VideoStatus::EmptyVideoId => String::from("header 'video_id' not provided"),
             VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
             VideoStatus::EmptyFilename => String::from("form 'filename' not provided"),
-
             VideoStatus::TooManyForms => String::from("too many forms, we accept only one form"),
             // curl with now form -F -> Multipart boundary is not found
             // status code 400
             //VideoStatus::EmptyForms => String::from("'form' not provided"),
-
             VideoStatus::VideoIdNotFound => String::from("video_id not found"),
             VideoStatus::FileNotFound => String::from("file not found"),
             VideoStatus::DeleteOk => String::from("delete ok"),
@@ -158,15 +157,14 @@ pub struct UpdateInput {
 /// delete info
 #[derive(Serialize, Debug)]
 pub struct DeleteResponse {     
-    //server_id: usize,      
-    //request_count: usize,  
-    //video_map: HashMap<VideoKey, VideoValue>,
     result: String,
 }
 
 /// GET index list all videos
 ///
 /// curl 'http://localhost:8081/video/'
+///
+/// for debug purpose as tested with dozen records not milions yet
 ///
 pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
     let request_count = state.request_count.get() + 1;
@@ -267,7 +265,6 @@ pub async fn insert_video(mut payload: Multipart,
 
             // we only accept one form with file
             if content_counter == 1 {
-                
                 let content_disposition = field.content_disposition();
                 
                 if let Some (dis) = content_disposition {
@@ -460,7 +457,7 @@ pub async fn download(state: web::Data<AppState>,
                                           match v.path.to_str() {
                                               Some(p) => p,
                                               // should not occure as verified?
-                                              None => "",
+                                              None => "FILENAME",
                                           },
                     );
 
@@ -523,7 +520,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 }
 
 
-/// DELETE via id -> return all msg hash without deleted one
+/// DELETE via id
 /// 
 /// path as String
 ///
@@ -533,7 +530,6 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// -H "Accept: application/json"
 ///
 pub async fn delete(state: web::Data<AppState>,
-                    //idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
                     idx: web::Path<String>) -> Result<web::Json<DeleteResponse>> {
 
     //println!("IDX: {idx:?}");
@@ -561,35 +557,38 @@ pub async fn delete(state: web::Data<AppState>,
     state.request_count.set(request_count);
 
     // we lock msg vec, but now as MUT because we delete
-    // we did not do MUT for push ?
     let mut video_hashmap = state
         .video_map
         .lock()
         .unwrap();
 
+    // even we get string, we still parse as later we will get id as usize/...
     let result = match parsed_idx {
         Some(i) => {
-
-            //match video_hashmap.get(&i) {
+            // search for video_id in hashmap
             match video_hashmap.get_mut(&i) {
                 Some(record) => {
-                    //let path_to_del = &record.path.clone();
-                    
+                    // validate path not permission
                     if Path::new(&record.path).exists() {
-                    //if Path::new(&path_to_del.clone()).exists() {
-                        // first we remove RECORD
+                        // first we remove video Struct
                         match video_hashmap.remove(&i) {
                             Some(response_record) => {
-                                // and then FILE
-                                //match std::fs::remove_file(&record.path) {
-                                //match std::fs::remove_file(&path_to_del) {
-                                // we can uses response data path
-                                match std::fs::remove_file(response_record.path) {
+                                // then file -> we use response data path
+                                match std::fs::remove_file(&response_record.path) {
                                     Ok(_) => VideoStatus::DeleteOk.as_string(),
-                                    Err(why) => format!("Error delete file: {}\nreason: {:?}",
-                                                        i,
-                                                        why,
-                                    ),
+                                    // in case dir ownership or perm has changed
+                                    // -rw------- 1 root root 8320394 Mar  1 11:56
+                                    // /home/conan/soft/rust/handler_video/storage/456_love_tonight_extended_mix.mp4
+                                    //id: 456,
+                                    //path: \"/home/conan/soft/rust/handler_video/storage/456_love_tonight_extended_mix.mp4\",
+                                    // reason: Permission denied (os error 13)"
+                                    Err(why) => {
+                                        format!("id: {}, path: {:?}, reason: {}",
+                                                i,
+                                                response_record.path,
+                                                why,
+                                        )
+                                    }
                                 }
                             },
                             None => VideoStatus::DeleteError.as_string(),
