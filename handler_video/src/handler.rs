@@ -42,6 +42,8 @@ pub struct AppState {
     // Video
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     // DataConfig for SCOPE
+    // since this, the app is very very slow with video upload
+    // find better solution!!!
     pub config: DataConfig,
 }                                      
 
@@ -105,10 +107,11 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             // LOG
             //.wrap(middleware::Logger::new(LOG_FORMAT))
             .wrap(middleware::Logger::new(&config.log_format))
-            // ROOT INDEX OUTSIDE scopes !!! 
-            // DISABLE so ROOT return 404
+            // ROOT ###
+            // index DISABLED so ROOT return 404
             //.service(index)
-            // HEALTH // FUTURE USE
+            // NO HANDLER FOR 404 yet
+            // HEALTH // FUTURE USE for tests
             .route("/health_check",
                    web::get()
                    .to(health_check)

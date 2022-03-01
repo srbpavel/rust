@@ -201,6 +201,7 @@ pub async fn insert_video(mut payload: Multipart,
                           req: HttpRequest) -> Result<web::Json<PostResponse>> {
 
     // decide sequence -> verify storage or headers/form?
+    // just in single dir for now, will seed to various dirs later
     //VERIFY STORAGE
     let path_to_verify = PathBuf::from(&*state.config.static_dir);
 
@@ -241,7 +242,7 @@ pub async fn insert_video(mut payload: Multipart,
             new_video.id = id
                 .to_str()
                 //.unwrap() // NOT SAFE
-                // but we will rather return Err msg instead, as i learn
+                // we will rather return Err msg instead generate uuid
                 .unwrap_or(&Uuid::new_v4()
                            .to_string()
                 )
@@ -325,14 +326,14 @@ pub async fn insert_video(mut payload: Multipart,
                             // another clone but WE NEED AT THE very END
                             let filepath = new_video.path.clone();
                             
-                            // HASH
+                            // HASH record
                             video_hashmap
                                 .insert(
                                     new_video.id.clone(), // KEY: video.id
                                     new_video.clone(), // VALUE: Video {}
                                 );
 
-                            // ### BUF
+                            /* // ### BUF
                             let mut f = web::block(||
                                                    std::fs::File::create(filepath)
                                                    /*
@@ -349,9 +350,8 @@ pub async fn insert_video(mut payload: Multipart,
                                                .map(|_| f)
                                 ).await?;
                             };
-                            // #_
+                            // #_ */
                             
-                            /*
                             // ### FILE
                             // block -> future to result
                             let mut f = web::block(||
@@ -370,7 +370,6 @@ pub async fn insert_video(mut payload: Multipart,
                                                .map(|_| f)
                                 ).await?;
                             };
-                            */
                         },
                         None => {
                             status = VideoStatus::EmptyFilename.as_string()
@@ -399,9 +398,11 @@ pub async fn insert_video(mut payload: Multipart,
 }
 
 
-/// DETAIL via hash
+/// GET detail via hash
 /// 
 /// curl 'http://localhost:8081/video/detail/{video_id}'
+///
+/// good enough for dozen id's, tune for millions
 ///
 #[get("/detail/{video_id}")]
 pub async fn detail(state: web::Data<AppState>,
@@ -457,7 +458,7 @@ pub async fn detail(state: web::Data<AppState>,
 }
 
 
-/// DOWNLOAD via hash
+/// GET DOWNLOAD via hash
 /// 
 /// curl 'http://localhost:8081/video/download/{id}'
 ///
@@ -502,7 +503,7 @@ pub async fn download(state: web::Data<AppState>,
         Some(v) => {
             match std::fs::read(v.path.clone()) {
                 Ok(data) => {
-                    // should this be just filename without path?
+                    // just filename without path?
                     let content = format!("form-data; filename={}",
                                           match v.path.to_str() {
                                               Some(p) => p,
