@@ -576,55 +576,39 @@ pub async fn delete(state: web::Data<AppState>,
     let result = match parsed_idx {
         Some(i) => {
 
-            match video_hashmap.get(&i) {
+            //match video_hashmap.get(&i) {
+            match video_hashmap.get_mut(&i) {
                 Some(record) => {
-                    println!("\nTO_DELETE: we have GET id{record:?}");
+                    //println!("\nTO_DELETE: we have GET id{record:?}");
 
+                    let path_to_del = &record.path.clone();
+                    
                     if Path::new(&record.path).exists() {
-                        let file_status = std::fs::remove_file(&record.path);
-                        let record_status = video_hashmap.remove(&i);
-
-                        //println!("STATUS:\nexists: {exists_status:?}\nfile: {file_status:?}\nrecord: {record_status:#?}");
-                        //println!("STATUS:file: {file_status:?}\nrecord: {record_status:#?}");
-                        format!("STATUS:file: {file_status:?}\nrecord: {record_status:#?}")
+                    //if Path::new(&path_to_del.clone()).exists() {
+                        // first we remove record
+                        //let record_status = video_hashmap.remove(&i);
+                        match video_hashmap.remove(&i) {
+                            Some(_remove_response) => {
+                                // and then file
+                                //match std::fs::remove_file(&record.path) {
+                                match std::fs::remove_file(&path_to_del) {
+                                    Ok(_) => VideoStatus::DeleteOk.as_string(),
+                                    Err(why) => format!("Error delete file: {}\nreason: {:?}",
+                                                        i,
+                                                        why,
+                                    ),
+                                }
+                            },
+                            None => VideoStatus::DeleteError.as_string(),
+                        }
                     } else {
                         VideoStatus::FileNotFound.as_string()
                     }
                 },
-                None => {
-                    //println!("TO_DELETE: id not found {i:?}");
-                    VideoStatus::VideoIdNotFound.as_string()
-                }
-
+                None => VideoStatus::VideoIdNotFound.as_string(),
             }
         },
-            /*
-            // DELETE record
-            match video_hashmap.remove(&i) {
-                Some(video) => {
-                    println!("DELETED: {video:?}");
-
-                    // REMOVE filename
-                    //fs::remove_file("a.txt")
-                    
-                    // later this will be another Json Response
-                    Some(format!("{}: {:?}",
-                                 i,
-                                 video,
-                    ))
-                },
-                None => {
-                    // later this will be another Json Response
-                    //eprintln!("NOT FOUND SO: {i:?} stay");
-                    None
-                },
-            },
-            */
-        None => {
-            //eprintln!("DELETE key {to_parse_idx:?} not valid Type");
-            //None
-            VideoStatus::DeleteInvalidId.as_string()
-        },
+        None => VideoStatus::DeleteInvalidId.as_string(),
     };
     
     //eprintln!("RESULT: {result:?}\n -> MOVE THIS to JSON response");
@@ -636,18 +620,6 @@ pub async fn delete(state: web::Data<AppState>,
             }                                        
         )
     )
-    
-    /* OBSOLETE
-    Ok(
-        web::Json(
-            IndexResponse {                          
-                server_id: state.server_id,          
-                request_count,        
-                video_map: video_hashmap.clone(),
-            }                                        
-        )
-    )
-    */
 }
 
 
