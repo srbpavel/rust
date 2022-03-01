@@ -37,7 +37,7 @@ pub type VideoValue = Video;
 #[derive(Debug)]
 pub enum VideoStatus {
     Init,
-    Ok,
+    StatusOk,
     EmptyVideoId,
     EmptyGroupId,
     // in case we want to have video_id as filename name -F "video_id=@video.mp4"
@@ -61,7 +61,7 @@ impl VideoStatus {
     pub fn as_string(&self) -> String {
         match *self {
             VideoStatus::Init => String::from("Init"),
-            VideoStatus::Ok => String::from("Ok"),
+            VideoStatus::StatusOk => String::from("Ok"),
             //VideoStatus::EmptyName => String::from("'form 'name' for filename not provided"),
             VideoStatus::EmptyVideoId => String::from("header 'video_id' not provided"),
             VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
@@ -300,7 +300,7 @@ pub async fn insert_video(mut payload: Multipart,
                 if let Some (dis) = content_disposition {
                     //println!("\ndis: {dis:?}");
 
-                    status = VideoStatus::Ok.as_string();
+                    status = VideoStatus::StatusOk.as_string();
                     
                     // verify if filename was in form
                     match dis.get_filename() {
@@ -737,10 +737,10 @@ pub async fn list_group(state: web::Data<AppState>,
         .lock()                                      
         .unwrap();                                   
 
+    /* // via NEW HASHMAP
     let mut group_map = HashMap::new();
-
     video
-        .iter()
+        .iter() // &
         .for_each(|(key,value)| 
                   if value.group.eq(&to_parse_idx) {
                       // because &, but expensive
@@ -750,6 +750,16 @@ pub async fn list_group(state: web::Data<AppState>,
                       );
                   }
         );
+    */
+
+    // /* // via CLONE
+    let group_map: HashMap<VideoKey, VideoValue> = video.clone()
+        .into_iter()
+        .filter(|(_,value)|
+                    value.group.eq(&to_parse_idx)
+        )
+        .collect();
+    // */
 
     // as to have empty result as Json 'null' not {}
     let result = if group_map.is_empty() {
