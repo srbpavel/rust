@@ -63,7 +63,7 @@ impl VideoStatus {
             VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
             VideoStatus::EmptyFilename => String::from("form 'filename' not provided"),
 
-            VideoStatus::TooManyForms => String::from("TOO MANY FORMS we accept only ONE"),
+            VideoStatus::TooManyForms => String::from("too many forms, we accept only one form"),
             // curl with now form -F -> Multipart boundary is not found
             // status code 400
             //VideoStatus::EmptyForms => String::from("'form' not provided"),
@@ -532,8 +532,6 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// this tells server that client expect JSON data in response
 /// -H "Accept: application/json"
 ///
-/// only delete Struct and not filename -> as for my curl test
-///
 pub async fn delete(state: web::Data<AppState>,
                     //idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
                     idx: web::Path<String>) -> Result<web::Json<DeleteResponse>> {
@@ -569,29 +567,24 @@ pub async fn delete(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    //println!("MSG before DEL: {msg:?}");
-
-    // for now it just display to STDOUT
-    // try to make it let shorter !!!
     let result = match parsed_idx {
         Some(i) => {
 
             //match video_hashmap.get(&i) {
             match video_hashmap.get_mut(&i) {
                 Some(record) => {
-                    //println!("\nTO_DELETE: we have GET id{record:?}");
-
-                    let path_to_del = &record.path.clone();
+                    //let path_to_del = &record.path.clone();
                     
                     if Path::new(&record.path).exists() {
                     //if Path::new(&path_to_del.clone()).exists() {
-                        // first we remove record
-                        //let record_status = video_hashmap.remove(&i);
+                        // first we remove RECORD
                         match video_hashmap.remove(&i) {
-                            Some(_remove_response) => {
-                                // and then file
+                            Some(response_record) => {
+                                // and then FILE
                                 //match std::fs::remove_file(&record.path) {
-                                match std::fs::remove_file(&path_to_del) {
+                                //match std::fs::remove_file(&path_to_del) {
+                                // we can uses response data path
+                                match std::fs::remove_file(response_record.path) {
                                     Ok(_) => VideoStatus::DeleteOk.as_string(),
                                     Err(why) => format!("Error delete file: {}\nreason: {:?}",
                                                         i,
@@ -611,8 +604,6 @@ pub async fn delete(state: web::Data<AppState>,
         None => VideoStatus::DeleteInvalidId.as_string(),
     };
     
-    //eprintln!("RESULT: {result:?}\n -> MOVE THIS to JSON response");
-
     Ok(
         web::Json(
             DeleteResponse {                          
