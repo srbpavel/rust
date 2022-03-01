@@ -42,6 +42,11 @@ pub enum VideoStatus {
     TooManyForms,
     //AccessPermission
     //NotEnoughSpace
+    VideoIdNotFound,
+    FileNotFound,
+    DeleteOk,
+    DeleteError,
+    DeleteInvalidId,
 }
 
 /// video_status -> msg
@@ -62,6 +67,12 @@ impl VideoStatus {
             // curl with now form -F -> Multipart boundary is not found
             // status code 400
             //VideoStatus::EmptyForms => String::from("'form' not provided"),
+
+            VideoStatus::VideoIdNotFound => String::from("video_id not found"),
+            VideoStatus::FileNotFound => String::from("file not found"),
+            VideoStatus::DeleteOk => String::from("delete ok"),
+            VideoStatus::DeleteError => String::from("delete error"),
+            VideoStatus::DeleteInvalidId => String::from("delete invalid id"),
          }
     }
 }
@@ -142,6 +153,15 @@ pub struct DetailResponse {
 pub struct UpdateInput {
     video_id: String,
     group_id: String,
+}
+
+/// delete info
+#[derive(Serialize, Debug)]
+pub struct DeleteResponse {     
+    //server_id: usize,      
+    //request_count: usize,  
+    //video_map: HashMap<VideoKey, VideoValue>,
+    result: String,
 }
 
 /// GET index list all videos
@@ -515,7 +535,8 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// only delete Struct and not filename -> as for my curl test
 ///
 pub async fn delete(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+                    //idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+                    idx: web::Path<String>) -> Result<web::Json<DeleteResponse>> {
 
     //println!("IDX: {idx:?}");
     
@@ -552,13 +573,40 @@ pub async fn delete(state: web::Data<AppState>,
 
     // for now it just display to STDOUT
     // try to make it let shorter !!!
-    let _result = match parsed_idx {
-        Some(i) =>  
-            // DELETE
+    let result = match parsed_idx {
+        Some(i) => {
+
+            match video_hashmap.get(&i) {
+                Some(record) => {
+                    println!("\nTO_DELETE: we have GET id{record:?}");
+
+                    if Path::new(&record.path).exists() {
+                        let file_status = std::fs::remove_file(&record.path);
+                        let record_status = video_hashmap.remove(&i);
+
+                        //println!("STATUS:\nexists: {exists_status:?}\nfile: {file_status:?}\nrecord: {record_status:#?}");
+                        //println!("STATUS:file: {file_status:?}\nrecord: {record_status:#?}");
+                        format!("STATUS:file: {file_status:?}\nrecord: {record_status:#?}")
+                    } else {
+                        VideoStatus::FileNotFound.as_string()
+                    }
+                },
+                None => {
+                    //println!("TO_DELETE: id not found {i:?}");
+                    VideoStatus::VideoIdNotFound.as_string()
+                }
+
+            }
+        },
+            /*
+            // DELETE record
             match video_hashmap.remove(&i) {
                 Some(video) => {
-                    //println!("DELETED: {video:?}");
+                    println!("DELETED: {video:?}");
 
+                    // REMOVE filename
+                    //fs::remove_file("a.txt")
+                    
                     // later this will be another Json Response
                     Some(format!("{}: {:?}",
                                  i,
@@ -571,14 +619,25 @@ pub async fn delete(state: web::Data<AppState>,
                     None
                 },
             },
+            */
         None => {
             //eprintln!("DELETE key {to_parse_idx:?} not valid Type");
-            None
+            //None
+            VideoStatus::DeleteInvalidId.as_string()
         },
     };
     
-    //eprintln!("RESULT: {result:?} -> MOVE THIS to JSON response");
+    //eprintln!("RESULT: {result:?}\n -> MOVE THIS to JSON response");
+
+    Ok(
+        web::Json(
+            DeleteResponse {                          
+                result
+            }                                        
+        )
+    )
     
+    /* OBSOLETE
     Ok(
         web::Json(
             IndexResponse {                          
@@ -588,6 +647,7 @@ pub async fn delete(state: web::Data<AppState>,
             }                                        
         )
     )
+    */
 }
 
 
