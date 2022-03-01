@@ -48,6 +48,7 @@ pub struct AppState {
 #[derive(Debug, Clone)]
 pub struct DataConfig {
     pub static_dir: String,
+    pub verify_dir_per_video: bool,
 }
 
 /// RUN
@@ -98,6 +99,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 // config
                 config: DataConfig {
                     static_dir: String::from(config.static_dir.clone()),
+                    verify_dir_per_video: config.flag.verify_dir_per_video.clone(),
                 },
             })                                                      
             // LOG

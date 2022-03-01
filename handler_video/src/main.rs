@@ -22,7 +22,7 @@ async fn main() -> std::io::Result<()> {
     let storage = std::path::Path::new(&*config.static_dir);
 
     // at the very start we want to test we can write
-    // flarg true hardcoded not via conf
+    // flag hardcoded not via conf
     match util::verify_dir(&storage.to_path_buf(), true) {
         Ok(_) => {},
         Err(err) => {

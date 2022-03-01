@@ -18,4 +18,5 @@ pub struct TomlConfig {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Flag {
     pub debug_config: bool,
+    pub verify_dir_per_video: bool,
 }
