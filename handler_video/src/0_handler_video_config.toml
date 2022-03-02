@@ -1,14 +1,18 @@
 name = 'HANDLER_VIDEO'
-host = 'spongebob'
+host = 'spongebob_laptop'
 #server = "127.0.0.1"
 #server = "localhost"
 server = "192.168.0.103"
 port = 8081
+# https://actix.rs/docs/server/
 workers = 4
-static_dir = "/home/conan/soft/rust/handler_video/storage/"
+# https://actix.rs/docs/middleware/
 log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
+# video persistent storage
+static_dir = "/home/conan/soft/rust/handler_video/storage/"
 
 [flag]
-debug_config = false
-#verify dir is available and we can write before each video safe	     
+# display config
+debug_config = true # false
+# verify dir is available and we can write before each video safe	     
 verify_dir_per_video = true # false

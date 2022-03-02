@@ -1,6 +1,7 @@
 use crate::{
     handler::AppState,
     util,
+    status,
 };
 
 use actix_web::{
@@ -21,7 +22,6 @@ use std::collections::HashMap;
 use std::path::{Path,
                 PathBuf,
 };
-
 use uuid::Uuid;
 
 /// scope
@@ -31,26 +31,37 @@ pub const SCOPE: &str = "/video";
 pub type VideoKey = String;
 pub type VideoValue = Video;
 
-
+/*
 /// video status messages
 /// very raw for now, will unit when the right time comes
 #[derive(Debug)]
 pub enum VideoStatus {
     Init,
     StatusOk,
+    // HEADERS
     EmptyVideoId,
     EmptyGroupId,
-    // in case we want to have video_id as filename name -F "video_id=@video.mp4"
-    //EmptyName
+    // FORM
     EmptyFilename,
     TooManyForms,
-    //AccessPermission
-    //NotEnoughSpace
+    // in case we want to have video_id as filename name -F "video_id=@video.mp4"
+    //EmptyName
+    // VIDEO
+    VideoIdFound,
     VideoIdNotFound,
     FileNotFound,
+    // GROUP
+    GroupFound,
+    GroupNotFound,
+    // LIST
+    // ...
+    // DELETE
     DeleteOk,
     DeleteError,
     DeleteInvalidId,
+    // FUTURE USE
+    //AccessPermission
+    //NotEnoughSpace
 }
 
 /// video_status -> msg
@@ -60,25 +71,34 @@ impl VideoStatus {
     //pub fn as_str(&self) -> &str {
     pub fn as_string(&self) -> String {
         match *self {
-            VideoStatus::Init => String::from("Init"),
-            VideoStatus::StatusOk => String::from("Ok"),
-            //VideoStatus::EmptyName => String::from("'form 'name' for filename not provided"),
-            VideoStatus::EmptyVideoId => String::from("header 'video_id' not provided"),
-            VideoStatus::EmptyGroupId => String::from("header 'group' not provided"),
-            VideoStatus::EmptyFilename => String::from("form 'filename' not provided"),
-            VideoStatus::TooManyForms => String::from("too many forms, we accept only one form"),
+            Self::Init => String::from("Init"),
+            Self::StatusOk => String::from("Ok"),
+
+            Self::EmptyVideoId => String::from("header 'video_id' not provided"),
+            Self::EmptyGroupId => String::from("header 'group' not provided"),
+
+
+            Self::EmptyFilename => String::from("form 'filename' not provided"),
+            Self::TooManyForms => String::from("too many forms, we accept only one form"),
+            //Self::EmptyName => String::from("'form 'name' for filename not provided"),
+
+            Self::VideoIdFound => String::from("video found"),
             // curl with now form -F -> Multipart boundary is not found
             // status code 400
-            //VideoStatus::EmptyForms => String::from("'form' not provided"),
-            VideoStatus::VideoIdNotFound => String::from("video_id not found"),
-            VideoStatus::FileNotFound => String::from("file not found"),
-            VideoStatus::DeleteOk => String::from("delete ok"),
-            VideoStatus::DeleteError => String::from("delete error"),
-            VideoStatus::DeleteInvalidId => String::from("delete invalid id"),
-         }
+            //Self::EmptyForms => String::from("'form' not provided"),
+            Self::VideoIdNotFound => String::from("video_id not found"),
+            Self::FileNotFound => String::from("file not found"),
+
+            Self::GroupFound => String::from("group found"),
+            Self::GroupNotFound => String::from("group not found"),
+
+            Self::DeleteOk => String::from("delete ok"),
+            Self::DeleteError => String::from("delete error"),
+            Self::DeleteInvalidId => String::from("delete invalid id"),
+        }
     }
 }
-
+*/
 
 /// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -110,7 +130,8 @@ struct File {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
-    video_map: HashMap<VideoKey, VideoValue>, 
+    video_map: HashMap<VideoKey, VideoValue>,
+    status: String,
 }
 
 /// group members
@@ -118,7 +139,8 @@ pub struct IndexResponse {
 pub struct ListResponse {     
     server_id: usize,      
     request_count: usize,  
-    result: Option<HashMap<VideoKey, VideoValue>>, 
+    result: Option<HashMap<VideoKey, VideoValue>>,
+    status: String,
 }
 
 /// upload 
@@ -149,6 +171,7 @@ pub struct DetailResponse {
     request_count: usize,                                 
     result: Option<Video>, // None in JSON will be "null"
     url: String,
+    status: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -184,6 +207,8 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
                 server_id: state.server_id,          
                 request_count,        
                 video_map: video.clone(),
+                //FUTURE USE
+                status: status::Status::StatusOk.as_string(),
             }                                        
         )                                            
     )                                                
@@ -191,10 +216,15 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 
 
 /// PUT new video
-/// 
+///
 /// curl -X PUT 'http://localhost:8081/video/put
 ///
 /// curl -X PUT -H "Content-type: multipart/form-data" 'http://localhost:8081/video/put' -F "video_name=@/home/conan/video/youtube/munch_roses_extended_remix.mp4;type=video/mp4" -H "video_id: 789" -H "group: stream_002" 2>/dev/null | jq
+///
+/// already existing record is overwritten -> we do not verify/confirm 
+/// if the same id but different file, this will create zombie file
+///
+/// later: via config flags: verify id/overwrite existing + delete file/send msg
 ///
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
@@ -233,7 +263,7 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
-    let mut status = VideoStatus::Init.as_string();
+    let mut status = status::Status::Init;//.as_string();
     let mut new_video = Video::default();
 
     //println!("HEADERS: {:?}", req.headers());
@@ -255,13 +285,14 @@ pub async fn insert_video(mut payload: Multipart,
                 web::Json(
                     PostResponse {
                         result: None,
-                        status: VideoStatus::EmptyVideoId.as_string(),
+                        status: status::Status::EmptyVideoId.as_string(),
                     }
                 )
             )
         },
     }
 
+    // we should add group to vec/hash just to list groups without iter video
     match req.headers().get("group") {
         Some(group) => {
             new_video.group = group
@@ -275,7 +306,7 @@ pub async fn insert_video(mut payload: Multipart,
                 web::Json(
                     PostResponse {
                         result: None,
-                        status: VideoStatus::EmptyGroupId.as_string(),
+                        status: status::Status::EmptyGroupId.as_string(),
                     }
                 )
             )
@@ -300,7 +331,7 @@ pub async fn insert_video(mut payload: Multipart,
                 if let Some (dis) = content_disposition {
                     //println!("\ndis: {dis:?}");
 
-                    status = VideoStatus::StatusOk.as_string();
+                    status = status::Status::StatusOk;//.as_string();
                     
                     // verify if filename was in form
                     match dis.get_filename() {
@@ -372,12 +403,12 @@ pub async fn insert_video(mut payload: Multipart,
                             };
                         },
                         None => {
-                            status = VideoStatus::EmptyFilename.as_string()
+                            status = status::Status::EmptyFilename//.as_string()
                         },
                     }
                 };
             } else {
-                status = VideoStatus::TooManyForms.as_string()
+                status = status::Status::TooManyForms//.as_string()
             }
         }
 
@@ -391,7 +422,7 @@ pub async fn insert_video(mut payload: Multipart,
                         video: new_video,
                     }
                 ),
-                status
+                status: status.as_string(),
             }
         )
     )
@@ -442,6 +473,7 @@ pub async fn detail(state: web::Data<AppState>,
                 path: v.path.clone(),
             })
         },
+        // return status: VideoIdNotFound
         None => None,
     };
     
@@ -452,6 +484,8 @@ pub async fn detail(state: web::Data<AppState>,
                 request_count,
                 result,
                 url,
+                //FUTURE USE
+                status: status::Status::VideoIdFound.as_string(),
             }
         )
     )
@@ -565,6 +599,8 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
                 request_count,
                 video_map: HashMap::new(), // no need to create new as we have old
                 //video_map: ms.clone(), // ok but expenssive?
+                // FUTURE USE
+                status: status::Status::StatusOk.as_string(),
             }
         )
     )
@@ -626,7 +662,8 @@ pub async fn delete(state: web::Data<AppState>,
                             Some(response_record) => {
                                 // then file -> we use response data path
                                 match std::fs::remove_file(&response_record.path) {
-                                    Ok(_) => VideoStatus::DeleteOk.as_string(),
+                                    Ok(_) => status::Status::DeleteOk.as_string(),
+                                    //Ok(_) => status::Status::Delete::DeleteOk.as_string(),
                                     // in case dir ownership or perm has changed
                                     // -rw------- 1 root root 8320394 Mar  1 11:56
                                     // /home/conan/soft/rust/handler_video/storage/456_love_tonight_extended_mix.mp4
@@ -642,16 +679,18 @@ pub async fn delete(state: web::Data<AppState>,
                                     }
                                 }
                             },
-                            None => VideoStatus::DeleteError.as_string(),
+                            None => status::Status::DeleteError.as_string(),
+                            //None => status::Status::Delete::DeleteError.as_string(),
                         }
                     } else {
-                        VideoStatus::FileNotFound.as_string()
+                        status::Status::FileNotFound.as_string()
                     }
                 },
-                None => VideoStatus::VideoIdNotFound.as_string(),
+                None => status::Status::VideoIdNotFound.as_string(),
             }
         },
-        None => VideoStatus::DeleteInvalidId.as_string(),
+        None => status::Status::DeleteInvalidId.as_string(),
+        //None => status::Status::Delete::DeleteInvalidId.as_string(),
     };
     
     Ok(
@@ -713,6 +752,8 @@ pub async fn update_group(update: web::Json<UpdateInput>,
                 request_count,
                 result,
                 url,
+                //FUTURE USE
+                status: status::Status::UpdateOk.as_string(),
             }
         )
     )
@@ -761,10 +802,16 @@ pub async fn list_group(state: web::Data<AppState>,
         .collect();
     // */
 
+    let status;
+    
     // as to have empty result as Json 'null' not {}
     let result = if group_map.is_empty() {
+        status = status::Status::GroupNotFound;
+
         None
     } else {
+        status = status::Status::GroupFound;
+            
         Some(group_map)
     };
     
@@ -774,6 +821,8 @@ pub async fn list_group(state: web::Data<AppState>,
                 server_id: state.server_id,          
                 request_count,        
                 result,
+                //FUTURE USE
+                status: status.as_string(),
             }                                        
         )                                            
     )                                                
