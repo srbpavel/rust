@@ -2,6 +2,14 @@
 
 <b>actix lesson</b>
 
+```
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+$ rustup update
+ stable-x86_64-unknown-linux-gnu unchanged - rustc 1.59.0 (9d1b2106e 2022-02-23)
+
+$ echo "export PATH=$PATH\:$HOME/.cargo/env" >> ~/.bashrc
+```
+
 *CONFIG and RUN*
 ```
 $ cat src/handler_video_config.toml
