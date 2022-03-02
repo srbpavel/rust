@@ -79,6 +79,13 @@ $ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/vide
   "status": "ok"
 }
 
+$ ls -la storage/
+total 57104
+drwxr-xr-x 2 conan conan     4096 Mar  2 18:59 .
+drwxr-xr-x 6 conan conan     4096 Mar  2 18:34 ..
+-rw-r--r-- 1 conan conan 58462389 Mar  2 18:59 123_dmnds.mp4
+-rw-r--r-- 1 conan conan        0 Mar  2 18:59 touch.verify
+
 ```
 
 ```
