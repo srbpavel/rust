@@ -161,6 +161,21 @@ $ curl -X DELETE "http://127.0.0.1:8081/video/delete/123" 2>/dev/null | jq
   "result":"delete ok"
 }
 
+$ curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
+{
+  "server_id": 0,
+  "request_count": 7,
+  "result": null,
+  "url": "/video/detail/123",
+  "status": "video_id not found"
+}
+
+$ ls -la storage/
+total 8
+drwxr-xr-x 2 conan conan 4096 Mar  2 18:56 .
+drwxr-xr-x 6 conan conan 4096 Mar  2 18:34 ..
+-rw-r--r-- 1 conan conan    0 Mar  2 18:56 touch.verify
+
 $ curl -X DELETE "http://127.0.0.1:8081/video/delete/123" 2>/dev/null | jq
 {
   "result": "video_id not found"
