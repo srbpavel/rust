@@ -2,9 +2,7 @@
 
 <b>actix lesson</b>
 
-- import video
-- detail
-
+*EMPTY START*
 ```
 $ curl "http://127.0.0.1:8081/video/" 2>/dev/null| jq
 {
@@ -13,9 +11,7 @@ $ curl "http://127.0.0.1:8081/video/" 2>/dev/null| jq
   "video_map": {},
   "status": "ok"
 }
-```
 
-```
 $ curl "http://127.0.0.1:8081/video/groups" 2>/dev/null| jq
 {
   "server_id": 2,
@@ -23,9 +19,7 @@ $ curl "http://127.0.0.1:8081/video/groups" 2>/dev/null| jq
   "result": null,
   "status": "no groups found"
 }
-```
 
-```
 $ curl http://localhost:8081/video/list/stream_001 2>/dev/null | jq
 {
   "server_id": 1,
@@ -33,8 +27,7 @@ $ curl http://localhost:8081/video/list/stream_001 2>/dev/null | jq
   "result": null,
   "status": "group not found"
 }
-```
-```
+
 curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
 {
   "server_id": 3,
@@ -44,6 +37,8 @@ curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
   "status": "video_id not found"
 }
 ```
+
+*IMPORT*
 ```
 $ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "auticko=/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" 2>/dev/null | jq
 {
