@@ -36,6 +36,7 @@ pub type VideoValue = Video;
 pub struct Video {
     id: String,
     group: String,
+    name: String,
     path: PathBuf,
 }
 
@@ -45,6 +46,7 @@ impl Video {
         Self {
             id: String::from(""),
             group: String::from(""),
+            name: String::from(""),
             path: PathBuf::new(),
         }
     }
@@ -71,6 +73,16 @@ pub struct ListResponse {
     server_id: usize,      
     request_count: usize,  
     result: Option<HashMap<VideoKey, VideoValue>>,
+    status: String,
+}
+
+/// all groups
+#[derive(Serialize, Debug)]
+pub struct GroupsResponse {     
+    server_id: usize,      
+    request_count: usize,  
+    //groups: Vec<String>,
+    result: Option<Vec<String>>,
     status: String,
 }
 
@@ -194,6 +206,13 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
+    let mut groups_list = state
+        .groups
+        .lock()
+        .unwrap();
+
+    println!("GROUPS: {:?}", groups_list);
+    
     let mut status = status::Status::Init;//.as_string();
     let mut new_video = Video::default();
 
@@ -246,6 +265,8 @@ pub async fn insert_video(mut payload: Multipart,
     
     //println!("NEW_VIDEO: {new_video:?}");
 
+    let new_group = new_video.group.clone();
+    
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
     let mut content_counter = 0;
@@ -262,6 +283,24 @@ pub async fn insert_video(mut payload: Multipart,
                 if let Some (dis) = content_disposition {
                     //println!("\ndis: {dis:?}");
 
+                    match dis.get_name() {
+                        Some(name) => {
+                            new_video.name = String::from(name);
+                        },
+                        None => {
+                            return Ok(
+                                web::Json(
+                                    PostResponse {
+                                        result: None,
+                                        status: status::Status::EmptyFormName.as_string(),
+                                    }
+                                )
+                            )
+                        },
+                    }
+
+                    // we have both headers video_id + group
+                    // we have form name + filename
                     status = status::Status::StatusOk;
                     
                     // verify if filename was in form
@@ -295,6 +334,11 @@ pub async fn insert_video(mut payload: Multipart,
                                     new_video.clone(), // VALUE: Video {}
                                 );
 
+                            // add new group to VEC groups -> too many clones !!!
+                            if !groups_list.contains(&new_group) {
+                                groups_list.push(new_group.clone());
+                            }
+                            
                             /* // ### BUF
                             let mut f = web::block(||
                                                    std::fs::File::create(filepath)
@@ -334,12 +378,28 @@ pub async fn insert_video(mut payload: Multipart,
                             };
                         },
                         None => {
-                            status = status::Status::EmptyFilename
+                            //status = status::Status::EmptyFormFilename
+                            return Ok(
+                                web::Json(
+                                    PostResponse {
+                                        result: None,
+                                        status: status::Status::EmptyFormFilename.as_string(),
+                    }
+                )
+            )
                         },
                     }
                 };
             } else {
-                status = status::Status::TooManyForms
+                //status = status::Status::TooManyForms
+                return Ok(
+                    web::Json(
+                        PostResponse {
+                            result: None,
+                            status: status::Status::TooManyForms.as_string(),
+                        }
+                    )
+                )
             }
         }
 
@@ -396,10 +456,24 @@ pub async fn detail(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    let status;
+    let mut status;
     
     let result = match parsed_idx {
         Some(i) => {
+            status = status::Status::VideoIdNotFound;
+            
+            video.get(&i).map(|v| {
+                status = status::Status::VideoIdFound;
+
+                Video {
+                    id: i,
+                    group: v.group.to_string(),
+                    path: v.path.clone(),
+                    name: v.name.clone(),
+                }
+            })
+            
+            /*
             let detail = video.get(&i).map(|v| { 
                 Video {
                     id: i,
@@ -420,21 +494,11 @@ pub async fn detail(state: web::Data<AppState>,
                     None
                 },
             }
-                
-            /*
-            video.get(&i).map(|v| 
-                              Video {
-                                  id: i,
-                                  group: v.group.to_string(),
-                                  path: v.path.clone(),
-                              }
-            )
-             */
-
-            
+            */
+           
         },
         None => {
-            status = status::Status::VideoIdNotFound;
+            status = status::Status::VideoIdWrongFormat;
             
             None
         },
@@ -491,6 +555,7 @@ pub async fn download(state: web::Data<AppState>,
                 id: i.to_string(),
                 group: v.group.to_string(),
                 path: v.path.clone(),
+                name: v.name.clone(),
             })
         },
         None => None,
@@ -702,6 +767,7 @@ pub async fn update_group(update: web::Json<UpdateInput>,
                     id: video.id.clone(),
                     group: update.group_id.to_string(),
                     path: video.path.clone(),
+                    name: video.name.clone(),
                 }
             )
         },
@@ -783,6 +849,47 @@ pub async fn list_group(state: web::Data<AppState>,
             ListResponse {                          
                 server_id: state.server_id,          
                 request_count,        
+                result,
+                //FUTURE USE
+                status: status.as_string(),
+            }                                        
+        )                                            
+    )                                                
+}
+
+
+/// GET list all groups
+///
+/// curl 'http://localhost:8081/video/groups'
+///
+pub async fn list_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsResponse>> {
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);          
+    
+    let all_groups = state                                  
+        .groups
+        .lock()                                      
+        .unwrap();                                   
+
+    let status;
+    
+    // as to have empty result as Json 'null' not {}
+    let result = if all_groups.is_empty() {
+        status = status::Status::NoGroupsAvailable;
+
+        None
+    } else {
+        status = status::Status::GroupsAvailable;
+            
+        Some(all_groups.to_vec())
+    };
+    
+    Ok(                                              
+        web::Json(                                   
+            GroupsResponse {                          
+                server_id: state.server_id,          
+                request_count,        
+                //groups: groups.to_vec(),
                 result,
                 //FUTURE USE
                 status: status.as_string(),

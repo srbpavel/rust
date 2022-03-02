@@ -45,6 +45,8 @@ pub struct AppState {
     // since this, the app is very very slow with video upload
     // find better solution!!!
     pub config: DataConfig,
+    // list of added groups
+    pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
 
 #[derive(Debug, Clone)]
@@ -83,6 +85,15 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
+    // groups
+    let groups =
+        Arc::new(
+            Mutex::new(
+                Vec::new()
+            )
+        );
+    
+    
     // SERVER
     HttpServer::new(move || {
         App::new()
@@ -103,6 +114,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     static_dir: String::from(config.static_dir.clone()),
                     verify_dir_per_video: config.flag.verify_dir_per_video.clone(),
                 },
+                // groups
+                groups: groups.clone(),
             })                                                      
             // LOG
             //.wrap(middleware::Logger::new(LOG_FORMAT))
@@ -193,6 +206,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     )
                     // LIST group members
                     .service(video::list_group)
+                    // GROUPS
+                    .service(
+                        web::resource("/groups")
+                            .route(web::get()
+                                   .to(video::list_groups)
+                            )
+                    )
                     // UPDATE group_id for single video
                     //.service(video::update_group)
                     .service(
