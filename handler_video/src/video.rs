@@ -63,6 +63,7 @@ struct File {
 pub struct IndexResponse {     
     server_id: usize,      
     request_count: usize,  
+    //not as Option yet
     video_map: HashMap<VideoKey, VideoValue>,
     status: String,
 }
@@ -81,7 +82,6 @@ pub struct ListResponse {
 pub struct GroupsResponse {     
     server_id: usize,      
     request_count: usize,  
-    //groups: Vec<String>,
     result: Option<Vec<String>>,
     status: String,
 }
@@ -173,7 +173,7 @@ pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest) -> Result<web::Json<PostResponse>> {
 
-    // decide sequence -> verify storage or headers/form?
+    // decide sequence -> first verify storage or headers/form?
     // just in single dir for now, will seed to various dirs later
     //VERIFY STORAGE
     let path_to_verify = PathBuf::from(&*state.config.static_dir);
@@ -211,8 +211,6 @@ pub async fn insert_video(mut payload: Multipart,
         .lock()
         .unwrap();
 
-    println!("GROUPS: {:?}", groups_list);
-    
     let mut status = status::Status::Init;//.as_string();
     let mut new_video = Video::default();
 
@@ -242,7 +240,6 @@ pub async fn insert_video(mut payload: Multipart,
         },
     }
 
-    // we should add group to vec/hash just to list groups without iter video
     match req.headers().get("group") {
         Some(group) => {
             new_video.group = group
@@ -339,25 +336,6 @@ pub async fn insert_video(mut payload: Multipart,
                                 groups_list.push(new_group.clone());
                             }
                             
-                            /* // ### BUF
-                            let mut f = web::block(||
-                                                   std::fs::File::create(filepath)
-                                                   /*
-                                                   std::result::Result::Ok(
-                                                   )
-                                                   */
-                            ).await?;
-                            //println!("F: {f:?}");
-                            
-                            while let Some(chunk) = field.try_next().await? {
-                                f = web::block(move ||
-                                               f
-                                               .write_all(&chunk)
-                                               .map(|_| f)
-                                ).await?;
-                            };
-                            // #_ */
-                            
                             // ### FILE
                             // block -> future to result
                             let mut f = web::block(||
@@ -378,7 +356,6 @@ pub async fn insert_video(mut payload: Multipart,
                             };
                         },
                         None => {
-                            //status = status::Status::EmptyFormFilename
                             return Ok(
                                 web::Json(
                                     PostResponse {
@@ -391,7 +368,6 @@ pub async fn insert_video(mut payload: Multipart,
                     }
                 };
             } else {
-                //status = status::Status::TooManyForms
                 return Ok(
                     web::Json(
                         PostResponse {
@@ -472,30 +448,6 @@ pub async fn detail(state: web::Data<AppState>,
                     name: v.name.clone(),
                 }
             })
-            
-            /*
-            let detail = video.get(&i).map(|v| { 
-                Video {
-                    id: i,
-                    group: v.group.to_string(),
-                    path: v.path.clone(),
-                }
-            });
-
-            match detail {
-                Some(d) => {
-                    status = status::Status::VideoIdFound;
-
-                    Some(d)
-                },
-                None => {
-                    status = status::Status::VideoIdNotAvailable;
-
-                    None
-                },
-            }
-            */
-           
         },
         None => {
             status = status::Status::VideoIdWrongFormat;
@@ -575,7 +527,8 @@ pub async fn download(state: web::Data<AppState>,
                     );
 
                     //println!("CONTENT: {content:?}");
-                    
+
+                    // here as HttpResponse, try to find more ways + add enum msg
                     HttpResponse::Ok()
                         .header("Content-Disposition",
                                 content,
@@ -583,6 +536,7 @@ pub async fn download(state: web::Data<AppState>,
                         .body(data)
                 },
                 Err(why) => {
+                    //file not found or permission
                     HttpResponse::NotFound().json(
                         &File {
                             err: format!("{why:?}")
@@ -593,6 +547,7 @@ pub async fn download(state: web::Data<AppState>,
         },
 
         None => {
+            //id not found
             HttpResponse::NotFound().json(
                 &File {
                     err: "id does not exist".to_string(),
@@ -619,6 +574,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .unwrap();
     
     all_videos.clear();
+    // + we should also clear groups
     
     Ok(
         web::Json(
@@ -708,7 +664,6 @@ pub async fn delete(state: web::Data<AppState>,
                                 }
                             },
                             None => status::Status::DeleteError.as_string(),
-                            //None => status::Status::Delete::DeleteError.as_string(),
                         }
                     } else {
                         status::Status::FileNotFound.as_string()
@@ -718,7 +673,6 @@ pub async fn delete(state: web::Data<AppState>,
             }
         },
         None => status::Status::DeleteInvalidId.as_string(),
-        //None => status::Status::Delete::DeleteInvalidId.as_string(),
     };
     
     Ok(
@@ -761,6 +715,8 @@ pub async fn update_group(update: web::Json<UpdateInput>,
 
             // update
             video.group = update.group_id.to_string();
+            // +should also add new group
+            // +if this was only one group member, delete group
 
             Some(
                 Video {
@@ -889,7 +845,6 @@ pub async fn list_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsR
             GroupsResponse {                          
                 server_id: state.server_id,          
                 request_count,        
-                //groups: groups.to_vec(),
                 result,
                 //FUTURE USE
                 status: status.as_string(),

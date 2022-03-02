@@ -36,6 +36,8 @@ echo "UPDATE: curl -X POST \"http://${SERVER}:${PORT}/video/update/group\" -H \"
 
 echo "DELETE: curl -X DELETE \"http://${SERVER}:${PORT}/video/delete/123\" 2>/dev/null| jq"
 
+echo "LISH GROUPS: curl \"http://127.0.0.1:8081/video/groups\" 2>/dev/null| jq"
+
 echo "LIST GROUP MEMBERS: curl http://localhost:8081/video/list/stream_001 2>/dev/null | jq"
 
 echo "CLEAR: curl -X POST \"http://${SERVER}:${PORT}/video/clear\" 2>/dev/null| jq"

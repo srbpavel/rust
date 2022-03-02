@@ -45,7 +45,7 @@ pub struct AppState {
     // since this, the app is very very slow with video upload
     // find better solution!!!
     pub config: DataConfig,
-    // list of added groups
+    // list of groups
     pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
 
@@ -206,7 +206,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     )
                     // LIST group members
                     .service(video::list_group)
-                    // GROUPS
+                    // ALL GROUPS
                     .service(
                         web::resource("/groups")
                             .route(web::get()
@@ -239,8 +239,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
         // number of logical CPUs in the system
         // each thread process is blocking
         // non-cpu-bound operation should be expressed as futures or asynchronous
-        //.workers(WORKERS) //
-        .workers(config.workers) //
+        .workers(config.workers)
         .run()
         .await
 }
