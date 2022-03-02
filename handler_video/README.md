@@ -2,6 +2,57 @@
 
 <b>actix lesson</b>
 
+*CONFIG and RUN*
+```
+$ cat src/handler_video_config.toml
+name = 'HANDLER_VIDEO'
+host = 'spongebob'
+#server = "127.0.0.1"
+server = "localhost"
+#server = "192.168.0.103"
+#server = "192.168.88.253"
+port = 8081
+workers = 4
+static_dir = "/home/conan/soft/rust/handler_video/storage/"
+log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
+
+[flag]
+debug_config = true # false
+#verify dir is available and we can write before each video safe             
+verify_dir_per_video = true # false
+
+$ cargo run
+EXIT: Problem parsing cmd arguments
+REASON >>> we want exactly one argument
+ example:
+  $ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+  $ /home/conan/soft/rust/handler_video/target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+
+$ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+VERIFY STORAGE: Error: video_storage directory does not exists: "\"/home/conan/soft/rust/handler_video/storage/\""
+
+$ mkdir storage
+$ /home/conan/soft/rust/handler_video/target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+
+#CONFIG:
+TomlConfig {
+    name: "HANDLER_VIDEO",
+    host: "spongebob",
+    server: "localhost",
+    port: 8081,
+    workers: 4,
+    static_dir: "/home/conan/soft/rust/handler_video/storage/",
+    log_format: "\"%r\" %s %b \"%{User-Agent}i\" %D",
+    flag: Flag {
+        debug_config: true,
+        verify_dir_per_video: true,
+    },
+}
+start -> HANDLER_VIDEO at spongebob / localhost
+[2022-03-02T18:13:15Z INFO  actix_server::builder] Starting 4 workers
+[2022-03-02T18:13:15Z INFO  actix_server::builder] Starting "actix-web-service-127.0.0.1:8081" service on 127.0.0.1:8081
+```
+
 *EMPTY START*
 ```
 $ curl "http://127.0.0.1:8081/video/" 2>/dev/null| jq
