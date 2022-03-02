@@ -31,75 +31,6 @@ pub const SCOPE: &str = "/video";
 pub type VideoKey = String;
 pub type VideoValue = Video;
 
-/*
-/// video status messages
-/// very raw for now, will unit when the right time comes
-#[derive(Debug)]
-pub enum VideoStatus {
-    Init,
-    StatusOk,
-    // HEADERS
-    EmptyVideoId,
-    EmptyGroupId,
-    // FORM
-    EmptyFilename,
-    TooManyForms,
-    // in case we want to have video_id as filename name -F "video_id=@video.mp4"
-    //EmptyName
-    // VIDEO
-    VideoIdFound,
-    VideoIdNotFound,
-    FileNotFound,
-    // GROUP
-    GroupFound,
-    GroupNotFound,
-    // LIST
-    // ...
-    // DELETE
-    DeleteOk,
-    DeleteError,
-    DeleteInvalidId,
-    // FUTURE USE
-    //AccessPermission
-    //NotEnoughSpace
-}
-
-/// video_status -> msg
-///
-impl VideoStatus {
-    // can have as &str but then full of lifetime, time will proof
-    //pub fn as_str(&self) -> &str {
-    pub fn as_string(&self) -> String {
-        match *self {
-            Self::Init => String::from("Init"),
-            Self::StatusOk => String::from("Ok"),
-
-            Self::EmptyVideoId => String::from("header 'video_id' not provided"),
-            Self::EmptyGroupId => String::from("header 'group' not provided"),
-
-
-            Self::EmptyFilename => String::from("form 'filename' not provided"),
-            Self::TooManyForms => String::from("too many forms, we accept only one form"),
-            //Self::EmptyName => String::from("'form 'name' for filename not provided"),
-
-            Self::VideoIdFound => String::from("video found"),
-            // curl with now form -F -> Multipart boundary is not found
-            // status code 400
-            //Self::EmptyForms => String::from("'form' not provided"),
-            Self::VideoIdNotFound => String::from("video_id not found"),
-            Self::FileNotFound => String::from("file not found"),
-
-            Self::GroupFound => String::from("group found"),
-            Self::GroupNotFound => String::from("group not found"),
-
-            Self::DeleteOk => String::from("delete ok"),
-            Self::DeleteError => String::from("delete error"),
-            Self::DeleteInvalidId => String::from("delete invalid id"),
-        }
-    }
-}
-*/
-
 /// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
@@ -331,7 +262,7 @@ pub async fn insert_video(mut payload: Multipart,
                 if let Some (dis) = content_disposition {
                     //println!("\ndis: {dis:?}");
 
-                    status = status::Status::StatusOk;//.as_string();
+                    status = status::Status::StatusOk;
                     
                     // verify if filename was in form
                     match dis.get_filename() {
@@ -403,12 +334,12 @@ pub async fn insert_video(mut payload: Multipart,
                             };
                         },
                         None => {
-                            status = status::Status::EmptyFilename//.as_string()
+                            status = status::Status::EmptyFilename
                         },
                     }
                 };
             } else {
-                status = status::Status::TooManyForms//.as_string()
+                status = status::Status::TooManyForms
             }
         }
 
@@ -465,16 +396,48 @@ pub async fn detail(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
+    let status;
+    
     let result = match parsed_idx {
         Some(i) => {
-            video.get(&i).map(|v| Video {
-                id: i,
-                group: v.group.to_string(),
-                path: v.path.clone(),
-            })
+            let detail = video.get(&i).map(|v| { 
+                Video {
+                    id: i,
+                    group: v.group.to_string(),
+                    path: v.path.clone(),
+                }
+            });
+
+            match detail {
+                Some(d) => {
+                    status = status::Status::VideoIdFound;
+
+                    Some(d)
+                },
+                None => {
+                    status = status::Status::VideoIdNotAvailable;
+
+                    None
+                },
+            }
+                
+            /*
+            video.get(&i).map(|v| 
+                              Video {
+                                  id: i,
+                                  group: v.group.to_string(),
+                                  path: v.path.clone(),
+                              }
+            )
+             */
+
+            
         },
-        // return status: VideoIdNotFound
-        None => None,
+        None => {
+            status = status::Status::VideoIdNotFound;
+            
+            None
+        },
     };
     
     Ok(
@@ -485,7 +448,7 @@ pub async fn detail(state: web::Data<AppState>,
                 result,
                 url,
                 //FUTURE USE
-                status: status::Status::VideoIdFound.as_string(),
+                status: status.as_string(),
             }
         )
     )
