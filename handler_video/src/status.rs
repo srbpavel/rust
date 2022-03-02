@@ -10,7 +10,7 @@ pub enum Status {
     // FORMS
     EmptyFormFilename,
     EmptyFormName,
-    EmptyForms,
+    //EmptyForms,
     TooManyForms,
     // VIDEO
     VideoIdFound,
@@ -52,7 +52,7 @@ impl Status {
             Self::EmptyFormName => String::from("'name' not provided for form"),
             // curl with no form -F -> Multipart boundary is not found
             // status code 400
-            Self::EmptyForms => String::from("'form' not provided"),
+            //Self::EmptyForms => String::from("'form' not provided"),
             Self::TooManyForms => String::from("too many forms, we accept only one form"),
 
             Self::VideoIdFound => String::from("video found"),
