@@ -31,10 +31,10 @@ version = "0.4.19"
 [dependencies.easy_config]                                           
 version = "^0"                                                           
 # LOCAL                                                                  
-path = "/home/conan/soft/rust/easy_config/"
+#path = "/home/conan/soft/rust/easy_config/"
 # REMOTE
-#git = "https://github.com/srbpavel/rust"
-#package = "easy_config"
+git = "https://github.com/srbpavel/rust"
+package = "easy_config"
 #subfolder = { git = "easy_config" } # ???
 
 # TOML CONFIG + ACTIX -> Serialize, Deserialize

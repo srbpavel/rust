@@ -14,5 +14,5 @@ static_dir = "/home/conan/soft/rust/handler_video/storage/"
 [flag]
 # display config
 debug_config = true # false
-# verify dir is available and we can write before each video safe	     
+# verify dir is available and we can write before each video save
 verify_dir_per_video = true # false
