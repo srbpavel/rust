@@ -4,7 +4,7 @@ extern crate serde;
 mod config;
 mod handler_video_toml_config_struct;
 mod handler;
-mod message;
+//mod message;
 mod video;
 mod util;
 mod status;
@@ -23,6 +23,7 @@ async fn main() -> std::io::Result<()> {
     // CONFIG
     let config = config::sample_config(&config_file);
 
+    /*
     //TEST VIDEO STORAGE
     let storage = std::path::Path::new(&*config.static_dir);
 
@@ -37,7 +38,8 @@ async fn main() -> std::io::Result<()> {
             std::process::exit(1)
         },
     };
-    
+    */
+
     //HANDLER
     run(config).await
 }

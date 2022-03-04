@@ -1,5 +1,7 @@
 use crate::{
-    handler::{AppState, Person}, 
+    handler::{AppState,
+              //Person,
+    }, 
     util,
     status,
 };
@@ -43,6 +45,17 @@ pub const SCOPE: &str = "/video";
 pub type VideoKey = String;
 pub type VideoValue = Video;
 
+/// types for binary hash_map
+pub type BinaryValue = Binary;
+
+/// binary
+#[derive(Debug, Clone)]
+pub struct Binary {
+    //pub data: Bytes,
+    pub data: BytesMut,
+    pub filename: String,
+}
+
 /// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
@@ -50,7 +63,7 @@ pub struct Video {
     group: String,
     name: String,
     //path: PathBuf,
-    binary: Vec<u8>,
+    //binary: Vec<u8>,
     //binary: Bytes,
 }
 
@@ -62,13 +75,14 @@ impl Video {
             group: String::from(""),
             name: String::from(""),
             //path: PathBuf::new(),
-            binary: Vec::new(),
+            //binary: Vec::new(),
             //binary: Bytes::new(),
         }
     }
 
-    /// to_debug
-    pub fn debug(&self) -> Self {
+    /*
+    /// view details
+    pub fn detail(&self) -> Self {
         Self {
             binary: Vec::new(),
 
@@ -78,6 +92,7 @@ impl Video {
             name: self.name.to_string(),
         }
     }
+    */
 }
 
 /// file error // FUTURE USE
@@ -205,18 +220,55 @@ pub async fn index(state: web::Data<AppState>,
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);          
     
-    let video = state                                  
+    let all_videos = state                                  
         .video_map
         .lock()                                      
         .unwrap();                                   
 
+    /*
+    all_videos.clone()
+        .iter()
+        .for_each(|(key, mut value)|
+                  //value = &value.detail();
+                  match all_videos.get_mut(&key.clone()) {
+                      Some(video) => {
+                          video.binary = Vec::new();
+                      },
+                      None => {},
+                  }
+        );
+    */
+
+    /* BINARY
+    let mut detail_map = HashMap::new();
+    
+    all_videos
+        .iter()
+        .for_each(|(key, value)| {
+            if let Some(video) = all_videos.clone().get_mut(&key.clone()) {
+
+                let mut video_detail: Video = video.clone();
+                video_detail.binary = Vec::new();
+                
+                detail_map.insert(
+                    key.clone(),
+                    video_detail,
+                    );
+            }}
+        );
+    
+    debug!("ALL_VIDEO: {:?}",
+           detail_map,
+    );
+    */
     
     Ok(                                              
         web::Json(                                   
             IndexResponse {                          
                 server_id: state.server_id,          
                 request_count,        
-                video_map: video.clone(),
+                video_map: all_videos.clone(),
+                //video_map: detail_map,
                 //FUTURE USE
                 status: status::Status::StatusOk.as_string(),
             }                                        
@@ -516,7 +568,7 @@ pub async fn detail(state: web::Data<AppState>,
                     //path: v.path.clone(),
 
                     //binary: v.binary.clone(),
-                    binary: Vec::new(),
+                    //binary: Vec::new(),
                     
                 }
             })
@@ -826,7 +878,7 @@ pub async fn update_group(update: web::Json<UpdateInput>,
                     group: update.group_id.to_string(),
                     name: video.name.clone(),
                     //path: video.path.clone(),
-                    binary: video.binary.clone(),
+                    //binary: video.binary.clone(),
                 }
             )
         },
@@ -1005,6 +1057,11 @@ pub async fn insert_video(mut payload: Multipart,
         .lock() // get access to data inside Mutex + blocks until another thread
         .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
 
+    let mut binary_hashmap = state
+        .binary_map
+        .lock() // get access to data inside Mutex + blocks until another thread
+        .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
+
     let mut groups_list = state
         .groups
         .lock()
@@ -1103,11 +1160,11 @@ pub async fn insert_video(mut payload: Multipart,
                 // FORM
                 match content_disposition.get_filename() {
                     Some(filename) => {
-                        /*
+                        // /*
                         debug!("\ndis_filename: {:?}",
                                filename,
                         );
-                        */
+                        // */
 
                         /* FILESYSTEM
                         // FOR DOWNLOAD/PLAYER or ... url
@@ -1126,12 +1183,14 @@ pub async fn insert_video(mut payload: Multipart,
                         let filepath = new_video.path.clone();
                         */
 
+                        /*
                         // HASH record
                         video_hashmap
                             .insert(
                                 new_video.id.clone(), // KEY: video.id
                                 new_video.clone(), // VALUE: Video {}
                             );
+                        */
 
                         // VEC groups
                         // add new group -> too many clones !!!
@@ -1140,13 +1199,48 @@ pub async fn insert_video(mut payload: Multipart,
                         }
 
                         //let mut binary_data = Bytes::new();
-                        let mut buf =BytesMut::with_capacity(4096);
+                        //let mut buf = BytesMut::with_capacity(1024); //4096
+                        let mut buf = Binary {
+                            data: BytesMut::with_capacity(1024),
+                            filename: filename.to_string(),
+                        };
+
+                        /*
+                        binary_hashmap
+                            .insert(
+                                new_video.id.clone(), // KEY: video.id
+                                buf.clone(), // VALUE: Binary {}
+                            );
+                        */
                         
                         // /* 
                         // ### RAM
+
+                        let mut chunk_counter = 0;
+                        
                         while let Some(chunk) = field.try_next().await? {
+                            chunk_counter += 1;
+                            //debug!("chunk_counter: {chunk_counter}");
+                            
+                            if chunk_counter == 1 {
+                                debug!("hash_create: {chunk_counter}");
+
+                                video_hashmap
+                                    .insert(
+                                        new_video.id.clone(), // KEY: video.id
+                                        new_video.clone(), // VALUE: Video {}
+                                    );
+                            }
+                            
                             //new_video.binary.push(&chunk)
-                            buf.put(&*chunk) 
+                            //buf.put(&*chunk)
+                            buf.data.put(&*chunk);
+
+                            binary_hashmap
+                                .insert(
+                                    new_video.id.clone(), // KEY: video.id
+                                    buf.clone(), // VALUE: Binary {}
+                                );
                             
                             /*
                             //debug!("CHUNK: {:#?}", chunk);
@@ -1170,12 +1264,15 @@ pub async fn insert_video(mut payload: Multipart,
                         );
                         */
 
+                        /* COUNTER
                         video_hashmap
                             .insert(
                                 new_video.id.clone(), // KEY: video.id
                                 new_video.clone(), // VALUE: Video {}
                             );
+                        */
 
+                        /* Binary
                         match video_hashmap.get_mut(&new_video.id) {
                             Some(v) => {
                                 /*
@@ -1196,7 +1293,7 @@ pub async fn insert_video(mut payload: Multipart,
                             None => {},
                             
                         }
-                        
+                        */
                         
                         
                         /* 
@@ -1264,7 +1361,7 @@ pub async fn insert_video(mut payload: Multipart,
         }
 
     // DISABLE binary OUTPUT
-    new_video = new_video.debug();
+    //new_video = new_video.detail();
     
     debug!("{:#?}",
            new_video,
@@ -1278,7 +1375,7 @@ pub async fn insert_video(mut payload: Multipart,
                         server_id: state.server_id,
                         request_count,
                         video: new_video,
-                        //video: new_video.debug();
+                        //video: new_video.detail();
                     }
                 ),
                 status: status.as_string(),
@@ -1287,7 +1384,7 @@ pub async fn insert_video(mut payload: Multipart,
     )
 }
 
-
+// /*
 /// RAM GET DOWNLOAD via hash
 /// 
 /// curl 'http://localhost:8081/video/download/{id}'
@@ -1312,11 +1409,19 @@ pub async fn download(state: web::Data<AppState>,
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
 
+    /*
     let video = state
         .video_map
         .lock()
         .unwrap();
+    */
 
+    let binary = state
+        .binary_map
+        .lock()
+        .unwrap();
+    
+    /*
     // join these two together
     let result = match parsed_idx {
         Some(i) => {
@@ -1325,16 +1430,32 @@ pub async fn download(state: web::Data<AppState>,
                 group: v.group.to_string(),
                 name: v.name.clone(),
                 //path: v.path.clone(),
-                binary: v.binary.clone()
+                //binary: v.binary.clone()
             })
         },
         None => None,
     };
+    */
 
+    // join these two together
+    let result = match parsed_idx {
+        Some(i) => {
+            binary.get(&i).map(|v|
+                               //v.data.clone() // niet goed !!!
+                               Binary {
+                                   data: v.data.clone(),
+                                   filename: v.filename.clone(),
+                               }
+            )
+        },
+        None => None,
+    };
+    
     match result {
         Some(v) => {
             let content = format!("form-data; filename={}",
-                                  v.name,
+                                  v.filename,
+                                  //"FILENAME",
             );
             
             debug!("CONTENT: {content:?}");
@@ -1346,7 +1467,8 @@ pub async fn download(state: web::Data<AppState>,
                     )
                 )
                 // binary data to send
-                .body(v.binary)
+                //.body(v.binary)
+                .body(v.data)
                 
             /* // FILESYSTEM
             match std::fs::read(v.path.clone()) {
@@ -1400,3 +1522,4 @@ pub async fn download(state: web::Data<AppState>,
         },
     }
 }
+// */

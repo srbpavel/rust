@@ -1,7 +1,7 @@
 /// HANDLER
 ///
 use crate::handler_video_toml_config_struct::{TomlConfig};
-use crate::message;
+//use crate::message;
 use crate::video;
 
 use log::{
@@ -49,6 +49,7 @@ static SERVER_ORD: Ordering = Ordering::SeqCst;
 
 //const SURNAME: &'static str = "sRb"; 
 
+/*
 /// person
 #[derive(Debug, Clone)]
 pub struct Person {
@@ -57,7 +58,6 @@ pub struct Person {
     pub age: u8,
 }
 
-/*
 impl FromRequest for Person {
     type Error = Error;
     type Future = Ready<Result<Person, Error>>;
@@ -84,13 +84,15 @@ pub struct AppState {
     // Atomic reference counted pointer
     // Arc can be shared across threads
     // Message
-    pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
+    //pub hash_map: Arc<Mutex<HashMap<usize, String>>>,
     // Video
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     // DataConfig for SCOPE
     // since this, the app is very very slow with video upload
     // find better solution!!!
     // pub config: DataConfig,
+    // data storage in RAM
+    pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
     // list of groups
     pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
@@ -117,6 +119,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     
     // shared msg HashMap for each worker
     // as we want to find via id not index
+    /*
     // Message
     let hash_map =
         Arc::new(                        
@@ -124,9 +127,18 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 HashMap::new()
             )
         );
+    */
 
     // Video
     let video_map =
+        Arc::new(                        
+            Mutex::new(
+                HashMap::new()
+            )
+        );
+
+    // Binary
+    let binary_map =
         Arc::new(                        
             Mutex::new(
                 HashMap::new()
@@ -173,9 +185,11 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 request_count: Cell::new(0), // initial value
                 // create a new pointer for each thread             
                 // message
-                hash_map: hash_map.clone(),
+                //hash_map: hash_map.clone(),
                 // video
                 video_map: video_map.clone(),
+                // binary
+                binary_map: binary_map.clone(),
                 /*
                 // config
                 config: DataConfig {
@@ -194,11 +208,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             // index DISABLED so ROOT return 404
             //.service(index)
             // NO HANDLER FOR 404 yet
+            /*
             // HEALTH // FUTURE USE for tests
             .route("/health_check",
                    web::get()
                    .to(health_check)
             )
+            */
             // SCOPE for ####################### VIDEO
             .service(
                 web::scope(video::SCOPE)
@@ -357,6 +373,7 @@ fn welcome_msg(config: &TomlConfig) -> std::io::Result<String> {
 }
 
 
+/*
 ///
 /// curl -v http://localhost:8081/health_check
 ///
@@ -365,3 +382,4 @@ fn welcome_msg(config: &TomlConfig) -> std::io::Result<String> {
 async fn health_check() -> impl Responder {
     HttpResponse::Ok()
 }
+*/
