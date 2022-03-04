@@ -90,16 +90,18 @@ pub struct AppState {
     // DataConfig for SCOPE
     // since this, the app is very very slow with video upload
     // find better solution!!!
-    pub config: DataConfig,
+    // pub config: DataConfig,
     // list of groups
     pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
 
+/*
 #[derive(Debug, Clone)]
 pub struct DataConfig {
     pub static_dir: String,
     pub verify_dir_per_video: bool,
 }
+*/
 
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
@@ -139,6 +141,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
+    /*
     // tester to app data
     let person = Person {
         first_name: String::from("foookin"),
@@ -147,7 +150,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     };
 
     let person_2 = person.clone();
-    
+    */
+
     // SERVER
     HttpServer::new(move || {
         App::new()
@@ -156,7 +160,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             //.app_data(person_2.clone())
             // data: U
             //.data(person_2.clone())
-            .app_data(Data::new(person_2.clone()))
+            // TESTER person data vs app_data
+            //.app_data(Data::new(person_2.clone()))
             //.app_data(Data::new(AppState {
             //.data(AppState {
             .app_data(Data::new(AppState {
@@ -171,11 +176,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 hash_map: hash_map.clone(),
                 // video
                 video_map: video_map.clone(),
+                /*
                 // config
                 config: DataConfig {
                     static_dir: String::from(config.static_dir.clone()),
                     verify_dir_per_video: config.flag.verify_dir_per_video,
                 },
+                */
                 // groups
                 groups: groups.clone(),
             }))
@@ -192,7 +199,86 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                    web::get()
                    .to(health_check)
             )
+            // SCOPE for ####################### VIDEO
+            .service(
+                web::scope(video::SCOPE)
+                    // /*
+                    // UPLOAD
+                    .service(
+                        web::resource("/put")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                    // NO LIMIT for VIDEO
+                                    //.limit(4096)
+                                )
+                            )
+                            /*
+                            .data(web::JsonConfig::default()
+                                  // NO LIMIT for VIDEO
+                                  //.limit(4096)
+                            )
+                            */
+                            .route(web::put()
+                                   .to(video::insert_video)
+                            )
+                    )
+                    // */
+                    // INDEX
+                    .service(
+                        // TRY COMBINE BOTH as you LEARN
+                        // has to be call as: /video/
+                        web::resource("/")
+                        // has to be call as: /video
+                        //web::resource("") 
+                            .route(web::get()
+                                   .to(video::index)
+                            )
+                    )
+                    // FS -> RAM 
+                    .service(video::download) // <- /video/download/123
+                    .service(video::detail) // <- /video/detail/123
+                    // FLUSH all msg from Hash
+                    .service(video::clear)
+                    // DELETE via id
+                    .service(                            
+                        web::resource("/delete/{index}") 
+                        // HTTP DELETE
+                            .route(web::delete()
+                                   .to(video::delete)           
+                            ),                           
+                    )
+                    // LIST group members
+                    .service(video::list_group)
+                    // ALL GROUPS
+                    .service(
+                        web::resource("/groups")
+                            .route(web::get()
+                                   .to(video::list_groups)
+                            )
+                    )
+                    // UPDATE group_id for single video
+                    //.service(video::update_group)
+                    .service(
+                        web::resource("/update/group")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                        .limit(4096)
+                                )
+                            )
+                            /*
+                            .data(web::JsonConfig::default()
+                                  .limit(4096)
+                            )
+                            */
+                            .route(web::post()
+                                   .to(video::update_group)
+                            ),
+                    )
+            )
             // SCOPE for ####################### MESSAGES
+            /*
             .service(
                 web::scope("/msg")
                     // INDEX INSIDE scopes !!!
@@ -238,83 +324,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                             ),                           
                     )
             )
-            // SCOPE for ####################### VIDEO
-            .service(
-                web::scope(video::SCOPE)
-                    // /*
-                    // UPLOAD
-                    .service(
-                        web::resource("/put")
-                            .app_data(
-                                Data::new(
-                                    JsonConfig::default()
-                                    // NO LIMIT for VIDEO
-                                    //.limit(4096)
-                                )
-                            )
-                            /*
-                            .data(web::JsonConfig::default()
-                                  // NO LIMIT for VIDEO
-                                  //.limit(4096)
-                            )
-                            */
-                            .route(web::put()
-                                   .to(video::insert_video)
-                            )
-                    )
-                    // */
-                    // INDEX
-                    .service(
-                        // TRY COMBINE BOTH as you LEARN
-                        // has to be call as: /video/
-                        web::resource("/")
-                        // has to be call as: /video
-                        //web::resource("") 
-                            .route(web::get()
-                                   .to(video::index)
-                            )
-                    )
-                    .service(video::download) // <- /video/download/123
-                    .service(video::detail) // <- /video/detail/123
-                    // FLUSH all msg from Hash
-                    .service(video::clear)
-                    // DELETE via id
-                    .service(                            
-                        web::resource("/delete/{index}") 
-                        // HTTP DELETE
-                            .route(web::delete()
-                                   .to(video::delete)           
-                            ),                           
-                    )
-                    // LIST group members
-                    .service(video::list_group)
-                    // ALL GROUPS
-                    .service(
-                        web::resource("/groups")
-                            .route(web::get()
-                                   .to(video::list_groups)
-                            )
-                    )
-                    // UPDATE group_id for single video
-                    //.service(video::update_group)
-                    .service(
-                        web::resource("/update/group")
-                            .app_data(
-                                Data::new(
-                                    JsonConfig::default()
-                                        .limit(4096)
-                                )
-                            )
-                            /*
-                            .data(web::JsonConfig::default()
-                                  .limit(4096)
-                            )
-                            */
-                            .route(web::post()
-                                   .to(video::update_group)
-                            ),
-                    )
-            )
+            */
     }
     )
         // https://actix.rs/docs/server/

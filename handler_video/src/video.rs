@@ -31,6 +31,10 @@ use std::path::{Path,
                 PathBuf,
 };
 use uuid::Uuid;
+use bytes::{Bytes,
+            BytesMut,
+            BufMut,
+};
 
 /// scope
 pub const SCOPE: &str = "/video";
@@ -45,7 +49,9 @@ pub struct Video {
     id: String,
     group: String,
     name: String,
-    path: PathBuf,
+    //path: PathBuf,
+    binary: Vec<u8>,
+    //binary: Bytes,
 }
 
 impl Video {
@@ -55,7 +61,21 @@ impl Video {
             id: String::from(""),
             group: String::from(""),
             name: String::from(""),
-            path: PathBuf::new(),
+            //path: PathBuf::new(),
+            binary: Vec::new(),
+            //binary: Bytes::new(),
+        }
+    }
+
+    /// to_debug
+    pub fn debug(&self) -> Self {
+        Self {
+            binary: Vec::new(),
+
+            //..&self
+            id: self.id.to_string(),
+            group: self.group.to_string(),
+            name: self.name.to_string(),
         }
     }
 }
@@ -153,7 +173,7 @@ pub struct DeleteResponse {
 ///
 pub async fn index(state: web::Data<AppState>,
                    // .data()
-                   _person: web::Data<Person>,
+                   //_person: web::Data<Person>,
 //) -> Result<web::Json<IndexResponse>> {
                    // .app_data()
                    _req: HttpRequest) -> Result<web::Json<IndexResponse>> {
@@ -492,8 +512,12 @@ pub async fn detail(state: web::Data<AppState>,
                 Video {
                     id: i,
                     group: v.group.to_string(),
-                    path: v.path.clone(),
                     name: v.name.clone(),
+                    //path: v.path.clone(),
+
+                    //binary: v.binary.clone(),
+                    binary: Vec::new(),
+                    
                 }
             })
         },
@@ -503,7 +527,7 @@ pub async fn detail(state: web::Data<AppState>,
             None
         },
     };
-    
+
     Ok(
         web::Json(
             DetailResponse {
@@ -518,7 +542,7 @@ pub async fn detail(state: web::Data<AppState>,
     )
 }
 
-
+/*
 /// GET DOWNLOAD via hash
 /// 
 /// curl 'http://localhost:8081/video/download/{id}'
@@ -554,7 +578,7 @@ pub async fn download(state: web::Data<AppState>,
             video.get(&i).map(|v| Video {
                 id: i.to_string(),
                 group: v.group.to_string(),
-                path: v.path.clone(),
+                //path: v.path.clone(),
                 name: v.name.clone(),
             })
         },
@@ -563,10 +587,27 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
+            let content = format!("form-data; filename={}",
+                                  v.name,
+            );
+            
+            debug!("CONTENT: {content:?}");
+            
+            HttpResponse::Ok()
+                .append_header(
+                    ("Content-Disposition",
+                     content,
+                    )
+                )
+                // binary data to send
+                .body(v)
+                
+            /* // FILESYSTEM
             match std::fs::read(v.path.clone()) {
                 Ok(data) => {
                     // just filename without path?
                     let content = format!("form-data; filename={}",
+                                          // FILESYSTEM
                                           match v.path.to_str() {
                                               Some(p) => p,
                                               // should not occure as verified?
@@ -599,6 +640,7 @@ pub async fn download(state: web::Data<AppState>,
                     )
                 },
             }
+            */
         },
 
         None => {
@@ -612,7 +654,7 @@ pub async fn download(state: web::Data<AppState>,
         },
     }
 }
-
+*/
 
 /// flush video_map Hash
 ///
@@ -695,10 +737,14 @@ pub async fn delete(state: web::Data<AppState>,
             match video_hashmap.get_mut(&i) {
                 Some(record) => {
                     // validate path not permission
-                    if Path::new(&record.path).exists() {
+                    // FILESYSTEM
+                    //if Path::new(&record.path).exists() {
+                    if !&record.name.eq("") {
                         // first we remove video Struct
                         match video_hashmap.remove(&i) {
                             Some(response_record) => {
+                                status::Status::DeleteOk.as_string()
+                                /* FILESYSTEM
                                 // then file -> we use response data path
                                 match std::fs::remove_file(&response_record.path) {
                                     Ok(_) => status::Status::DeleteOk.as_string(),
@@ -717,6 +763,7 @@ pub async fn delete(state: web::Data<AppState>,
                                         )
                                     }
                                 }
+                                */
                             },
                             None => status::Status::DeleteError.as_string(),
                         }
@@ -777,8 +824,9 @@ pub async fn update_group(update: web::Json<UpdateInput>,
                 Video {
                     id: video.id.clone(),
                     group: update.group_id.to_string(),
-                    path: video.path.clone(),
                     name: video.name.clone(),
+                    //path: video.path.clone(),
+                    binary: video.binary.clone(),
                 }
             )
         },
@@ -923,6 +971,8 @@ pub async fn insert_video(mut payload: Multipart,
 
     // decide sequence -> first verify storage or headers/form?
     // just in single dir for now, will seed to various dirs later
+
+    /* // FILESYTEM
     //VERIFY STORAGE
     let path_to_verify = PathBuf::from(&*state.config.static_dir);
 
@@ -943,7 +993,8 @@ pub async fn insert_video(mut payload: Multipart,
             )                                                
         },
     };
-
+    */
+    
     // Cell
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);
@@ -1058,6 +1109,7 @@ pub async fn insert_video(mut payload: Multipart,
                         );
                         */
 
+                        /* FILESYSTEM
                         // FOR DOWNLOAD/PLAYER or ... url
                         new_video.path = Path::new(
                             // STORAGE via config
@@ -1072,7 +1124,8 @@ pub async fn insert_video(mut payload: Multipart,
                         
                         // another clone but WE NEED AT THE very END
                         let filepath = new_video.path.clone();
-                        
+                        */
+
                         // HASH record
                         video_hashmap
                             .insert(
@@ -1086,6 +1139,67 @@ pub async fn insert_video(mut payload: Multipart,
                             groups_list.push(new_group.clone());
                         }
 
+                        //let mut binary_data = Bytes::new();
+                        let mut buf =BytesMut::with_capacity(4096);
+                        
+                        // /* 
+                        // ### RAM
+                        while let Some(chunk) = field.try_next().await? {
+                            //new_video.binary.push(&chunk)
+                            buf.put(&*chunk) 
+                            
+                            /*
+                            //debug!("CHUNK: {:#?}", chunk);
+                            f = web::block(move || {
+                                let mut g = f.unwrap(); // fookin baaad
+
+                                g.write_all(&chunk)
+                                    .map(|_| g)
+
+                            }).await?;
+                            */
+                        };
+                        // */
+                        
+                        //let buf_clone = buf.clone();
+
+                        /*
+                        debug!("BYTES: {:?}\n VEC: {:?}",
+                               buf,
+                               buf.to_vec(),
+                        );
+                        */
+
+                        video_hashmap
+                            .insert(
+                                new_video.id.clone(), // KEY: video.id
+                                new_video.clone(), // VALUE: Video {}
+                            );
+
+                        match video_hashmap.get_mut(&new_video.id) {
+                            Some(v) => {
+                                /*
+                                debug!("HASH_VIDEO: {:?}",
+                                       v,
+                                );
+                                */
+
+                                //v.binary = buf_clone.to_vec();
+                                v.binary = buf.clone().to_vec();
+
+                                /*
+                                debug!("HASH_VIDEO_AFTER: {:?}",
+                                       v,
+                                );
+                                */
+                            },
+                            None => {},
+                            
+                        }
+                        
+                        
+                        
+                        /* 
                         // ### FILE
                         // block -> future to result
                         let mut f = web::block(||
@@ -1122,6 +1236,7 @@ pub async fn insert_video(mut payload: Multipart,
                                 */
                             }).await?;
                         };
+                        */
 
                         status = status::Status::UploadDone;
                     },
@@ -1147,8 +1262,13 @@ pub async fn insert_video(mut payload: Multipart,
                 )
             }
         }
+
+    // DISABLE binary OUTPUT
+    new_video = new_video.debug();
     
-    debug!("{new_video:#?}");
+    debug!("{:#?}",
+           new_video,
+    );
 
     Ok(
         web::Json(
@@ -1158,10 +1278,125 @@ pub async fn insert_video(mut payload: Multipart,
                         server_id: state.server_id,
                         request_count,
                         video: new_video,
+                        //video: new_video.debug();
                     }
                 ),
                 status: status.as_string(),
             }
         )
     )
+}
+
+
+/// RAM GET DOWNLOAD via hash
+/// 
+/// curl 'http://localhost:8081/video/download/{id}'
+///
+#[get("/download/{idx}")]
+pub async fn download(state: web::Data<AppState>,
+                      idx: web::Path<String>) -> HttpResponse {
+
+    let to_parse_idx = idx.into_inner();
+
+    let parsed_idx = match to_parse_idx.parse::<String>() {
+        Ok(i) => {
+            Some(i)
+        },
+        Err(why) => {
+            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
+
+            None
+        },
+    };
+
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    let video = state
+        .video_map
+        .lock()
+        .unwrap();
+
+    // join these two together
+    let result = match parsed_idx {
+        Some(i) => {
+            video.get(&i).map(|v| Video {
+                id: i.to_string(),
+                group: v.group.to_string(),
+                name: v.name.clone(),
+                //path: v.path.clone(),
+                binary: v.binary.clone()
+            })
+        },
+        None => None,
+    };
+
+    match result {
+        Some(v) => {
+            let content = format!("form-data; filename={}",
+                                  v.name,
+            );
+            
+            debug!("CONTENT: {content:?}");
+            
+            HttpResponse::Ok()
+                .append_header(
+                    ("Content-Disposition",
+                     content,
+                    )
+                )
+                // binary data to send
+                .body(v.binary)
+                
+            /* // FILESYSTEM
+            match std::fs::read(v.path.clone()) {
+                Ok(data) => {
+                    // just filename without path?
+                    let content = format!("form-data; filename={}",
+                                          // FILESYSTEM
+                                          match v.path.to_str() {
+                                              Some(p) => p,
+                                              // should not occure as verified?
+                                              None => "FILENAME",
+                                          },
+                    );
+
+                    //println!("CONTENT: {content:?}");
+
+                    // here as HttpResponse, try to find more ways + add enum msg
+                    HttpResponse::Ok()
+                        .append_header(
+                            ("Content-Disposition",
+                             content,
+                            )
+                        )
+                        /*
+                        .header("Content-Disposition",
+                                content,
+                        )
+                        */
+                        .body(data)
+                },
+                Err(why) => {
+                    //file not found or permission
+                    HttpResponse::NotFound().json(
+                        &File {
+                            err: format!("{why:?}")
+                        }
+                    )
+                },
+            }
+            */
+        },
+
+        None => {
+            //id not found
+            HttpResponse::NotFound().json(
+                &File {
+                    err: "id does not exist".to_string(),
+                    
+                }
+            )
+        },
+    }
 }
