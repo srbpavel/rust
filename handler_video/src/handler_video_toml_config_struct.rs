@@ -10,9 +10,7 @@ pub struct TomlConfig {
     pub server: MyStr,
     pub port: u64,
     pub workers: usize,
-    //pub static_dir: MyStr,
     pub log_format: MyStr,
-    pub video_size_limit: u64,
 
     pub flag: Flag,
 }
@@ -20,5 +18,4 @@ pub struct TomlConfig {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Flag {
     pub debug_config: bool,
-    //pub verify_dir_per_video: bool,
 }

@@ -8,11 +8,9 @@ port = 8081
 workers = 4
 # https://actix.rs/docs/middleware/
 log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
-# video persistent storage
-static_dir = "/home/conan/soft/rust/handler_video/storage/"
+
 
 [flag]
 # display config
 debug_config = true # false
-# verify dir is available and we can write before each video save
-verify_dir_per_video = true # false
+

@@ -26,8 +26,8 @@ pub fn sample_config(config_filename: &str) -> TomlConfig {
 
     // DEBUG CONFIG
     if config.flag.debug_config {
-        println!("\n#CONFIG:\n{:#?}",
-                 config,
+        log::debug!("\n#CONFIG:\n{:#?}",
+                    config,
         );
     };
 
