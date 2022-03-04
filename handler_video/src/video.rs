@@ -74,25 +74,8 @@ impl Video {
             id: String::from(""),
             group: String::from(""),
             name: String::from(""),
-            //path: PathBuf::new(),
-            //binary: Vec::new(),
-            //binary: Bytes::new(),
         }
     }
-
-    /*
-    /// view details
-    pub fn detail(&self) -> Self {
-        Self {
-            binary: Vec::new(),
-
-            //..&self
-            id: self.id.to_string(),
-            group: self.group.to_string(),
-            name: self.name.to_string(),
-        }
-    }
-    */
 }
 
 /// file error // FUTURE USE
@@ -104,8 +87,8 @@ struct File {
 /// all videos
 #[derive(Serialize, Debug)]
 pub struct IndexResponse {     
-    server_id: usize,      
-    request_count: usize,  
+    //server_id: usize,      
+    //request_count: usize,  
     //not as Option yet
     video_map: HashMap<VideoKey, VideoValue>,
     status: String,
@@ -114,8 +97,8 @@ pub struct IndexResponse {
 /// group members
 #[derive(Serialize, Debug)]
 pub struct ListResponse {     
-    server_id: usize,      
-    request_count: usize,  
+    //server_id: usize,      
+    //request_count: usize,  
     result: Option<HashMap<VideoKey, VideoValue>>,
     status: String,
 }
@@ -123,8 +106,8 @@ pub struct ListResponse {
 /// all groups
 #[derive(Serialize, Debug)]
 pub struct GroupsResponse {     
-    server_id: usize,      
-    request_count: usize,  
+    //server_id: usize,      
+    //request_count: usize,  
     result: Option<Vec<String>>,
     status: String,
 }
@@ -147,8 +130,8 @@ pub struct UploadResponse {
 /// valid upload
 #[derive(Serialize, Debug)]
 pub struct PostOk {
-    server_id: usize,
-    request_count: usize,
+    //server_id: usize,
+    //request_count: usize,
     video: Video,
 }
 
@@ -161,8 +144,8 @@ struct PostError {
 /// detail
 #[derive(Serialize, Debug)]                               
 pub struct DetailResponse {                                   
-    server_id: usize,                                     
-    request_count: usize,                                 
+    //server_id: usize,                                     
+    //request_count: usize,                                 
     result: Option<Video>, // None in JSON will be "null"
     url: String,
     status: String,
@@ -217,8 +200,8 @@ pub async fn index(state: web::Data<AppState>,
     );
     */
 
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);          
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);          
     
     let all_videos = state                                  
         .video_map
@@ -265,8 +248,8 @@ pub async fn index(state: web::Data<AppState>,
     Ok(                                              
         web::Json(                                   
             IndexResponse {                          
-                server_id: state.server_id,          
-                request_count,        
+                //server_id: state.server_id,          
+                //request_count,        
                 video_map: all_videos.clone(),
                 //video_map: detail_map,
                 //FUTURE USE
@@ -544,8 +527,8 @@ pub async fn detail(state: web::Data<AppState>,
         },
     };
 
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
 
     let video = state
         .video_map
@@ -583,8 +566,8 @@ pub async fn detail(state: web::Data<AppState>,
     Ok(
         web::Json(
             DetailResponse {
-                server_id: state.server_id,
-                request_count,
+                //server_id: state.server_id,
+                //request_count,
                 result,
                 url,
                 //FUTURE USE
@@ -714,8 +697,9 @@ pub async fn download(state: web::Data<AppState>,
 ///
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
 
     let mut all_videos = state
         .video_map
@@ -728,8 +712,8 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
     Ok(
         web::Json(
             IndexResponse {
-                server_id: state.server_id,
-                request_count,
+                //server_id: state.server_id,
+                //request_count,
                 video_map: HashMap::new(), // no need to create new as we have old
                 //video_map: ms.clone(), // ok but expenssive?
                 // FUTURE USE
@@ -773,8 +757,8 @@ pub async fn delete(state: web::Data<AppState>,
     //println!("PARSED_IDX: {parsed_idx:?}");
     
     // we still add to this thread counter
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
 
     // we lock msg vec, but now as MUT because we delete
     let mut video_hashmap = state
@@ -854,8 +838,8 @@ pub async fn update_group(update: web::Json<UpdateInput>,
     );
     
     // Cell
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
     
     // we lock and have access to HashMap messages
     let mut video_hashmap = state
@@ -888,8 +872,8 @@ pub async fn update_group(update: web::Json<UpdateInput>,
     Ok(
         web::Json(
             DetailResponse {
-                server_id: state.server_id,
-                request_count,
+                //server_id: state.server_id,
+                //request_count,
                 result,
                 url,
                 //FUTURE USE
@@ -910,8 +894,8 @@ pub async fn list_group(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);          
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);          
     
     let video = state                                  
         .video_map
@@ -958,8 +942,8 @@ pub async fn list_group(state: web::Data<AppState>,
     Ok(                                              
         web::Json(                                   
             ListResponse {                          
-                server_id: state.server_id,          
-                request_count,        
+                //server_id: state.server_id,          
+                //request_count,        
                 result,
                 //FUTURE USE
                 status: status.as_string(),
@@ -974,8 +958,9 @@ pub async fn list_group(state: web::Data<AppState>,
 /// curl 'http://localhost:8081/video/groups'
 ///
 pub async fn list_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsResponse>> {
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);          
+
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);          
     
     let all_groups = state                                  
         .groups
@@ -998,8 +983,8 @@ pub async fn list_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsR
     Ok(                                              
         web::Json(                                   
             GroupsResponse {                          
-                server_id: state.server_id,          
-                request_count,        
+                //server_id: state.server_id,          
+                //request_count,        
                 result,
                 //FUTURE USE
                 status: status.as_string(),
@@ -1048,8 +1033,8 @@ pub async fn insert_video(mut payload: Multipart,
     */
     
     // Cell
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
 
     // we lock and have access to HashMap messages
     let mut video_hashmap = state
@@ -1372,8 +1357,8 @@ pub async fn insert_video(mut payload: Multipart,
             UploadResponse {
                 result: Some(
                     PostOk {
-                        server_id: state.server_id,
-                        request_count,
+                        //server_id: state.server_id,
+                        //request_count,
                         video: new_video,
                         //video: new_video.detail();
                     }
@@ -1406,8 +1391,8 @@ pub async fn download(state: web::Data<AppState>,
         },
     };
 
-    let request_count = state.request_count.get() + 1;
-    state.request_count.set(request_count);
+    //let request_count = state.request_count.get() + 1;
+    //state.request_count.set(request_count);
 
     /*
     let video = state
