@@ -1,4 +1,4 @@
-use std::{path::PathBuf,
+use std::{path::Path,
           io::{
               Error,
               ErrorKind,
@@ -41,7 +41,7 @@ impl DirStatus {
 
 
 /// verify dir is available and we are allowed to write
-pub fn verify_dir(storage: &PathBuf,
+pub fn verify_dir(storage: &Path,
                   write: bool) -> Result<(), Error> {
 
     if !storage.exists() {
@@ -56,25 +56,23 @@ pub fn verify_dir(storage: &PathBuf,
             )
         )
         
-    } else {
-        if write {
-            // touch file -> delete later when proof enough
-            match std::fs::File::create(storage.join("touch.verify")) {
-                Ok(_) => {},
-                Err(why) => {
-                    return Err(
-                        Error::new(
-                            ErrorKind::Other,
-                            DirStatus::AccessPermission.as_string(
-                                &format!("{:?}\nREASON >>> {:?}",
-                                         storage,
-                                         why,
-                                )
-                            ),
-                        )
+    } else if write {
+        // touch file -> delete later when proof enough
+        match std::fs::File::create(storage.join("touch.verify")) {
+            Ok(_) => {},
+            Err(why) => {
+                return Err(
+                    Error::new(
+                        ErrorKind::Other,
+                        DirStatus::AccessPermission.as_string(
+                            &format!("{:?}\nREASON >>> {:?}",
+                                     storage,
+                                     why,
+                            )
+                        ),
                     )
-                },
-            }
+                )
+            },
         }
     }
     

@@ -1,16 +1,24 @@
 use crate::{
-    handler::AppState,
+    handler::{AppState, Person}, 
     util,
     status,
+};
+
+use log::{
+    debug,
+    //error,
+    //info,
 };
 
 use actix_web::{
     get,
     post,
     web,
+    //dev,
     Result,
     HttpResponse,
     HttpRequest,
+    //Responder,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
@@ -93,6 +101,14 @@ pub struct PostResponse {
     status: String,
 }
 
+/// new upload 
+#[derive(Serialize, Debug)]
+pub struct UploadResponse {
+    //result: Option<String>,
+    result: Option<PostOk>,
+    status: String,
+}
+
 /// valid upload
 #[derive(Serialize, Debug)]
 pub struct PostOk {
@@ -135,7 +151,37 @@ pub struct DeleteResponse {
 ///
 /// for debug purpose as tested with dozen records not milions yet
 ///
-pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+pub async fn index(state: web::Data<AppState>,
+                   // .data()
+                   _person: web::Data<Person>,
+//) -> Result<web::Json<IndexResponse>> {
+                   // .app_data()
+                   _req: HttpRequest) -> Result<web::Json<IndexResponse>> {
+    /* LOG 
+    //dbg!(&state);
+    //info!("info_index");
+    debug!("debug: {state:?}");
+    //error!("error");
+    */
+
+    /* DEBUG
+    debug!("req: {:#?}\nheaders: {:#?}\napp_data_state: {:#?}\napp_data_person: {:?}\nperson: {:?}",
+           req,
+           req.headers(),
+           req.app_data::<web::Data<AppState>>(),
+           req.app_data::<web::Data<Person>>(),
+           person,
+    );
+    */
+    
+    /*
+    // person is inside Data
+    debug!("debug: {:#?} -> age:{:?}",
+           person,
+           person.age,
+    );
+    */
+
     let request_count = state.request_count.get() + 1;
     state.request_count.set(request_count);          
     
@@ -143,6 +189,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .video_map
         .lock()                                      
         .unwrap();                                   
+
     
     Ok(                                              
         web::Json(                                   
@@ -158,6 +205,7 @@ pub async fn index(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 }
 
 
+/*
 /// PUT new video
 ///
 /// curl -X PUT 'http://localhost:8081/video/put
@@ -394,7 +442,7 @@ pub async fn insert_video(mut payload: Multipart,
         )
     )
 }
-
+*/
 
 /// GET detail via hash
 /// 
@@ -530,9 +578,16 @@ pub async fn download(state: web::Data<AppState>,
 
                     // here as HttpResponse, try to find more ways + add enum msg
                     HttpResponse::Ok()
+                        .append_header(
+                            ("Content-Disposition",
+                             content,
+                            )
+                        )
+                        /*
                         .header("Content-Disposition",
                                 content,
                         )
+                        */
                         .body(data)
                 },
                 Err(why) => {
@@ -851,4 +906,262 @@ pub async fn list_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsR
             }                                        
         )                                            
     )                                                
+}
+
+
+/// VERSION new video
+///
+pub async fn insert_video(mut payload: Multipart,
+                          state: web::Data<AppState>,
+                          //req: HttpRequest) -> Result<web::Json<PostResponse>> {
+                          //req: HttpRequest)  -> impl Responder {
+                          req: HttpRequest)  -> Result<web::Json<UploadResponse>> {
+
+    debug!("REQ: {:?}",
+           req,
+    );
+
+    // decide sequence -> first verify storage or headers/form?
+    // just in single dir for now, will seed to various dirs later
+    //VERIFY STORAGE
+    let path_to_verify = PathBuf::from(&*state.config.static_dir);
+
+    match util::verify_dir(&path_to_verify,
+                           state.config.verify_dir_per_video,
+    ) {
+        Ok(_) => {},
+        Err(err) => {
+            // curl: (55) Send failure: Connection reset by peer
+            // but still we receive JSON response with status
+            return     Ok(                                              
+                web::Json(                                   
+                    UploadResponse {                          
+                        result: None,
+                        status: err.to_string(),
+                    }                                        
+                )                                            
+            )                                                
+        },
+    };
+
+    // Cell
+    let request_count = state.request_count.get() + 1;
+    state.request_count.set(request_count);
+
+    // we lock and have access to HashMap messages
+    let mut video_hashmap = state
+        .video_map
+        .lock() // get access to data inside Mutex + blocks until another thread
+        .unwrap(); // -> MutexGuard<Vec<String>> // will panic on Err !!!
+
+    let mut groups_list = state
+        .groups
+        .lock()
+        .unwrap();
+
+    let mut status = status::Status::Init;//.as_string();
+    let mut new_video = Video::default();
+
+    //debug!("HEADERS: {:?}", req.headers());
+    // VIDEO_ID
+    match req.headers().get("video_id") {
+        Some(id) => {  // HeaderValue
+            new_video.id = id
+                .to_str()
+                //.unwrap() // NOT SAFE
+                // we will rather return Err msg instead generate uuid
+                .unwrap_or(&Uuid::new_v4()
+                           .to_string()
+                )
+                .to_string();
+        },
+        None => {
+            // curl: (55) Send failure: Connection reset by peer
+            // but still we receive JSON response with status
+            return Ok(
+                web::Json(
+                    UploadResponse {                          
+                        result: None,
+                        status: status::Status::EmptyVideoId.as_string(),
+                    }                                        
+                )
+            )
+        },
+    }
+
+    // GROUP
+    match req.headers().get("group") {
+        Some(group) => {
+            new_video.group = group
+                .to_str()
+                .unwrap() // NOT SAFE
+                .to_string()
+                
+        },
+        None => {
+            return Ok(
+                web::Json(
+                    UploadResponse {                          
+                        result: None,
+                        status: status::Status::EmptyGroupId.as_string(),
+                    }
+                )
+            )
+        },
+    }
+    
+    //debug!("{new_video:#?}");
+
+    let new_group = new_video.group.clone();
+
+    // iterate over multipart stream
+    // https://actix.rs/actix-web/actix_multipart/struct.Field.html
+    let mut content_counter = 0;
+
+    while let Some(mut field) = payload
+        .try_next()
+        .await? {
+            content_counter += 1;
+
+            // we only accept one form with file
+            if content_counter == 1 {
+                let content_disposition = field.content_disposition();
+
+                match content_disposition.get_name() {
+                    Some(name) => {
+                        /*
+                        debug!("\ndis_name: {:?}",
+                               name,
+                        );
+                        */
+
+                        new_video.name = String::from(name);
+                    },
+                    None =>{
+                        return Ok(
+                            web::Json(
+                                UploadResponse {
+                                    result: None,
+                                    status: status::Status::EmptyFormName.as_string(),
+                                }
+                            )
+                        )
+                    },
+                }
+
+                // FORM
+                match content_disposition.get_filename() {
+                    Some(filename) => {
+                        /*
+                        debug!("\ndis_filename: {:?}",
+                               filename,
+                        );
+                        */
+
+                        // FOR DOWNLOAD/PLAYER or ... url
+                        new_video.path = Path::new(
+                            // STORAGE via config
+                            // find better way then in .data() !!!
+                            &state.config.static_dir)
+                            .join(
+                                format!("{}_{}",
+                                        new_video.id,
+                                        filename,
+                                )
+                            );
+                        
+                        // another clone but WE NEED AT THE very END
+                        let filepath = new_video.path.clone();
+                        
+                        // HASH record
+                        video_hashmap
+                            .insert(
+                                new_video.id.clone(), // KEY: video.id
+                                new_video.clone(), // VALUE: Video {}
+                            );
+
+                        // VEC groups
+                        // add new group -> too many clones !!!
+                        if !groups_list.contains(&new_group) {
+                            groups_list.push(new_group.clone());
+                        }
+
+                        // ### FILE
+                        // block -> future to result
+                        let mut f = web::block(||
+                                               std::fs::File::create(filepath) 
+                                               
+                        ).await?;
+
+                        //debug!("F: {f:?}");
+                        //status = status::Status::UploadStarted;
+                        
+                        // stream of *Bytes* object
+                        while let Some(chunk) = field.try_next().await? {
+                            //debug!("CHUNK: {:#?}", chunk);
+                            f = web::block(move || {
+                                let mut g = f.unwrap(); // fookin baaad
+
+                                g.write_all(&chunk)
+                                    .map(|_| g)
+
+                                /*
+                                let mut g = match f {
+                                    Ok(file) => file,
+                                    Err(why) => {
+                                        return Ok(
+                                            web::Json(
+                                                UploadResponse {
+                                                    result: None,
+                                                    status: why,
+                                                }
+                                            )
+                                        )
+                                    },
+                                };
+                                */
+                            }).await?;
+                        };
+
+                        status = status::Status::UploadDone;
+                    },
+                    None =>{
+                        return Ok(
+                            web::Json(
+                                UploadResponse {
+                                    result: None,
+                                    status: status::Status::EmptyFormFilename.as_string(),
+                                }
+                            )
+                        )
+                    },
+                }
+            } else {
+                return Ok(
+                    web::Json(
+                        UploadResponse {
+                            result: None,
+                            status: status::Status::TooManyForms.as_string(),
+                        }
+                    )
+                )
+            }
+        }
+    
+    debug!("{new_video:#?}");
+
+    Ok(
+        web::Json(
+            UploadResponse {
+                result: Some(
+                    PostOk {
+                        server_id: state.server_id,
+                        request_count,
+                        video: new_video,
+                    }
+                ),
+                status: status.as_string(),
+            }
+        )
+    )
 }

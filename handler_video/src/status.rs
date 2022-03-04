@@ -17,6 +17,8 @@ pub enum Status {
     VideoIdNotFound,
     VideoIdWrongFormat,
     FileNotFound,
+    UploadStarted,
+    UploadDone,
     // GROUP
     GroupFound,
     GroupNotFound,
@@ -60,7 +62,9 @@ impl Status {
             Self::VideoIdNotFound => String::from("video_id not found"),
             Self::VideoIdWrongFormat => String::from("video_id wrong format"),
             Self::FileNotFound => String::from("file not found"),
-
+            Self::UploadStarted => String::from("upload started"),
+            Self::UploadDone => String::from("upload finished"),
+            
             Self::GroupFound => String::from("group found"),
             Self::GroupNotFound => String::from("group not found"),
             Self::GroupsAvailable => String::from("some groups found"),

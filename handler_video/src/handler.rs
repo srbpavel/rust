@@ -4,14 +4,33 @@ use crate::handler_video_toml_config_struct::{TomlConfig};
 use crate::message;
 use crate::video;
 
+use log::{
+    //debug,
+    //error,
+    info,
+};
+
 use actix_web::{
-    web,
+    web::{
+        self,
+        Data,
+        JsonConfig
+    },
     middleware,
     App,
     HttpServer,
     HttpResponse,
     Responder,
+
+    //FromRequest,
+    //HttpRequest,
+    //Error,
+    //dev::Payload,
+    //dev::ServiceRequest,
+    //error::ErrorBadRequest,
 };
+
+//use futures::future::{Ready, ok, err};
 
 use std::cell::Cell;                
 use std::sync::atomic::{AtomicUsize,
@@ -27,6 +46,33 @@ use std::collections::HashMap;
 /// counters
 static SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 static SERVER_ORD: Ordering = Ordering::SeqCst;
+
+//const SURNAME: &'static str = "sRb"; 
+
+/// person
+#[derive(Debug, Clone)]
+pub struct Person {
+    pub first_name: String,
+    pub last_name: String,
+    pub age: u8,
+}
+
+/*
+impl FromRequest for Person {
+    type Error = Error;
+    type Future = Ready<Result<Person, Error>>;
+    type Config = ();
+
+    fn from_request(req: &HttpRequest, pl: &mut Payload) -> futures_util::future::Ready<Result<Person, actix_web::Error>> {
+        //req.app_data::<web::Data<Person>>()
+        match req.app_data::<web::Data<Person>>() {
+            Some(p) => return ok(p.into_inner()),
+            None => err(ErrorBadRequest("fail")),
+        }
+        //err(ErrorBadRequest("fail"))
+    }
+}
+*/
 
 /// this is for each WORKER thread     
 #[derive(Debug)]                       
@@ -58,15 +104,15 @@ pub struct DataConfig {
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     // DEBUG VERBOSE
+    // https://actix.rs/docs/errors/
     std::env::set_var("RUST_BACKTRACE", "1");
     // EVEN LOG -> stdout
-    std::env::set_var("RUST_LOG", "actix_web=debug,actix_server=info");
+    std::env::set_var("RUST_LOG", "handler_video=debug,actix_web=debug,actix_server=info");
     env_logger::init();
+    //debug!("debug");
+    //error!("error");
+    info!("{}", welcome_msg(&config)?,);
     
-    println!("{}",
-             welcome_msg(&config)?,
-    );
-
     // shared msg HashMap for each worker
     // as we want to find via id not index
     // Message
@@ -92,12 +138,28 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 Vec::new()
             )
         );
-    
+
+    // tester to app data
+    let person = Person {
+        first_name: String::from("foookin"),
+        last_name: String::from("paavel"),
+        age: 43,
+    };
+
+    let person_2 = person.clone();
     
     // SERVER
     HttpServer::new(move || {
         App::new()
-            .data(AppState {                                        
+            // https://docs.rs/actix-web/3.3.3/actix_web/struct.App.html
+            // ext: U
+            //.app_data(person_2.clone())
+            // data: U
+            //.data(person_2.clone())
+            .app_data(Data::new(person_2.clone()))
+            //.app_data(Data::new(AppState {
+            //.data(AppState {
+            .app_data(Data::new(AppState {
                 // persistent server counter
                 server_id: SERVER_COUNTER.fetch_add(1,              
                                                     SERVER_ORD,
@@ -112,12 +174,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 // config
                 config: DataConfig {
                     static_dir: String::from(config.static_dir.clone()),
-                    verify_dir_per_video: config.flag.verify_dir_per_video.clone(),
+                    verify_dir_per_video: config.flag.verify_dir_per_video,
                 },
                 // groups
                 groups: groups.clone(),
-            })                                                      
+            }))
             // LOG
+            //.wrap(middleware::Logger::default())
             //.wrap(middleware::Logger::new(LOG_FORMAT))
             .wrap(middleware::Logger::new(&config.log_format))
             // ROOT ###
@@ -137,9 +200,17 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     // ADD msg
                     .service(
                         web::resource("/send")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                        .limit(4096)
+                                )
+                            )
+                            /*
                             .data(web::JsonConfig::default()
                                   .limit(4096)
                             )
+                            */
                             .route(web::post()
                                    // -> fn post_msg
                                    .to(message::post_msg)
@@ -170,17 +241,28 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             // SCOPE for ####################### VIDEO
             .service(
                 web::scope(video::SCOPE)
+                    // /*
                     // UPLOAD
                     .service(
                         web::resource("/put")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                    // NO LIMIT for VIDEO
+                                    //.limit(4096)
+                                )
+                            )
+                            /*
                             .data(web::JsonConfig::default()
                                   // NO LIMIT for VIDEO
                                   //.limit(4096)
                             )
+                            */
                             .route(web::put()
                                    .to(video::insert_video)
                             )
                     )
+                    // */
                     // INDEX
                     .service(
                         // TRY COMBINE BOTH as you LEARN
@@ -217,9 +299,17 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     //.service(video::update_group)
                     .service(
                         web::resource("/update/group")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                        .limit(4096)
+                                )
+                            )
+                            /*
                             .data(web::JsonConfig::default()
                                   .limit(4096)
                             )
+                            */
                             .route(web::post()
                                    .to(video::update_group)
                             ),

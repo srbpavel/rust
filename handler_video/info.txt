@@ -93,3 +93,30 @@ https://docs.rs/actix-web/latest/actix_web/trait.HttpMessage.html#associatedtype
 https://actix.rs/actix-web/actix_web/http/header/constant.TE.html\n
 https://actix.rs/actix-web/actix_web/http/header/constant.TRANSFER_ENCODING.html\n
 "
+
+#example
+https://camposha.info/rust/actix-web/
+
+#timestamp
+##to timestamp
+$ date +%s
+1646402711
+
+$ date +%s%3N
+1646402714704
+
+$ date +%s%6N
+1646402716480453
+
+$ date +%s%N
+1646402719496976924
+
+##from ts
+$date +%s | date
+
+## MIME
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Type
+https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Common_types
+https://datatracker.ietf.org/doc/html/rfc6838
+##
+date +%s%N > timestamp.txt; time curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "ts=@/home/conan/soft/rust/handler_video/timestamp.txt;type=text/plain" -H "video_id: now" -H "group: timestamp" 2>/dev/null | jq; curl "http://127.0.0.1:8081/video/detail/now" 2>/dev/null| jq; curl "http://127.0.0.1:8081/video/download/now"; date +%s%N
