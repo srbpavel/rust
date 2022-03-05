@@ -28,7 +28,7 @@ use std::{
 pub struct AppState {                      
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
-    pub groups: Arc<Mutex<Vec<String>>>,
+    //pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
 
 
@@ -64,6 +64,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
+    /*
     // groups
     let groups =
         Arc::new(
@@ -71,13 +72,14 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 Vec::new()
             )
         );
+    */
 
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(AppState {
                 video_map: video_map.clone(),
                 binary_map: binary_map.clone(),
-                groups: groups.clone(),
+                //groups: groups.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
             .service(

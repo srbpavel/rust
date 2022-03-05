@@ -22,10 +22,10 @@ use bytes::{BytesMut,
             BufMut,
 };
 
-/// scope
+
 pub const SCOPE: &str = "/video";
 
-/// types hash_maps
+/// types for hash_maps
 pub type VideoKey = String;
 pub type VideoValue = Video;
 pub type BinaryValue = Binary;
@@ -56,10 +56,10 @@ impl Video {
     }
 }
 
-/// file error // FUTURE USE
+/// parse url pattern error msg
 #[derive(Serialize, Deserialize)]
-struct File {
-    err: String,
+struct ParseError {
+    status: String,
 }
 
 /// all videos
@@ -76,12 +76,14 @@ pub struct ListResponse {
     status: String,
 }
 
+/*
 /// all groups
 #[derive(Serialize, Debug)]
 pub struct GroupsResponse {     
     result: Option<Vec<String>>,
     status: String,
 }
+*/
 
 /// upload 
 #[derive(Serialize, Debug)]
@@ -110,16 +112,18 @@ pub struct DetailResponse {
     status: String,
 }
 
+/*
 #[derive(Deserialize, Debug)]
 pub struct UpdateInput {
     video_id: String,
     group_id: String,
 }
+*/
 
 /// delete info
 #[derive(Serialize, Debug)]
 pub struct DeleteResponse {     
-    result: String,
+    status: String,
 }
 
 
@@ -148,10 +152,8 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
 }
 
 
-/// detail via hash
+/// detail
 /// 
-/// good enough for dozen id's, tune for millions
-///
 #[get("/detail/{video_id}")]
 pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
@@ -168,9 +170,20 @@ pub async fn detail(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
+            /*
             eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
 
             None
+             */
+            return Ok(
+                web::Json(
+                    DetailResponse {                          
+                        result: None,
+                        url,
+                        status: format!("{why}"),
+                    }
+                )
+            )
         },
     };
 
@@ -214,7 +227,7 @@ pub async fn detail(state: web::Data<AppState>,
 }
 
 
-/// flush video_map Hash
+/// flush video_map + binary_map
 ///
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
@@ -224,14 +237,24 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .lock()
         .unwrap();
 
+    all_videos.clear();
+    
+    let mut all_binary = state
+        .binary_map
+        .lock()
+        .unwrap();
+
+    all_binary.clear();
+
+    /*
     let mut all_groups = state
         .groups
         .lock()
         .unwrap();
     
-    all_videos.clear();
     all_groups.clear();
-    
+    */
+
     Ok(
         web::Json(
             IndexResponse {
@@ -258,9 +281,18 @@ pub async fn delete(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
+            /*
             eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
 
             None
+             */
+            return Ok(
+                web::Json(
+                    DeleteResponse {                          
+                        status: format!("{why}"),
+                    }                                        
+                )
+            )
         },
     };
 
@@ -302,7 +334,7 @@ pub async fn delete(state: web::Data<AppState>,
     Ok(
         web::Json(
             DeleteResponse {                          
-                result: result.as_string(),
+                status: result.as_string(),
             }                                        
         )
     )
@@ -415,7 +447,6 @@ pub async fn list_group(state: web::Data<AppState>,
 
     let status;
     
-    // as to have empty result as Json 'null' not {}
     let result = if group_map.is_empty() {
         status = status::Status::GroupNotFound;
 
@@ -479,7 +510,6 @@ pub async fn insert_video(mut payload: Multipart,
                           req: HttpRequest)  -> Result<web::Json<UploadResponse>> {
 
     //debug!("REQ: {req:?}");
-
     
     let mut video_hashmap = state
         .video_map
@@ -491,10 +521,12 @@ pub async fn insert_video(mut payload: Multipart,
         .lock()
         .unwrap();
 
+    /*
     let mut groups_list = state
         .groups
         .lock()
         .unwrap();
+    */
 
     let mut status = status::Status::Init;
     let mut new_video = Video::default();
@@ -550,7 +582,7 @@ pub async fn insert_video(mut payload: Multipart,
     
     //debug!("{new_video:#?}");
 
-    let new_group = new_video.group.clone();
+    //let new_group = new_video.group.clone();
 
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
@@ -587,9 +619,11 @@ pub async fn insert_video(mut payload: Multipart,
                     Some(filename) => {
                         //debug!("\ndis_filename: {filename:?}");
 
+                        /*
                         if !groups_list.contains(&new_group) {
                             groups_list.push(new_group.clone());
                         }
+                        */
 
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
@@ -683,9 +717,12 @@ pub async fn download(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
+            return HttpResponse::NotFound()
+                .json(
+                    &ParseError {
+                        status: format!("{why}"),
+                }
+            )
         },
     };
 
@@ -694,40 +731,11 @@ pub async fn download(state: web::Data<AppState>,
         .lock()
         .unwrap();
 
-    /*
-    match parsed_idx {
-        Some(i) => {
-            binary
-                .get(&i)
-                .map(|v| 
-
-                    HttpResponse::Ok()
-                        .append_header(
-                            ("Content-Disposition",
-                             format!("form-data; filename={}",
-                                     v.filename,
-                             ),
-                            )
-                        )
-                        .body(v.data)
-                )
-        },
-        None => HttpResponse::NotFound().json(
-            &File {
-                err: "id does not exist".to_string(),
-                
-            }
-        ),
-    }
-    */
-
-    // /*
-    // join these two together
     let result = match parsed_idx {
         Some(i) => {
             binary.get(&i).map(|v|
                                Binary {
-                                   data: v.data.clone(),  // niet goed or lazy ok!
+                                   data: v.data.clone(),  // niet goed
                                    filename: v.filename.clone(),
                                }
             )
@@ -737,29 +745,22 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
-            let content = format!("form-data; filename={}",
-                                  v.filename,
-            );
-            
-            //debug!("CONTENT: {content:?}");
-            
             HttpResponse::Ok()
                 .append_header(
                     ("Content-Disposition",
-                     content,
+                     format!("form-data; filename={}",
+                             v.filename,
+                     ),
                     )
                 )
                 .body(v.data)
         },
         None => {
             HttpResponse::NotFound().json(
-                &File {
-                    err: "id does not exist".to_string(),
-                    
+                &ParseError {
+                    status: status::Status::VideoIdNotFound.as_string(),
                 }
             )
         },
     }
-    // */
 }
-
