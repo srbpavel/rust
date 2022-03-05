@@ -4,9 +4,10 @@ use crate::handler_video_toml_config_struct::{TomlConfig};
 use crate::video;
 
 use actix_web::{
-    web::{self,
-          Data,
-          JsonConfig,
+    web::
+    {self,
+     Data,
+     JsonConfig,
     },
     middleware,
     App,
@@ -15,11 +16,10 @@ use actix_web::{
 
 use log;
 use std::{
-          sync::{
-              Arc,                
-              Mutex,              
-          },
-          collections::HashMap,
+    sync::{Arc,                
+           Mutex,              
+    },
+    collections::HashMap,
 };
 
 
@@ -30,6 +30,7 @@ pub struct AppState {
     pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
     pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
+
 
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
@@ -81,12 +82,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             .wrap(middleware::Logger::new(&config.log_format))
             .service(
                 web::scope(video::SCOPE)
-                    .service(video::index)
+                    //.service(video::index)
+                    .service(video::all)
                     .service(video::download)
                     .service(video::detail)
                     .service(video::clear)
                     .service(video::list_group)
-                    .service(video::show_groups)
+                    //.service(video::show_groups)
                     .service(
                         web::resource("/put")
                             .app_data(
@@ -99,11 +101,12 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                             )
                     )
                     .service(                            
-                        web::resource("/delete/{index}") 
+                        web::resource("/delete/{video_id}") 
                             .route(web::delete()
                                    .to(video::delete)           
                             ),                           
                     )
+                    /*
                     .service(
                         web::resource("/update/group")
                             .app_data(
@@ -116,6 +119,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                                    .to(video::update_group)
                             ),
                     )
+                    */
             )
     }
     )

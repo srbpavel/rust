@@ -123,13 +123,12 @@ pub struct DeleteResponse {
 }
 
 
-/// index list all videos
+/// list all videos
 ///
 /// for debug purpose as tested with dozen records not milions yet
 ///
-#[get("")]
-pub async fn index(state: web::Data<AppState>,
-                   _req: HttpRequest) -> Result<web::Json<IndexResponse>> {
+#[get("/all")]
+pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
     let all_videos = state                                  
         .video_map
@@ -244,7 +243,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 }
 
 
-/// DELETE via id
+/// DELETE video_id
 /// 
 pub async fn delete(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DeleteResponse>> {
@@ -310,9 +309,9 @@ pub async fn delete(state: web::Data<AppState>,
 }
 
 
+/*
 /// UPDATE group_id for video
 /// 
-///
 pub async fn update_group(update: web::Json<UpdateInput>,
                           state: web::Data<AppState>) -> actix_web::Result<web::Json<DetailResponse>> {
     
@@ -392,7 +391,7 @@ pub async fn update_group(update: web::Json<UpdateInput>,
         )
     )
 }
-
+*/
 
 /// list group members
 ///
@@ -438,6 +437,7 @@ pub async fn list_group(state: web::Data<AppState>,
 }
 
 
+/*
 /// list all groups
 ///
 #[get("/groups")]
@@ -469,6 +469,7 @@ pub async fn show_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsR
         )                                            
     )                                                
 }
+*/
 
 
 /// upload video
@@ -692,20 +693,48 @@ pub async fn download(state: web::Data<AppState>,
         .binary_map
         .lock()
         .unwrap();
-    
+
+    /*
+    match parsed_idx {
+        Some(i) => {
+            binary
+                .get(&i)
+                .map(|v| 
+
+                    HttpResponse::Ok()
+                        .append_header(
+                            ("Content-Disposition",
+                             format!("form-data; filename={}",
+                                     v.filename,
+                             ),
+                            )
+                        )
+                        .body(v.data)
+                )
+        },
+        None => HttpResponse::NotFound().json(
+            &File {
+                err: "id does not exist".to_string(),
+                
+            }
+        ),
+    }
+    */
+
+    // /*
     // join these two together
     let result = match parsed_idx {
         Some(i) => {
             binary.get(&i).map(|v|
                                Binary {
-                                   data: v.data.clone(),  // niet goed !!!
+                                   data: v.data.clone(),  // niet goed or lazy ok!
                                    filename: v.filename.clone(),
                                }
             )
         },
         None => None,
     };
-    
+
     match result {
         Some(v) => {
             let content = format!("form-data; filename={}",
@@ -731,5 +760,6 @@ pub async fn download(state: web::Data<AppState>,
             )
         },
     }
+    // */
 }
 
