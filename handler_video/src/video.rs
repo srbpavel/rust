@@ -598,6 +598,7 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
+            /*
             HttpResponse::Ok()
                 .append_header(
                     ("Content-Disposition",
@@ -607,6 +608,35 @@ pub async fn download(state: web::Data<AppState>,
                     )
                 )
                 .body(v.data)
+            */
+
+            HttpResponse::Ok()
+                .append_header(
+                    ("Content-Disposition",
+                     format!("form-data; filename={}",
+                             v.filename,
+                     ),
+                    )
+                )
+                /*
+                .content_type(
+                    // name not type
+                    //actix_web::http::header::ContentType(mime::VIDEO) 
+                    actix_web::http::header::ContentType(mime::TEXT_PLAIN)
+                )
+                */
+                // https://docs.rs/actix-web/latest/actix_web/http/header/struct.ContentType.html#method.octet_stream
+                .content_type(
+                    actix_web::http::header::ContentType::octet_stream()
+                )
+                // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
+                .status(actix_web::http::StatusCode::OK)
+                //.body(v.data)
+                .body(v.data)
+                //.streaming(v.data.writer())
+                //.streaming(v.data)
+
+            
         },
         None => {
             HttpResponse::NotFound().json(
@@ -673,8 +703,7 @@ pub async fn play(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
-            return web::Bytes::from_static(b"player: parse error")
-            //None
+            return web::Bytes::from_static(b"player: index String parse error")
 
             /*
             return HttpResponse::NotFound()
@@ -701,8 +730,7 @@ pub async fn play(state: web::Data<AppState>,
                                }
             )
         },
-        None => //None,
-            return web::Bytes::from_static(b"player: binary not found")
+        None => return web::Bytes::from_static(b"player: parsed None")
     };
 
     match result {
@@ -710,7 +738,7 @@ pub async fn play(state: web::Data<AppState>,
             web::Bytes::from(v.data)
         },
         None => {
-            web::Bytes::from_static(b"player: None")
+            return web::Bytes::from_static(b"player: binary_id not found")
             
             /*
             HttpResponse::NotFound().json(
@@ -722,3 +750,19 @@ pub async fn play(state: web::Data<AppState>,
         },
     }
 }
+
+
+/*
+impl futures_util::Stream for BytesMut {
+    fn write(&mut self, src: &[u8]) -> std::io::Result<usize> {
+        self.extend_from_slice(src);
+        Ok(src.len())
+    }
+
+    /*
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+    */
+}
+*/
