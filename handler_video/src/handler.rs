@@ -9,12 +9,13 @@ use actix_web::{
      Data,
      JsonConfig,
     },
+    guard,
     middleware,
     App,
     HttpServer,
+    HttpResponse,
 };
 
-//use log;
 use std::{
     sync::{Arc,                
            Mutex,              
@@ -70,12 +71,82 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
+            // 405 instead 404
+            .default_service(
+                web::route()
+                    .guard(
+                        guard::Not(
+                            guard::Get()
+                        )
+                    )
+                    // -> 405
+                    //.to(HttpResponse::MethodNotAllowed),
+                    // -> 200
+                    .to(|| async { HttpResponse::Ok().body("url not active\n") }),
+            )
             .service(
                 web::scope(video::SCOPE)
-                    //.service(video::index)
-                    //+rest 404 handler
+                    // curl "http://127.0.0.1:8081/video/"
+                    .service(video::index_trail)
+                    // curl "http://127.0.0.1:8081/video"
+                    .service(video::index)
+                    // curl -X POST "http://127.0.0.1:8081/video"
+                    // -H "host: spongebob"
+                    .service(
+                        web::scope("")
+                            .guard(
+                                guard::Header(
+                                    "host",
+                                    "spongebob")
+                            )
+                            .route("",
+                                   web::to(||
+                                           async {
+                                               HttpResponse::Ok()
+                                                   .body("SPONGEBOB")
+                                           }
+                                   )
+                            ),
+                    )
+                    // curl -X POST "http://127.0.0.1:8081/video"
+                    // -H "host: jozefina"
+                    .service(
+                        web::scope("")
+                            .guard(
+                                guard::Header(
+                                    "host",
+                                    "jozefina")
+                            )
+                            .route("",
+                                   web::to(||
+                                           async {
+                                               HttpResponse::Ok()
+                                                   .body("JOZEFINA")
+                                           }
+                                   )
+                            ),
+                    )
+                    // curl -X POST "http://127.0.0.1:8081/video"
+                    // -d '{"video_id": "123", "group_id": "video_on_demand"}'
+                    .service(
+                        web::scope("")
+                            .guard(
+                                guard::Post()
+                            )
+                            .route("",
+                                   web::post()
+                                   .to(video::index_post)
+                            )
+                    )
+                    /*
+                    .route("",
+                           web::post()
+                           .to(video::index_post)
+                    )
+                    */
                     .service(video::all)
                     .service(video::download)
+                    .service(video::play)
                     .service(video::detail)
                     .service(video::clear)
                     .service(video::list_group)
@@ -104,7 +175,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     config.port,
             )             
         )?
-        .workers(config.workers)
+        // default: number of logical CPUs
+        //.workers(config.workers)
         .run()
         .await
 }
