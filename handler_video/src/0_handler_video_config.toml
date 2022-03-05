@@ -9,8 +9,6 @@ workers = 4
 # https://actix.rs/docs/middleware/
 log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
 
-
 [flag]
 # display config
 debug_config = true # false
-

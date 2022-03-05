@@ -14,7 +14,7 @@ use actix_web::{
     HttpServer,
 };
 
-use log;
+//use log;
 use std::{
     sync::{Arc,                
            Mutex,              
@@ -28,7 +28,6 @@ use std::{
 pub struct AppState {                      
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
-    //pub groups: Arc<Mutex<Vec<String>>>,
 }                                      
 
 
@@ -64,35 +63,24 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
-    /*
-    // groups
-    let groups =
-        Arc::new(
-            Mutex::new(
-                Vec::new()
-            )
-        );
-    */
-
     HttpServer::new(move || {
         App::new()
             .app_data(Data::new(AppState {
                 video_map: video_map.clone(),
                 binary_map: binary_map.clone(),
-                //groups: groups.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
             .service(
                 web::scope(video::SCOPE)
                     //.service(video::index)
+                    //+rest 404 handler
                     .service(video::all)
                     .service(video::download)
                     .service(video::detail)
                     .service(video::clear)
                     .service(video::list_group)
-                    //.service(video::show_groups)
                     .service(
-                        web::resource("/put")
+                        web::resource("/upload")
                             .app_data(
                                 Data::new(
                                     JsonConfig::default()
@@ -108,23 +96,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                                    .to(video::delete)           
                             ),                           
                     )
-                    /*
-                    .service(
-                        web::resource("/update/group")
-                            .app_data(
-                                Data::new(
-                                    JsonConfig::default()
-                                        .limit(4096)
-                                )
-                            )
-                            .route(web::post()
-                                   .to(video::update_group)
-                            ),
-                    )
-                    */
             )
-    }
-    )
+    })
         .bind(
             format!("{}:{}",
                     &config.server,

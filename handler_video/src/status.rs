@@ -2,32 +2,21 @@
 #[derive(Debug)]
 pub enum Status {
     Init,
-    StatusOk,
-    // HEADERS
+    ClearOk,
+    ListAll,
     EmptyVideoId,
     EmptyGroupId,
-    // FORMS
     EmptyFormFilename,
     EmptyFormName,
     //EmptyForms,
     TooManyForms,
-    // VIDEO
     VideoIdFound,
     VideoIdNotFound,
     VideoIdWrongFormat,
     //UploadStarted,
     UploadDone,
-    // GROUP
     GroupFound,
     GroupNotFound,
-    //GroupsAvailable,
-    //NoGroupsAvailable,
-    // LIST
-    // ...
-    // UPDATE
-    //UpdateOk,
-    //UpdateError,
-    // DELETE
     DeleteOk,
     DeleteError,
     DeleteInvalidId,
@@ -39,7 +28,8 @@ impl Status {
     pub fn as_string(&self) -> String {
         match *self {
             Self::Init => String::from("init"),
-            Self::StatusOk => String::from("ok"),
+            Self::ClearOk => String::from("clear ok"),
+            Self::ListAll => String::from("some videos found"),
             Self::EmptyVideoId => String::from("header 'video_id' not provided"),
             Self::EmptyGroupId => String::from("header 'group' not provided"),
             Self::EmptyFormFilename => String::from("form 'filename' not provided"),
@@ -55,13 +45,10 @@ impl Status {
             Self::UploadDone => String::from("upload finished"),
             Self::GroupFound => String::from("group found"),
             Self::GroupNotFound => String::from("group not found"),
-            //Self::GroupsAvailable => String::from("some groups found"),
-            //Self::NoGroupsAvailable => String::from("no groups found"),
-            //Self::UpdateOk => String::from("update ok"),
-            //Self::UpdateError => String::from("update error"),
             Self::DeleteOk => String::from("delete ok"),
             Self::DeleteError => String::from("delete error"),
             Self::DeleteInvalidId => String::from("delete invalid id"),
         }
     }
 }
+

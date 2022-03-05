@@ -65,25 +65,9 @@ struct ParseError {
 /// all videos
 #[derive(Serialize, Debug)]
 pub struct IndexResponse {     
-    video_map: HashMap<VideoKey, VideoValue>,
-    status: String,
-}
-
-/// group members
-#[derive(Serialize, Debug)]
-pub struct ListResponse {     
     result: Option<HashMap<VideoKey, VideoValue>>,
     status: String,
 }
-
-/*
-/// all groups
-#[derive(Serialize, Debug)]
-pub struct GroupsResponse {     
-    result: Option<Vec<String>>,
-    status: String,
-}
-*/
 
 /// upload 
 #[derive(Serialize, Debug)]
@@ -98,12 +82,6 @@ pub struct PostOk {
     video: Video,
 }
 
-/// invalid upload
-#[derive(Serialize)]
-struct PostError {
-    msg: String,
-}
-
 /// detail
 #[derive(Serialize, Debug)]                               
 pub struct DetailResponse {                                   
@@ -111,14 +89,6 @@ pub struct DetailResponse {
     url: String,
     status: String,
 }
-
-/*
-#[derive(Deserialize, Debug)]
-pub struct UpdateInput {
-    video_id: String,
-    group_id: String,
-}
-*/
 
 /// delete info
 #[derive(Serialize, Debug)]
@@ -139,13 +109,17 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
         .lock()                                      
         .unwrap();                                   
 
-    //debug!("ALL_VIDEOS: {all_videos:?}");
+    let result = if all_videos.is_empty() {
+        None
+    } else {
+        Some(all_videos.clone())
+    };
     
     Ok(                                              
         web::Json(                                   
             IndexResponse {                          
-                video_map: all_videos.clone(),
-                status: status::Status::StatusOk.as_string(),
+                result,
+                status: status::Status::ListAll.as_string(),
             }                                        
         )                                            
     )                                                
@@ -170,11 +144,6 @@ pub async fn detail(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
-            /*
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
-             */
             return Ok(
                 web::Json(
                     DetailResponse {                          
@@ -246,20 +215,11 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 
     all_binary.clear();
 
-    /*
-    let mut all_groups = state
-        .groups
-        .lock()
-        .unwrap();
-    
-    all_groups.clear();
-    */
-
     Ok(
         web::Json(
             IndexResponse {
-                video_map: HashMap::new(),
-                status: status::Status::StatusOk.as_string(),
+                result: None,
+                status: status::Status::ClearOk.as_string(),
             }
         )
     )
@@ -281,11 +241,6 @@ pub async fn delete(state: web::Data<AppState>,
             Some(i)
         },
         Err(why) => {
-            /*
-            eprintln!("foookin INDEX: {to_parse_idx}\nREASON >>> {why}");
-
-            None
-             */
             return Ok(
                 web::Json(
                     DeleteResponse {                          
@@ -341,95 +296,11 @@ pub async fn delete(state: web::Data<AppState>,
 }
 
 
-/*
-/// UPDATE group_id for video
-/// 
-pub async fn update_group(update: web::Json<UpdateInput>,
-                          state: web::Data<AppState>) -> actix_web::Result<web::Json<DetailResponse>> {
-    
-    //debug!("UPDATE_VIDEO: {update:?}");    
-
-    let url = format!("{}/update/group",
-                      SCOPE,
-    );
-    
-    let mut video_hashmap = state
-        .video_map
-        .lock()
-        .unwrap();
-
-    let mut groups_list = state
-        .groups
-        .lock()
-        .unwrap();
-    
-    let status;
-
-    let clone_video_hashmap = video_hashmap.clone();
-    
-    let result = match video_hashmap.get_mut(&update.video_id) {
-        Some(video) => {
-            let original_group = video.group.clone();
-
-            // update group
-            video.group = update.group_id.to_string();
-
-            // new group to vec
-            if !groups_list.contains(&video.group) {
-                groups_list.push(video.group.clone());
-            }
-
-            // delete group if this was last member
-            let group_map: HashMap<VideoKey, VideoValue> = clone_video_hashmap
-            //let group_map: HashMap<VideoKey, VideoValue> = video_hashmap
-                .into_iter()
-                .filter(|(_,value)|
-                        value.group.eq(&original_group)
-                )
-                .collect();
-
-            // this should not work? as from clone
-            if group_map.is_empty() {
-                groups_list
-                    .retain(|g|
-                            g.eq(&original_group)
-                    );
-            }
-            
-            status = status::Status::UpdateOk;
-            
-            Some(
-                Video {
-                    id: video.id.clone(),
-                    group: update.group_id.to_string(),
-                    name: video.name.clone(),
-                }
-            )
-        },
-        None => {
-            status = status::Status::UpdateError;
-
-            None}
-        ,
-    };
-    
-    Ok(
-        web::Json(
-            DetailResponse {
-                result,
-                url,
-                status: status.as_string(),
-            }
-        )
-    )
-}
-*/
-
 /// list group members
 ///
 #[get("/list/{group_id}")]
 pub async fn list_group(state: web::Data<AppState>,
-                        idx: web::Path<String>) -> Result<web::Json<ListResponse>> {
+                        idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
 
     let to_parse_idx = idx.into_inner();
 
@@ -459,48 +330,13 @@ pub async fn list_group(state: web::Data<AppState>,
     
     Ok(                                              
         web::Json(                                   
-            ListResponse {                          
+            IndexResponse {                          
                 result,
                 status: status.as_string(),
             }                                        
         )                                            
     )                                                
 }
-
-
-/*
-/// list all groups
-///
-#[get("/groups")]
-pub async fn show_groups(state: web::Data<AppState>) -> Result<web::Json<GroupsResponse>> {
-
-    let all_groups = state                                  
-        .groups
-        .lock()                                      
-        .unwrap();                                   
-
-    let status;
-    
-    let result = if all_groups.is_empty() {
-        status = status::Status::NoGroupsAvailable;
-
-        None
-    } else {
-        status = status::Status::GroupsAvailable;
-            
-        Some(all_groups.to_vec())
-    };
-    
-    Ok(                                              
-        web::Json(                                   
-            GroupsResponse {                          
-                result,
-                status: status.as_string(),
-            }                                        
-        )                                            
-    )                                                
-}
-*/
 
 
 /// upload video
@@ -520,13 +356,6 @@ pub async fn insert_video(mut payload: Multipart,
         .binary_map
         .lock()
         .unwrap();
-
-    /*
-    let mut groups_list = state
-        .groups
-        .lock()
-        .unwrap();
-    */
 
     let mut status = status::Status::Init;
     let mut new_video = Video::default();
@@ -582,8 +411,6 @@ pub async fn insert_video(mut payload: Multipart,
     
     //debug!("{new_video:#?}");
 
-    //let new_group = new_video.group.clone();
-
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
     let mut content_counter = 0;
@@ -618,12 +445,6 @@ pub async fn insert_video(mut payload: Multipart,
                 match content_disposition.get_filename() {
                     Some(filename) => {
                         //debug!("\ndis_filename: {filename:?}");
-
-                        /*
-                        if !groups_list.contains(&new_group) {
-                            groups_list.push(new_group.clone());
-                        }
-                        */
 
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
@@ -666,7 +487,7 @@ pub async fn insert_video(mut payload: Multipart,
 
                         status = status::Status::UploadDone;
                     },
-                    None =>{
+                    None => {
                         return Ok(
                             web::Json(
                                 UploadResponse {
