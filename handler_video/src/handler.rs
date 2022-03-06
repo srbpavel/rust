@@ -71,7 +71,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
-            // 405 instead 404
+            // https://actix.rs/docs/url-dispatch/
             .default_service(
                 web::route()
                     .guard(
@@ -82,11 +82,38 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     // -> 405
                     //.to(HttpResponse::MethodNotAllowed),
                     // -> 200
-                    .to(|| async { HttpResponse::Ok().body("url not active\n") }),
+                    // /*
+                    .to(|| async {
+                        HttpResponse::Ok()
+                            .body("url not active\n")
+                    }),
+                    // */
+
+                    /*
+                    .route(web::get()
+                           .to(video::index_trail)
+                    )
+                    */
+
+                    /*
+                    .to(|| async {
+                        HttpResponse::Found()
+                           .insert_header((actix_web::http::header::LOCATION, "url"))
+                           .finish()
+                            
+                        /*
+                        HttpResponse::Found()
+                            .header("Location",
+                                    "/login",
+                            )
+                            .finish()
+                        */
+                    }),
+                    */
             )
             .service(
                 web::scope(video::SCOPE)
-                    // curl "http://127.0.0.1:8081/video/"
+                // curl "http://127.0.0.1:8081/video/"
                     .service(video::index_trail)
                     // curl "http://127.0.0.1:8081/video"
                     .service(video::index)

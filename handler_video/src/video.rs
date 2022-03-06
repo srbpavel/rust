@@ -672,7 +672,7 @@ async fn index(req: HttpRequest,
 
     
     let result = format!("req: {:?}\n{}\n{:?}",
-                         req,//req.url_for(),
+                         req,
                          "index",
                          &data
                          .video_map
@@ -738,8 +738,9 @@ pub async fn play(state: web::Data<AppState>,
             web::Bytes::from(v.data)
         },
         None => {
+            // should return 404 
             return web::Bytes::from_static(b"player: binary_id not found")
-            
+                
             /*
             HttpResponse::NotFound().json(
                 &ParseError {
