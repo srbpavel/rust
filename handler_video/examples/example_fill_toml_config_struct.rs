@@ -13,11 +13,20 @@ pub struct TomlConfig {
     //pub workers: usize,
     //pub log_format: MyStr,
     pub upload_path: MyStr,
+    pub player_path: MyStr,
     pub video_dir: MyStr,
+    pub sample_limit: i8,
+
+    pub html_file: MyStr,
+    pub html_template: MyStr,
+    pub video_tag: MyStr,
+    pub player_width: MyStr,
+    
     pub flag: Flag,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Flag {
     pub debug_config: bool,
+    pub debug_template: bool,
 }

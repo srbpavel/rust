@@ -56,3 +56,8 @@ features = ["derive"]
 version = "^0"                                                           
 git = "https://github.com/srbpavel/rust"
 package = "easy_config"
+
+[dependencies.template_formater]                 
+version = "^0"                                   
+git = "https://github.com/srbpavel/rust"
+package = "template_formater"

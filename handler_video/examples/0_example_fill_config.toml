@@ -1,0 +1,30 @@
+name = 'VIDEO_UPLOADER'
+secure = "http"
+host = 'spongebob'
+#server = "127.0.0.1"
+server = "localhost"
+#server = "192.168.0.103"
+#server = "192.168.88.253"
+port = 8081
+#workers = 4
+#log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
+upload_path = "/video/upload"
+
+#player_path = "/video/play"
+player_path = "/video/download"
+
+
+video_dir = "/home/conan/video/youtube"
+#sample_limit = 5 # shrink video_files list
+sample_limit = -1 # no limit # -2 # should cause error warning
+html_file = "/home/conan/soft/rust/handler_video/player.html"
+html_template = "<html>\n\t<body>\n\t<p>handler_video</p>\n\t\t{all_videos}\n\t</p>\n\t</body>\n</html>"
+
+#video_tag = "<video width={width} controls autoplay muted><source src={src} type=\"video/mp4\"></video>"
+video_tag = "\n\t\t<video width={width} controls>\n\t\t\t<source src={src} type=\"video/mp4\">\n\t\t</video>"
+
+player_width = "240"
+
+[flag]
+debug_config = true # false
+debug_template = false

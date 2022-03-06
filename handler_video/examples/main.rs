@@ -5,7 +5,11 @@ mod example_config;
 mod example_fill_toml_config_struct;
 mod util;
 
-fn main() {
+use template_formater::tuple_formater;
+use std::io::prelude::*;
+
+
+fn main() -> std::io::Result<()> {
     // COMMAND ARGS
     let config_file = util::prepare_config(std::env::args()).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem parsing cmd arguments\nREASON >>> {}", err);
@@ -24,6 +28,13 @@ fn main() {
                              server=config.server,
                              port=config.port,
                              path=config.upload_path,
+    );
+
+    let player_url = format!("{secure}://{server}:{port}{path}",
+                             secure=config.secure,
+                             server=config.server,
+                             port=config.port,
+                             path=config.player_path,
     );
 
     println!("UPLOAD_URL: {upload_url}");
@@ -106,10 +117,22 @@ fn main() {
         None => {},
     }
 
-    // 
     //println!("FILES: {:?}", video_files);
 
-    let _curl_list = video_files
+    let video_files_sample = match &config.sample_limit {
+        -1 => video_files,
+        n @ 1.. => {
+            video_files[..(*n as usize)].to_vec()
+        },
+        _ => {
+            eprintln!("ERROR: wrong sample limit: {}",
+                      &config.sample_limit,
+            );
+            std::process::exit(1)
+        }
+    };
+    
+    let binary_paths = video_files_sample
         .iter()
         .map(|f| {
 
@@ -125,15 +148,6 @@ fn main() {
 
             let video_id = uuid::Uuid::new_v4();
 
-            /*
-            let curl = format!("curl -X PUT -H \"Content-type: multipart/form-data\" \"{url}\" -F \"{name}=@{filename};type=video/mp4\" -H \"video_id: {video_id}\" -H \"group: {group}\"",
-                               url = upload_url, 
-                               group = "youtube",
-            );
-
-            println!("{:?}", curl);
-            */
-            
             let mut cmd = std::process::Command::new("curl");
 
             cmd.arg("-X")
@@ -142,6 +156,7 @@ fn main() {
                 .arg("Content-type: multipart/form-data")
                 .arg(&upload_url)
                 .arg("-F")
+                // type hardcoded as all mp4
                 .arg(
                     &format!("{name}=@{filename};type=video/mp4")
                 )
@@ -150,18 +165,13 @@ fn main() {
                     &format!("video_id: {video_id}")
                 )
                 .arg("-H")
-                .arg("group: youtube")
-                //.output()
-                //.unwrap()
-                ;
+                .arg("group: youtube");
 
-            println!("\n\nCMD: {:?}", &cmd);
+            println!("\n\n#CMD: {:?}", &cmd);
             let output = &cmd.output();
-            //let output_result = &output.unwrap();
 
-            //println!("CMD: {:?}\nSTDOUT: {}\nSTDERR: {}",
-            println!("OUTPUT: {:?}",
-                     output, //cmd,
+            println!("#OUTPUT: {:#?}",
+                     output,
                      /*
                      String::from_utf8(cmd
                                        //.unwrap()
@@ -179,20 +189,50 @@ fn main() {
                      */
             );
 
+            let video_path = format!("{}/{}",
+                                     player_url,
+                                     video_id
+            );
+
             /*
-            match output {
-                Ok(o) => o.stdout,
-                Err(why) => {
-                    eprintln!("CURL ERR: {why:?}");
+            println!("{}",
+                     tuple_formater(
+                         &config.video_tag,
+                         &vec![
+                             ("width", &config.player_width),
+                             ("src", &video_path),
+                         ],
+                         true,
+                     ),
+            );
 
-                    Vec::new()
-                },
-            }
-            */
+            video_path
+             */
+
+            tuple_formater(
+                &config.video_tag,
+                &vec![
+                    ("width", &config.player_width),
+                    ("src", &video_path),
+                ],
+                config.flag.debug_template,
+            )
         })
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+        .concat();
 
-    //println!("CURL_LIST: {:#?}", curl_list);
-    //println!("CURL_OUT: {:#?}", curl_list);
+    let html_code = tuple_formater(
+        &config.html_template,
+        &vec![
+            ("all_videos", &binary_paths),
+        ],
+        config.flag.debug_template,
+    );
+
+    //println!("{html_code}");
+    let mut html_file = std::fs::File::create(&*config.html_file)?;
+    html_file.write_all(html_code.as_bytes())?;
+
+    Ok(())
 }
 
