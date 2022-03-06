@@ -8,7 +8,7 @@ const ARG_COUNT: usize = 2;
 pub fn prepare_config(mut cmd_args: std::env::Args) -> Result<String, &'static str> {
     
     if cmd_args.len() != ARG_COUNT {
-        return Err("we want exactly one argument\n example:\n  $ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml\n  $ /home/conan/soft/rust/handler_video/target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml");
+        return Err("we want exactly one argumentnEXAMPLE: cargo run --example main /home/conan/soft/rust/handler_video/examples/example_fill_config.toml");
     }
 
     let _program = match cmd_args.next() {

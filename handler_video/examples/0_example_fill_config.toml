@@ -6,24 +6,27 @@ server = "localhost"
 #server = "192.168.0.103"
 #server = "192.168.88.253"
 port = 8081
-#workers = 4
-#log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
 upload_path = "/video/upload"
 
-#player_path = "/video/play"
-player_path = "/video/download"
-
+# via fn download
+#player_path = "/video/download" 
+# via fn play -> Bytes
+player_path = "/video/play"
 
 video_dir = "/home/conan/video/youtube"
-#sample_limit = 5 # shrink video_files list
-sample_limit = -1 # no limit # -2 # should cause error warning
-html_file = "/home/conan/soft/rust/handler_video/player.html"
-html_template = "<html>\n\t<body>\n\t<p>handler_video</p>\n\t\t{all_videos}\n\t</p>\n\t</body>\n</html>"
+#limit number of <Vec<Video>> uploaded to speed up debug
+sample_limit_start = 0 # 0 # 12
+sample_limit_end = -1 # 20 
 
-#video_tag = "<video width={width} controls autoplay muted><source src={src} type=\"video/mp4\"></video>"
-video_tag = "\n\t\t<video width={width} controls>\n\t\t\t<source src={src} type=\"video/mp4\">\n\t\t</video>"
+html_path = "/home/conan/soft/rust/handler_video/html/"
+html_file = "player.html"
+html_template = "<html>\n\t<body>\n\t<p>handler_video</p>\n\t<p>\n\t\t{all_videos}\n\t</p>\n\t</body>\n</html>"
 
-player_width = "240"
+video_tag = "\n\t\t<video width={width} controls autoplay muted>\n\t\t\t<source src={src} type=\"video/mp4\"/>\n\t\t</video>"
+#video_tag = "\n\t\t<video width={width} controls>\n\t\t\t<source src={src} type=\"video/mp4\"/>\n\t\t</video>"
+
+#player_width = "240"
+player_width = "640"
 
 [flag]
 debug_config = true # false

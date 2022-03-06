@@ -18,10 +18,7 @@ fn main() -> std::io::Result<()> {
     
     // CONFIG
     let config = example_config::sample_config(&config_file);
-
-    println!("EXAMPLE_CONFIG: {:#?}",
-             config,
-    );
+    //println!("EXAMPLE_CONFIG: {:#?}", config);
 
     let upload_url = format!("{secure}://{server}:{port}{path}",
                              secure=config.secure,
@@ -30,6 +27,8 @@ fn main() -> std::io::Result<()> {
                              path=config.upload_path,
     );
 
+    println!("UPLOAD_URL: {upload_url}");
+    
     let player_url = format!("{secure}://{server}:{port}{path}",
                              secure=config.secure,
                              server=config.server,
@@ -37,7 +36,11 @@ fn main() -> std::io::Result<()> {
                              path=config.player_path,
     );
 
-    println!("UPLOAD_URL: {upload_url}");
+    println!("PLAYER_URL: {player_url}");
+
+    println!("HTMLL: {}",
+             &config.html_file,
+    );
         
     // VIDEO_DIR
     let video_dir_path = match std::path::Path::new(&*config.video_dir)
@@ -54,7 +57,7 @@ fn main() -> std::io::Result<()> {
             }
         };
 
-    println!("PATH: {video_dir_path:?}");
+    //println!("VIDEO DIR PATH: {video_dir_path:?}");
 
     // LIST
     let read_dir = match video_dir_path.read_dir() { // ReadDir
@@ -63,7 +66,8 @@ fn main() -> std::io::Result<()> {
     };
 
     let mut video_files = Vec::new();
-    
+
+    // GET READY ALL VIDEO FILES
     match read_dir {
         Some(dir) => {
             for element in dir {
@@ -118,15 +122,22 @@ fn main() -> std::io::Result<()> {
     }
 
     //println!("FILES: {:?}", video_files);
-
-    let video_files_sample = match &config.sample_limit {
+    println!("SAMPLE_LIMIT: {}..{}",
+             &config.sample_limit_start,
+             &config.sample_limit_end,
+    );
+    
+    let video_files_sample = match &config.sample_limit_end {
         -1 => video_files,
         n @ 1.. => {
-            video_files[..(*n as usize)].to_vec()
+            video_files[
+                (*&config.sample_limit_start as usize)..(*n as usize)
+            ].to_vec()
         },
         _ => {
-            eprintln!("ERROR: wrong sample limit: {}",
-                      &config.sample_limit,
+            eprintln!("ERROR: wrong sample limit: start: {} end: {}",
+                      &config.sample_limit_start,
+                      &config.sample_limit_end,
             );
             std::process::exit(1)
         }
@@ -170,53 +181,44 @@ fn main() -> std::io::Result<()> {
             println!("\n\n#CMD: {:?}", &cmd);
             let output = &cmd.output();
 
-            println!("#OUTPUT: {:#?}",
-                     output,
-                     /*
-                     String::from_utf8(cmd
-                                       //.unwrap()
-                                       .stdout
-                                       .to_vec()
-                     )
-                     .unwrap(),
-
-                     String::from_utf8(cmd
-                                       //.unwrap()
-                                       .stderr
-                                       .to_vec()
-                     )
-                     .unwrap(),
-                     */
-            );
+            println!("#OUTPUT: {output:#?}");
 
             let video_path = format!("{}/{}",
                                      player_url,
                                      video_id
             );
 
-            /*
-            println!("{}",
-                     tuple_formater(
-                         &config.video_tag,
-                         &vec![
-                             ("width", &config.player_width),
-                             ("src", &video_path),
-                         ],
-                         true,
-                     ),
-            );
-
-            video_path
-             */
-
-            tuple_formater(
+            let video_tag = tuple_formater(
                 &config.video_tag,
                 &vec![
+                    ("name", &name),
                     ("width", &config.player_width),
                     ("src", &video_path),
                 ],
                 config.flag.debug_template,
-            )
+            );
+
+            let single_html_code = tuple_formater(
+                &config.html_template,
+                &vec![
+                    ("all_videos", &video_tag),
+                ],
+                config.flag.debug_template,
+            );      
+
+            let mut single_html_file = std::fs::File::create(
+                format!("{}{}_{}.html",
+                        &*config.html_path,
+                        &video_id,
+                        &name,
+                )
+            ).unwrap();
+
+            single_html_file.write_all(
+                &single_html_code.as_bytes()
+            ).unwrap();
+            
+            video_tag
         })
         .collect::<Vec<_>>()
         .concat();
@@ -229,8 +231,12 @@ fn main() -> std::io::Result<()> {
         config.flag.debug_template,
     );
 
-    //println!("{html_code}");
-    let mut html_file = std::fs::File::create(&*config.html_file)?;
+    let mut html_file = std::fs::File::create(
+        format!("{}{}",
+                &*config.html_path,
+                &*config.html_file,
+        )
+    )?;
     html_file.write_all(html_code.as_bytes())?;
 
     Ok(())
