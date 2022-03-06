@@ -6,11 +6,13 @@ type MyStr = Box<str>;
 pub struct TomlConfig {
     // ROOT
     pub name: MyStr,
+    pub secure: MyStr,
     pub host: MyStr,
     pub server: MyStr,
     pub port: u64,
     //pub workers: usize,
     //pub log_format: MyStr,
+    pub upload_path: MyStr,
     pub video_dir: MyStr,
     pub flag: Flag,
 }
