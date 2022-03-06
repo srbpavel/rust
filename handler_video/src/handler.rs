@@ -71,6 +71,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
+            /*
             // https://actix.rs/docs/url-dispatch/
             .default_service(
                 web::route()
@@ -111,9 +112,11 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     }),
                     */
             )
+            */
             .service(
                 web::scope(video::SCOPE)
-                // curl "http://127.0.0.1:8081/video/"
+                    /*
+                    // curl "http://127.0.0.1:8081/video/"
                     .service(video::index_trail)
                     // curl "http://127.0.0.1:8081/video"
                     .service(video::index)
@@ -165,6 +168,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                                    .to(video::index_post)
                             )
                     )
+                    */
                     /*
                     .route("",
                            web::post()

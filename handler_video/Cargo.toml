@@ -43,3 +43,15 @@ features = ["derive"]
                                                                          
 #[dependencies.serde_json]                                                
 #version= "1.0.79"                                                       
+
+### EXAMPLES
+[dev-dependencies]
+
+[dev-dependencies.serde]
+version = "1.0.136"                                                     
+features = ["derive"]                                                    
+
+[dev-dependencies.easy_config]                                           
+version = "^0"                                                           
+git = "https://github.com/srbpavel/rust"
+package = "easy_config"
