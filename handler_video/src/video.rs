@@ -440,8 +440,6 @@ pub async fn insert_video(mut payload: Multipart,
         },
     }
     
-    //debug!("{new_video:#?}");
-
     // iterate over multipart stream
     // https://actix.rs/actix-web/actix_multipart/struct.Field.html
     let mut content_counter = 0;
@@ -460,8 +458,6 @@ pub async fn insert_video(mut payload: Multipart,
 
                 match content_disposition.get_name() {
                     Some(name) => {
-                        //debug!("\ndis_name: {name:?}");
-
                         if name.trim().eq("") {
                             return Ok(
                                 web::Json(
@@ -490,8 +486,6 @@ pub async fn insert_video(mut payload: Multipart,
                 // FORM
                 match content_disposition.get_filename() {
                     Some(filename) => {
-                        //debug!("\ndis_filename: {filename:?}");
-
                         // /* // https://actix.rs/docs/server/
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
@@ -511,13 +505,9 @@ pub async fn insert_video(mut payload: Multipart,
                         let mut chunk_counter = 0;
                         while let Some(chunk) = field.try_next().await? {
                             chunk_counter += 1;
-                            //debug!("CHUNK_COUNTER: {chunk_counter}");
 
                             // FIRST CHUNK
                             if chunk_counter == 1 {
-                                //debug!(">>> hash_create: {chunk_counter}");
-                                //status = status::Status::UploadStarted;
-
                                 // LOCK DETAIL
                                 let mut video_hashmap = video_map.lock().unwrap();
                                 video_hashmap
@@ -635,7 +625,6 @@ pub async fn download(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
-            /*
             HttpResponse::Ok()
                 .append_header(
                     ("Content-Disposition",
@@ -644,36 +633,11 @@ pub async fn download(state: web::Data<AppState>,
                      ),
                     )
                 )
-                .body(v.data)
-            */
-
-            HttpResponse::Ok()
-                .append_header(
-                    ("Content-Disposition",
-                     format!("form-data; filename={}",
-                             v.filename,
-                     ),
-                    )
-                )
-                /*
-                .content_type(
-                    // name not type
-                    //actix_web::http::header::ContentType(mime::VIDEO) 
-                    actix_web::http::header::ContentType(mime::TEXT_PLAIN)
-                )
-                */
-                // https://docs.rs/actix-web/latest/actix_web/http/header/struct.ContentType.html#method.octet_stream
                 .content_type(
                     actix_web::http::header::ContentType::octet_stream()
                 )
-                // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
                 .status(actix_web::http::StatusCode::OK)
-                //.body(v.data)
                 .body(v.data)
-                //.streaming(v.data.writer())
-                //.streaming(v.data)
-
-            
         },
         None => {
             HttpResponse::NotFound().json(
@@ -742,26 +706,25 @@ pub async fn play(state: web::Data<AppState>,
             Some(i)
         },
         Err(_why) => {
+            // Infallible
             return web::Bytes::from_static(b"player: index String parse error")
-            
-            /*
-            return HttpResponse::NotFound()
-                .json(
-                    &ParseError {
-                        status: format!("{why}"),
-                }
-            )
-            */
         },
     };
 
+    /*
     let binary = state
         .binary_map
         .lock()
         .unwrap();
+    */
 
     let result = match parsed_idx {
         Some(i) => {
+            let binary = state
+                .binary_map
+                .lock()
+                .unwrap();
+            
             binary.get(&i).map(|v|
                                Binary {
                                    data: v.data.clone(),  // niet goed jochie
@@ -777,32 +740,8 @@ pub async fn play(state: web::Data<AppState>,
             web::Bytes::from(v.data)
         },
         None => {
-            // should return 404 
+            // we should rather return 404 
             return web::Bytes::from_static(b"player: binary_id not found")
-                
-            /*
-            HttpResponse::NotFound().json(
-                &ParseError {
-                    status: status::Status::VideoIdNotFound.as_string(),
-                }
-            )
-            */
         },
     }
 }
-
-
-/*
-impl futures_util::Stream for BytesMut {
-    fn write(&mut self, src: &[u8]) -> std::io::Result<usize> {
-        self.extend_from_slice(src);
-        Ok(src.len())
-    }
-
-    /*
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-    */
-}
-*/

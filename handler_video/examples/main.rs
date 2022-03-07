@@ -8,8 +8,96 @@ mod util;
 use template_formater::tuple_formater;
 use std::io::prelude::*;
 
+//use async_std::stream::StreamExt;
+use async_std::prelude::*;
 
-fn main() -> std::io::Result<()> {
+use example_fill_toml_config_struct::TomlConfig;
+
+
+struct Video {
+    name: String,
+    filename: String,
+    player_url: String,
+    upload_url: String,
+    video_id: uuid::Uuid,
+}
+
+
+/// single curl video upload
+async fn run_upload(config: &TomlConfig,
+                    video: Video) -> Option<String> {
+
+    let mut cmd = std::process::Command::new("curl");
+    
+    cmd.arg("-X")
+        .arg("PUT")
+        .arg("-H")
+        .arg("Content-type: multipart/form-data")
+        .arg(video.upload_url)
+        .arg("-F")
+    // type hardcoded as all mp4
+        .arg(
+            &format!("{name}=@{filename};type=video/mp4",
+                     name = video.name,
+                     filename = video.filename,
+            )
+        )
+        .arg("-H")
+        .arg(
+            &format!("video_id: {}",
+                     video.video_id,
+            )
+        )
+        .arg("-H")
+        .arg("group: youtube");
+    
+    println!("\n\n#CMD: {:?}", cmd);
+    
+    let output = cmd.output();
+    
+    println!("#OUTPUT: {output:#?}");
+
+    let video_path = format!("{}/{}",
+                             &video.player_url,
+                             video.video_id
+    );
+
+    let video_tag = tuple_formater(
+        &config.video_tag,
+        &vec![
+            ("name", &video.name),
+            ("width", &config.player_width),
+            ("src", &video_path),
+        ],
+        config.flag.debug_template,
+    );
+    
+    let single_html_code = tuple_formater(
+        &config.html_template,
+        &vec![
+            ("all_videos", &video_tag),
+        ],
+        config.flag.debug_template,
+    );
+
+    let mut single_html_file = std::fs::File::create(
+        format!("{}{}_{}.html",
+                &*config.html_path,
+                &video.video_id,
+                &video.name,
+        )
+    ).unwrap();
+    
+    single_html_file.write_all(
+        &single_html_code.as_bytes()
+    ).unwrap();
+    
+    Some(video_tag)
+}
+
+
+#[async_std::main]
+async fn main() -> std::io::Result<()> {
     // COMMAND ARGS
     let config_file = util::prepare_config(std::env::args()).unwrap_or_else(|err| {
         eprintln!("\nEXIT: Problem parsing cmd arguments\nREASON >>> {}", err);
@@ -121,7 +209,8 @@ fn main() -> std::io::Result<()> {
         None => {},
     }
 
-    //println!("FILES: {:?}", video_files);
+    println!("FILES: {:?}", video_files);
+
     println!("SAMPLE_LIMIT: {}..{}",
              &config.sample_limit_start,
              &config.sample_limit_end,
@@ -159,6 +248,7 @@ fn main() -> std::io::Result<()> {
 
             let video_id = uuid::Uuid::new_v4();
 
+            /*
             let mut cmd = std::process::Command::new("curl");
 
             cmd.arg("-X")
@@ -178,8 +268,24 @@ fn main() -> std::io::Result<()> {
                 .arg("-H")
                 .arg("group: youtube");
 
-            println!("\n\n#CMD: {:?}", &cmd);
+            println!("\n\n#CMD: {:?}", cmd);
+            */
 
+            // EXPENSIVE UPLOAD HERE
+            
+            let video = Video {
+                name: String::from(name),
+                filename: String::from(filename),
+                player_url: String::from(&player_url),
+                upload_url: String::from(&upload_url),
+                video_id: video_id,
+            };
+
+            run_upload(&config,
+                       video,
+            )
+            
+            /*
             let output = &cmd.output();
 
             println!("#OUTPUT: {output:#?}");
@@ -220,10 +326,14 @@ fn main() -> std::io::Result<()> {
             ).unwrap();
             
             video_tag
+            */
         })
-        .collect::<Vec<_>>()
-        .concat();
+        .collect::<Vec<_>>();
+        //.concat();
 
+    let _ = futures::future::join_all(binary_paths).await;
+    
+    /*
     let html_code = tuple_formater(
         &config.html_template,
         &vec![
@@ -240,6 +350,7 @@ fn main() -> std::io::Result<()> {
     )?;
 
     html_file.write_all(html_code.as_bytes())?;
+    */
 
     Ok(())
 }

@@ -57,7 +57,15 @@ version = "^0"
 git = "https://github.com/srbpavel/rust"
 package = "easy_config"
 
-[dependencies.template_formater]                 
+[dev-dependencies.template_formater]                 
 version = "^0"                                   
 git = "https://github.com/srbpavel/rust"
 package = "template_formater"
+
+[dev-dependencies.async-std]
+version = "1.10.0"
+features = ["attributes", "unstable"]
+
+[dev-dependencies.futures]
+version = "0.3"
+
