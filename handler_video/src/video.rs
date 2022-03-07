@@ -14,6 +14,9 @@ use actix_web::{get,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
+//use futures_util::stream::TryStreamExt;
+
+
 use serde::{Serialize,
             Deserialize,
 };
@@ -157,16 +160,23 @@ pub async fn detail(state: web::Data<AppState>,
         },
     };
 
+    /*
     let video = state
         .video_map
         .lock()
         .unwrap();
+    */
 
     let mut status;
     
     let result = match parsed_idx {
         Some(i) => {
             status = status::Status::VideoIdNotFound;
+
+            let video = state
+                .video_map
+                .lock()
+                .unwrap();
             
             video.get(&i).map(|v| {
                 status = status::Status::VideoIdFound;
@@ -253,7 +263,8 @@ pub async fn delete(state: web::Data<AppState>,
     };
 
     //debug!("PARSED_IDX: {parsed_idx:?}");
-    
+
+    /*
     let mut video_hashmap = state
         .video_map
         .lock()
@@ -263,14 +274,25 @@ pub async fn delete(state: web::Data<AppState>,
         .binary_map
         .lock()
         .unwrap();
+    */
 
     // even we get string, we still parse as later we will get id as usize/...
     let result = match parsed_idx {
         Some(i) => {
+            let mut video_hashmap = state
+                .video_map
+                .lock()
+                .unwrap();
+            
             match video_hashmap.get_mut(&i) {
                 Some(_) => {
                     match video_hashmap.remove(&i) {
                         Some(_) => {
+                                let mut binary_hashmap = state
+                                .binary_map
+                                .lock()
+                                .unwrap();
+                            
                             match binary_hashmap.remove(&i) {
                                 Some(_) => {
                                     status::Status::DeleteOk
@@ -347,16 +369,24 @@ pub async fn insert_video(mut payload: Multipart,
                           req: HttpRequest)  -> Result<web::Json<UploadResponse>> {
 
     //debug!("REQ: {req:?}");
+
+    let AppState { video_map, binary_map } = &*state.into_inner();
+    // DO NOT BLOCK until needed!
+    //let mut video_hashmap = video_map.lock().unwrap();
+    //let mut binary_hashmap = binary_map.lock().unwrap();
     
+    /*
     let mut video_hashmap = state
         .video_map
         .lock()
         .unwrap();
 
-    let mut binary_hashmap = state
+    //let mut binary_hashmap = state
+    let binary_hashmap = &mut state
         .binary_map
         .lock()
         .unwrap();
+    */
 
     let mut status = status::Status::Init;
     let mut new_video = Video::default();
@@ -417,10 +447,13 @@ pub async fn insert_video(mut payload: Multipart,
     let mut content_counter = 0;
 
     while let Some(mut field) = payload
+    // // while let Some(item) = payload
         .try_next()
         .await? {
             content_counter += 1;
 
+            // // let mut field = item;
+            
             // we only accept one form with file
             if content_counter == 1 {
                 let content_disposition = field.content_disposition();
@@ -464,7 +497,8 @@ pub async fn insert_video(mut payload: Multipart,
                             data: BytesMut::with_capacity(1024),
                             filename: filename.to_string(),
                         };
-
+                        // */
+                        
                         /*
                         let mut buf = web::block(move || {
                             Binary {
@@ -472,17 +506,20 @@ pub async fn insert_video(mut payload: Multipart,
                                 filename: filename.to_string(),
                             }
                         }).await?;
-                        // */
+                        */
 
                         let mut chunk_counter = 0;
                         while let Some(chunk) = field.try_next().await? {
                             chunk_counter += 1;
                             //debug!("CHUNK_COUNTER: {chunk_counter}");
-                            
+
+                            // FIRST CHUNK
                             if chunk_counter == 1 {
                                 //debug!(">>> hash_create: {chunk_counter}");
                                 //status = status::Status::UploadStarted;
-                                
+
+                                // LOCK DETAIL
+                                let mut video_hashmap = video_map.lock().unwrap();
                                 video_hashmap
                                     .insert(
                                         new_video.id.clone(), // KEY: video.id
@@ -498,12 +535,16 @@ pub async fn insert_video(mut payload: Multipart,
                                 buf.data
                             }).await?;
 
+                            // /*
+                            // LOCK DATA
+                            let mut binary_hashmap = binary_map.lock().unwrap();
                             binary_hashmap
                                 .insert(
                                     new_video.id.clone(), // KEY: video.id
                                     buf
                                         .clone(), // VALUE: Binary {}
                                 );
+                            // */
                         };
 
                         status = status::Status::UploadDone;
@@ -568,13 +609,20 @@ pub async fn download(state: web::Data<AppState>,
         },
     };
 
+    /*
     let binary = state
         .binary_map
         .lock()
         .unwrap();
+    */
 
     let result = match parsed_idx {
         Some(i) => {
+            let binary = state
+                .binary_map
+                .lock()
+                .unwrap();
+            
             binary.get(&i).map(|v|
                                Binary {
                                    data: v.data.clone(),  // niet goed
