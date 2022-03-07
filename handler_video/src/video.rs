@@ -459,19 +459,20 @@ pub async fn insert_video(mut payload: Multipart,
                     Some(filename) => {
                         //debug!("\ndis_filename: {filename:?}");
 
+                        // /* // https://actix.rs/docs/server/
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
                             filename: filename.to_string(),
                         };
 
-                        /* // https://actix.rs/docs/server/
-                        let mut buf = web::block(||
-                                                 Binary {
-                                                     data: BytesMut::with_capacity(1024),
-                                                     filename: filename.to_string(),
-                                                 }
-                        ).await;
-                        */
+                        /*
+                        let mut buf = web::block(move || {
+                            Binary {
+                                data: BytesMut::with_capacity(1024),
+                                filename: filename.to_string(),
+                            }
+                        }).await?;
+                        // */
 
                         let mut chunk_counter = 0;
                         while let Some(chunk) = field.try_next().await? {
@@ -489,32 +490,20 @@ pub async fn insert_video(mut payload: Multipart,
                                     );
                             }
 
-                            // learn to test? how expensive as clone to hashmap
-                            // /*
-                            buf.data.put(&*chunk);
+                            buf.data = web::block(move || {
+                                buf
+                                    .data
+                                    .put(&*chunk);
+
+                                buf.data
+                            }).await?;
 
                             binary_hashmap
                                 .insert(
                                     new_video.id.clone(), // KEY: video.id
-                                    buf.clone(), // VALUE: Binary {}
+                                    buf
+                                        .clone(), // VALUE: Binary {}
                                 );
-                            // */
-                            
-                            /* // cannot solve unpack result!!!
-                            buf = web::block(move ||
-                                             buf
-                                             .data
-                                             .put(&*chunk)
-                                             .map(|_| buf)
-                            ).await?;
-
-                            binary_hashmap
-                                .insert(
-                                    new_video.id.clone(), // KEY: video.id
-                                    buf.clone(), // VALUE: Binary {}
-                                    //buf,
-                                );
-                            */
                         };
 
                         status = status::Status::UploadDone;
@@ -648,6 +637,7 @@ pub async fn download(state: web::Data<AppState>,
     }
 }
 
+/*
 // INDEX + 404 + ...
 
 #[derive(Serialize)]
@@ -688,6 +678,7 @@ async fn index(req: HttpRequest,
 pub async fn index_post(req_body: String) -> impl Responder {
     HttpResponse::Ok().body(req_body)
 }
+*/
 
 
 /// PLAYER
@@ -702,9 +693,9 @@ pub async fn play(state: web::Data<AppState>,
         Ok(i) => {
             Some(i)
         },
-        Err(why) => {
+        Err(_why) => {
             return web::Bytes::from_static(b"player: index String parse error")
-
+            
             /*
             return HttpResponse::NotFound()
                 .json(

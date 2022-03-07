@@ -9,11 +9,11 @@ use actix_web::{
      Data,
      JsonConfig,
     },
-    guard,
+    //guard,
     middleware,
     App,
     HttpServer,
-    HttpResponse,
+    //HttpResponse,
 };
 
 use std::{
@@ -207,7 +207,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )             
         )?
         // default: number of logical CPUs
-        //.workers(config.workers)
+        .workers(config.workers)
         .run()
         .await
 }

@@ -38,7 +38,7 @@ fn main() -> std::io::Result<()> {
 
     println!("PLAYER_URL: {player_url}");
 
-    println!("HTMLL: {}",
+    println!("HTML: {}",
              &config.html_file,
     );
         
@@ -179,6 +179,7 @@ fn main() -> std::io::Result<()> {
                 .arg("group: youtube");
 
             println!("\n\n#CMD: {:?}", &cmd);
+
             let output = &cmd.output();
 
             println!("#OUTPUT: {output:#?}");
@@ -237,6 +238,7 @@ fn main() -> std::io::Result<()> {
                 &*config.html_file,
         )
     )?;
+
     html_file.write_all(html_code.as_bytes())?;
 
     Ok(())
