@@ -1,4 +1,4 @@
-#going nice and slow, i see multiple chunks
+#going slow, i see multiple chunks
 #both fn download + play ok
 #+type
 curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" --no-buffer --limit-rate 100K
@@ -9,14 +9,12 @@ curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/vide
 #this we get via multipart payload -> "application/octet-stream"
 # ok -> vlc "http://127.0.0.1:8081/video/download/123"
 
+
 #video upload with 10K + html video tag play
 #with chunk 2 we are allowed to play video
 $ time cargo run --example main /home/conan/soft/rust/handler_video/examples/example_fill_config.toml
-   Compiling handler_video v0.1.0 (/home/conan/soft/rust/handler_video)
-    Finished dev [unoptimized + debuginfo] target(s) in 3.00s
-     Running `/home/conan/soft/rust/handler_video/target/debug/examples/main /home/conan/soft/rust/handler_video/examples/example_fill_config.toml`
-#CMD: "curl" "-X" "PUT" "-H" "Content-type: multipart/form-data" "http://localhost:8081/video/upload" "-F" "rave_party_1997_level_6_dance_or_die_360p_=@/home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4;type=video/mp4" "-H" "video_id: ab79b74d-4590-4be6-bd08-6be45298bfc1" "-H" "group: youtube" "--no-buffer" "--limit-rate" "10K"
-#UPLOADED: /home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4
+CMD: "curl" "-X" "PUT" "-H" "Content-type: multipart/form-data" "http://localhost:8081/video/upload" "-F" "rave_party_1997_level_6_dance_or_die_360p_=@/home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4;type=video/mp4" "-H" "video_id: ab79b74d-4590-4be6-bd08-6be45298bfc1" "-H" "group: youtube" "--no-buffer" "--limit-rate" "10K"
+UPLOADED: /home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4
 
 
 #https://www.gutenberg.org/ebooks/164
@@ -80,6 +78,8 @@ fill_video conan@spongebob:~/video/youtube$ curl "http://127.0.0.1:8081/video/do
 
 
 #piped
+#cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+#
 #third chunk
 # $ curl "http://127.0.0.1:8081/video/download/verne_piped" | tail
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
@@ -94,10 +94,10 @@ fill_video conan@spongebob:~/video/youtube$ curl "http://127.0.0.1:8081/video/do
   3568  their intense brilliancy had succeeded a reddish twilight, the lowest
   3569  state between day and night; but we could still see well enough; it was
   3570  not necessary to resort to the Ruhmkorff apparatus as yet.  At this
-cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
 
 
-#various: date samples
+
+#various: data samples
 for i in $(seq 5)
 do date +%s%N
 #do date ; echo "\n"

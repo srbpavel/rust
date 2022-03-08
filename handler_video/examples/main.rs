@@ -162,6 +162,7 @@ async fn run_upload(config: &TomlConfig,
         // type hardcoded as all mp4
         .arg(
             &format!("{name}=@{filename};type={content_type}",
+            //&format!("{name}=@{filename}",
                      name = video.name,
                      filename = video.filename,
                      content_type = &config.content_type,

@@ -12,7 +12,7 @@ pub enum Status {
     TooManyForms,
     VideoIdFound,
     VideoIdNotFound,
-    VideoIdWrongFormat,
+    //VideoIdWrongFormat,
     //UploadStarted,
     UploadDone,
     GroupFound,
@@ -20,6 +20,8 @@ pub enum Status {
     DeleteOk,
     DeleteError,
     DeleteInvalidId,
+    InvalidVideoMap,
+    InvalidBinaryMap,
 }
 
 impl Status {
@@ -40,7 +42,7 @@ impl Status {
             Self::TooManyForms => String::from("too many forms, we accept only one form"),
             Self::VideoIdFound => String::from("video_id found"),
             Self::VideoIdNotFound => String::from("video_id not found"),
-            Self::VideoIdWrongFormat => String::from("video_id wrong format"),
+            //Self::VideoIdWrongFormat => String::from("video_id wrong format"),
             //Self::UploadStarted => String::from("upload started"),
             Self::UploadDone => String::from("upload finished"),
             Self::GroupFound => String::from("group found"),
@@ -48,6 +50,8 @@ impl Status {
             Self::DeleteOk => String::from("delete ok"),
             Self::DeleteError => String::from("delete error"),
             Self::DeleteInvalidId => String::from("delete invalid id"),
+            Self::InvalidVideoMap => String::from("invalid video_map"),
+            Self::InvalidBinaryMap => String::from("invalid binary_map"),
         }
     }
 }

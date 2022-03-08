@@ -94,21 +94,26 @@ pub struct DeleteResponse {
 #[get("/all")]
 pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
-    let all_videos = state                                  
+    let all_videos = match state                                  
         .video_map
-        .lock()                                      
-        .unwrap();                                   
-
-    let result = if all_videos.is_empty() {
-        None
-    } else {
-        Some(all_videos.clone())
-    };
+        .lock() {
+            Ok(video_map) => video_map,
+            Err(_) => {
+                return Ok(                                              
+                    web::Json(                                   
+                        IndexResponse {                          
+                            result: None,
+                            status: status::Status::InvalidVideoMap.as_string(),
+                        }                                        
+                    )                                            
+                )                                                
+            },
+        };                     
     
     Ok(                                              
         web::Json(                                   
             IndexResponse {                          
-                result,
+                result: hash_to_option(all_videos.clone()),
                 status: status::Status::ListAll.as_string(),
             }                                        
         )                                            
@@ -124,61 +129,35 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            return Ok(
-                web::Json(
-                    DetailResponse {                          
-                        result: None,
-                        status: format!("{why}"),
-                    }
-                )
-            )
-        },
-    };
-
     let mut status;
+    status = status::Status::VideoIdNotFound;
+
+    let video = match state                                  
+        .video_map
+        .lock() {
+            Ok(videos_map) => videos_map,
+            Err(_) => {
+                return Ok(                                              
+                    web::Json(                                   
+                        DetailResponse {                          
+                            result: None,
+                            status: status::Status::InvalidVideoMap.as_string(),
+                        }                                        
+                    )                                            
+                )                                                
+            },
+        };                     
+
+    let result = video.get(&to_parse_idx).map(|v| {
+        status = status::Status::VideoIdFound;
+        
+        Video {
+            id: to_parse_idx,
+            group: v.group.to_string(),
+            name: v.name.clone(),
+        }
+    });
     
-    let result = match parsed_idx {
-        Some(i) => {
-            status = status::Status::VideoIdNotFound;
-
-            let video = state
-                .video_map
-                .lock()
-                .unwrap();
-
-            video.get(&i).map(|v| {
-                status = status::Status::VideoIdFound;
-
-                let binary = state
-                    .binary_map
-                    .lock()
-                    .unwrap();
-
-                binary
-                    .get(&i)
-                    .map(|b| {
-                        debug!("B: {} -> {}", b.filename, b.mime);
-                    });
-                
-                Video {
-                    id: i,
-                    group: v.group.to_string(),
-                    name: v.name.clone(),
-                }
-            })
-        },
-        None => {
-            status = status::Status::VideoIdWrongFormat;
-            
-            None
-        },
-    };
-
     Ok(
         web::Json(
             DetailResponse {
@@ -195,20 +174,42 @@ pub async fn detail(state: web::Data<AppState>,
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
-    let mut all_videos = state
+    let mut all_videos = match state                                  
         .video_map
-        .lock()
-        .unwrap();
+        .lock() {
+            Ok(video_map) => video_map,
+            Err(_) => {
+                return Ok(                                              
+                    web::Json(                                   
+                        IndexResponse {                          
+                            result: None,
+                            status: status::Status::InvalidVideoMap.as_string(),
+                        }                                        
+                    )                                            
+                )                                                
+            },
+        };                     
 
     all_videos.clear();
     
-    let mut all_binary = state
+    let mut all_binary = match state                                  
         .binary_map
-        .lock()
-        .unwrap();
+        .lock() {
+            Ok(binary_map) => binary_map,
+            Err(_) => {
+                return Ok(                                              
+                    web::Json(                                   
+                        IndexResponse {                          
+                            result: None,
+                            status: status::Status::InvalidBinaryMap.as_string(),
+                        }                                        
+                    )                                            
+                )                                                
+            },
+        };                     
 
     all_binary.clear();
-
+    
     Ok(
         web::Json(
             IndexResponse {
@@ -442,7 +443,7 @@ pub async fn insert_video(mut payload: Multipart,
                     Some(filename) => {
 
                         let content_type = field.content_type().essence_str();
-                        debug!("CONTENT_TYPE: {:?}", content_type);
+                        //debug!("CONTENT_TYPE: {:?}", content_type);
                         
                         // /* // https://actix.rs/docs/server/
                         let mut buf = Binary {
@@ -478,13 +479,13 @@ pub async fn insert_video(mut payload: Multipart,
                             }
 
                             buf.data = web::block(move || {
-                                let ch = &*chunk;
-                                debug!("CHUNK: {chunk_counter}");
+                                //let ch = &*chunk;
+                                //debug!("CHUNK: {chunk_counter}");
 
                                 buf
                                     .data
-                                    //.put(&*chunk);
-                                    .put(ch);
+                                    .put(&*chunk);
+                                    //.put(ch);
 
                                 buf.data
                             }).await?;
@@ -654,5 +655,15 @@ pub async fn play(state: web::Data<AppState>,
             // we should rather return 404 
             return web::Bytes::from_static(b"player: binary_id not found")
         },
+    }
+}
+
+
+/// hashmap inside option
+fn hash_to_option(hash: HashMap<VideoKey, VideoValue>) -> Option<HashMap<VideoKey, VideoValue>> {
+    if hash.is_empty() {
+        None
+    } else {
+        Some(hash)
     }
 }

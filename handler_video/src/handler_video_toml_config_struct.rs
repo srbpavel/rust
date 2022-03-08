@@ -9,7 +9,7 @@ pub struct TomlConfig {
     pub host: MyStr,
     pub server: MyStr,
     pub port: u64,
-    pub workers: usize,
+    pub workers: i8,
     pub log_format: MyStr,
 
     pub flag: Flag,

@@ -64,14 +64,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .app_data(Data::new(AppState {
                 video_map: video_map.clone(),
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
-            // https://actix.rs/docs/url-dispatch/
             .default_service(
                 web::route()
                     .guard(
@@ -79,100 +78,10 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                             guard::Get()
                         )
                     )
-                    // -> 405
                     .to(HttpResponse::MethodNotAllowed),
-                    // -> 200
-                    /*
-                    .to(|| async {
-                        HttpResponse::Ok()
-                            .body("url not active\n")
-                    }),
-                    */
-
-                    /*
-                    .route(web::get()
-                           .to(video::index_trail)
-                    )
-                    */
-
-                    /*
-                    .to(|| async {
-                        HttpResponse::Found()
-                           .insert_header((actix_web::http::header::LOCATION, "url"))
-                           .finish()
-                            
-                        /*
-                        HttpResponse::Found()
-                            .header("Location",
-                                    "/login",
-                            )
-                            .finish()
-                        */
-                    }),
-                    */
             )
             .service(
                 web::scope(video::SCOPE)
-                    /*
-                    // curl "http://127.0.0.1:8081/video/"
-                    .service(video::index_trail)
-                    // curl "http://127.0.0.1:8081/video"
-                    .service(video::index)
-                    // curl -X POST "http://127.0.0.1:8081/video"
-                    // -H "host: spongebob"
-                    .service(
-                        web::scope("")
-                            .guard(
-                                guard::Header(
-                                    "host",
-                                    "spongebob")
-                            )
-                            .route("",
-                                   web::to(||
-                                           async {
-                                               HttpResponse::Ok()
-                                                   .body("SPONGEBOB")
-                                           }
-                                   )
-                            ),
-                    )
-                    // curl -X POST "http://127.0.0.1:8081/video"
-                    // -H "host: jozefina"
-                    .service(
-                        web::scope("")
-                            .guard(
-                                guard::Header(
-                                    "host",
-                                    "jozefina")
-                            )
-                            .route("",
-                                   web::to(||
-                                           async {
-                                               HttpResponse::Ok()
-                                                   .body("JOZEFINA")
-                                           }
-                                   )
-                            ),
-                    )
-                    // curl -X POST "http://127.0.0.1:8081/video"
-                    // -d '{"video_id": "123", "group_id": "video_on_demand"}'
-                    .service(
-                        web::scope("")
-                            .guard(
-                                guard::Post()
-                            )
-                            .route("",
-                                   web::post()
-                                   .to(video::index_post)
-                            )
-                    )
-                    */
-                    /*
-                    .route("",
-                           web::post()
-                           .to(video::index_post)
-                    )
-                    */
                     .service(video::all)
                     .service(video::download)
                     .service(video::play)
@@ -203,10 +112,21 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     &config.server,
                     config.port,
             )             
-        )?
-        .workers(config.workers)
-        .run()
-        .await
+        )?;
+
+    match &config.workers {
+        -1 => server
+            .run()
+            .await,
+        n @ 1.. => server
+            .workers(*n as usize)
+            .run()
+            .await,
+        _ => {
+            eprintln!("\nEXIT: set correct number of workers:\n default: -1\n user defined: 1/2/4/..");
+            std::process::exit(1);
+        }
+    }
 }
 
 
