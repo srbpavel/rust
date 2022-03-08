@@ -19,6 +19,7 @@ pub enum Status {
     DeleteOk,
     DeleteDetailError,
     DeleteBinaryError,
+    PlayerBinaryNotFound,
 }
 
 impl Status {
@@ -46,6 +47,10 @@ impl Status {
             Self::DeleteOk => String::from("delete ok"),
             Self::DeleteDetailError => String::from("delete detail error"),
             Self::DeleteBinaryError => String::from("delete binary error"),
+            Self::PlayerBinaryNotFound => String::from(
+                "{\"status\": \"player binary_id not found\"}"
+            ),
+            
         }
     }
 }

@@ -539,21 +539,10 @@ pub async fn play(state: web::Data<AppState>,
             web::Bytes::from(v.data)
         },
         None => {
-            web::Bytes::from_static(
-                b"{\"status\": \"player binary_id not found\"}"
+            web::Bytes::from(
+                status::Status::PlayerBinaryNotFound
+                    .as_string()
             )
         },
     }
 }
-
-
-/*
-/// hashmap into option
-fn hash_to_option<K, V>(hash: HashMap<K, V>) -> Option<HashMap<K, V>> {
-    if hash.is_empty() {
-        None
-    } else {
-        Some(hash)
-    }
-}
-*/
