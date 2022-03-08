@@ -3,7 +3,7 @@ use crate::{
     }, 
     status,
 };
-use log::debug;
+//use log::debug;
 use actix_web::{get,
                 post,
                 web,
@@ -14,11 +14,8 @@ use actix_web::{get,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
-use serde::{Serialize,
-            Deserialize,
-};
+use serde::Serialize;
 use std::collections::HashMap;
-//use uuid::Uuid;
 use bytes::{BytesMut,
             BufMut,
 };
@@ -39,7 +36,8 @@ pub struct Binary {
     pub mime: String,
 }
 
-type FieldType = String; 
+
+type FieldType = String;
 
 /// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -60,12 +58,6 @@ impl Video {
     }
 }
 
-/// parse url pattern error msg
-#[derive(Serialize, Deserialize)]
-struct ParseError {
-    status: String,
-}
-
 /// all videos
 #[derive(Serialize, Debug)]
 pub struct IndexResponse {     
@@ -82,7 +74,7 @@ pub struct DetailResponse {
 
 /// delete info
 #[derive(Serialize, Debug)]
-pub struct DeleteResponse {     
+pub struct StatusResponse {     
     status: String,
 }
 
@@ -94,16 +86,28 @@ pub struct DeleteResponse {
 #[get("/all")]
 pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
+    let status;
+    
     let all_videos = state                                  
         .video_map
         .lock()
         .unwrap();
+
+    let result = if all_videos.is_empty() {
+        status = status::Status::ListNone;
+        
+        None
+    } else {
+        status = status::Status::ListAll;
+        
+        Some(all_videos.clone())
+    };
     
     Ok(                                              
         web::Json(                                   
             IndexResponse {                          
-                result: hash_to_option(all_videos.clone()),
-                status: status::Status::ListAll.as_string(),
+                result,
+                status: status.as_string(),
             }                                        
         )                                            
     )                                                
@@ -131,7 +135,7 @@ pub async fn detail(state: web::Data<AppState>,
         
         Video {
             id: to_parse_idx,
-            group: v.group.to_string(),
+            group: v.group.clone(),
             name: v.name.clone(),
         }
     });
@@ -180,65 +184,40 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
 /// DELETE video_id
 /// 
 pub async fn delete(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> Result<web::Json<DeleteResponse>> {
+                    idx: web::Path<String>) -> Result<web::Json<StatusResponse>> {
 
-    //debug!("IDX: {idx:?}");
-    
     let to_parse_idx = idx.into_inner();
 
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            return Ok(
-                web::Json(
-                    DeleteResponse {                          
-                        status: format!("{why}"),
-                    }                                        
-                )
-            )
-        },
-    };
-
-    //debug!("PARSED_IDX: {parsed_idx:?}");
-
-    // even we get string, we still parse as later we will get id as usize/...
-    let result = match parsed_idx {
-        Some(i) => {
-            let mut video_hashmap = state
-                .video_map
-                .lock()
-                .unwrap();
-            
-            match video_hashmap.get_mut(&i) {
+    let mut video_hashmap = state
+        .video_map
+        .lock()
+        .unwrap();
+    
+    let result = match video_hashmap.get_mut(&to_parse_idx) {
+        Some(_) => {
+            match video_hashmap.remove(&to_parse_idx) {
                 Some(_) => {
-                    match video_hashmap.remove(&i) {
+                    let mut binary_hashmap = state
+                        .binary_map
+                        .lock()
+                        .unwrap();
+                    
+                    match binary_hashmap.remove(&to_parse_idx) {
                         Some(_) => {
-                                let mut binary_hashmap = state
-                                .binary_map
-                                .lock()
-                                .unwrap();
-                            
-                            match binary_hashmap.remove(&i) {
-                                Some(_) => {
-                                    status::Status::DeleteOk
-                                },
-                                None => status::Status::DeleteError,
-                            }
+                            status::Status::DeleteOk
                         },
-                        None => status::Status::DeleteError,
+                        None => status::Status::DeleteBinaryError,
                     }
                 },
-                None => status::Status::VideoIdNotFound,
+                None => status::Status::DeleteDetailError,
             }
         },
-        None => status::Status::DeleteInvalidId,
+        None => status::Status::VideoIdNotFound,
     };
     
     Ok(
         web::Json(
-            DeleteResponse {                          
+            StatusResponse {
                 status: result.as_string(),
             }                                        
         )
@@ -305,7 +284,7 @@ pub async fn insert_video(mut payload: Multipart,
     //debug!("HEADERS: {:?}", req.headers());
 
     match req.headers().get("video_id") {
-        Some(id) => {  // HeaderValue
+        Some(id) => {
             new_video.id = match id.to_str() {
                 Ok(i) => String::from(i),
                 Err(why) => {
@@ -360,8 +339,6 @@ pub async fn insert_video(mut payload: Multipart,
         },
     }
     
-    // iterate over multipart stream
-    // https://actix.rs/actix-web/actix_multipart/struct.Field.html
     let mut content_counter = 0;
 
     while let Some(mut field) = payload
@@ -431,6 +408,8 @@ pub async fn insert_video(mut payload: Multipart,
                                         new_video.id.clone(), // K: video.id
                                         new_video.clone(), // V: Video {}
                                     );
+                            } else if chunk_counter == 2 {
+
                             }
 
                             buf.data = web::block(move || {
@@ -527,7 +506,7 @@ pub async fn download(state: web::Data<AppState>,
         },
         None => {
             HttpResponse::NotFound().json(
-                &ParseError {
+                &StatusResponse {
                     status: status::Status::VideoIdNotFound.as_string(),
                 }
             )
@@ -536,7 +515,7 @@ pub async fn download(state: web::Data<AppState>,
 }
 
 
-/// PLAYER
+/// PLAYER -> data in bytes
 /// 
 #[get("/play/{idx}")]
 pub async fn play(state: web::Data<AppState>,
@@ -560,12 +539,15 @@ pub async fn play(state: web::Data<AppState>,
             web::Bytes::from(v.data)
         },
         None => {
-            web::Bytes::from_static(b"player: binary_id not found")
+            web::Bytes::from_static(
+                b"{\"status\": \"player binary_id not found\"}"
+            )
         },
     }
 }
 
 
+/*
 /// hashmap into option
 fn hash_to_option<K, V>(hash: HashMap<K, V>) -> Option<HashMap<K, V>> {
     if hash.is_empty() {
@@ -574,3 +556,4 @@ fn hash_to_option<K, V>(hash: HashMap<K, V>) -> Option<HashMap<K, V>> {
         Some(hash)
     }
 }
+*/

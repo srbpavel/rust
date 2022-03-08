@@ -26,7 +26,7 @@ use std::{
 
 /// for each WORKER thread     
 #[derive(Debug)]                       
-pub struct AppState {                      
+pub struct AppState {
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
     pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
 }                                      

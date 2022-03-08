@@ -4,6 +4,7 @@ pub enum Status {
     Init,
     ClearOk,
     ListAll,
+    ListNone,
     EmptyVideoId,
     EmptyGroupId,
     EmptyFormFilename,
@@ -12,16 +13,12 @@ pub enum Status {
     TooManyForms,
     VideoIdFound,
     VideoIdNotFound,
-    //VideoIdWrongFormat,
-    //UploadStarted,
     UploadDone,
     GroupFound,
     GroupNotFound,
     DeleteOk,
-    DeleteError,
-    DeleteInvalidId,
-    //InvalidVideoMap,
-    //InvalidBinaryMap,
+    DeleteDetailError,
+    DeleteBinaryError,
 }
 
 impl Status {
@@ -32,6 +29,7 @@ impl Status {
             Self::Init => String::from("init"),
             Self::ClearOk => String::from("clear ok"),
             Self::ListAll => String::from("some videos found"),
+            Self::ListNone => String::from("none videos found"),
             Self::EmptyVideoId => String::from("header 'video_id' not provided"),
             Self::EmptyGroupId => String::from("header 'group' not provided"),
             Self::EmptyFormFilename => String::from("form 'filename' not provided"),
@@ -42,17 +40,12 @@ impl Status {
             Self::TooManyForms => String::from("too many forms, we accept only one form"),
             Self::VideoIdFound => String::from("video_id found"),
             Self::VideoIdNotFound => String::from("video_id not found"),
-            //Self::VideoIdWrongFormat => String::from("video_id wrong format"),
-            //Self::UploadStarted => String::from("upload started"),
             Self::UploadDone => String::from("upload finished"),
             Self::GroupFound => String::from("group found"),
             Self::GroupNotFound => String::from("group not found"),
             Self::DeleteOk => String::from("delete ok"),
-            Self::DeleteError => String::from("delete error"),
-            Self::DeleteInvalidId => String::from("delete invalid id"),
-            //Self::InvalidVideoMap => String::from("invalid video_map"),
-            //Self::InvalidBinaryMap => String::from("invalid binary_map"),
+            Self::DeleteDetailError => String::from("delete detail error"),
+            Self::DeleteBinaryError => String::from("delete binary error"),
         }
     }
 }
-
