@@ -633,10 +633,12 @@ pub async fn download(state: web::Data<AppState>,
                      ),
                     )
                 )
+                /*
                 .content_type(
                     actix_web::http::header::ContentType::octet_stream()
                 )
                 .status(actix_web::http::StatusCode::OK)
+                */
                 .body(v.data)
         },
         None => {
