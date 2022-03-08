@@ -31,7 +31,7 @@ struct Video {
 }
 
 
-/// list dir and files
+/// list dir and push files to vec
 fn get_files(config: &TomlConfig) -> Result<Vec<PathBuf>, Error> {
 
     // VIDEO_DIR
@@ -125,6 +125,7 @@ async fn run_upload(config: &TomlConfig,
             ("name", &video.name),
             ("width", &config.player_width),
             ("src", &video_path),
+            ("type", &config.content_type),
         ],
         config.flag.debug_template,
     );
@@ -160,9 +161,10 @@ async fn run_upload(config: &TomlConfig,
         .arg("-F")
         // type hardcoded as all mp4
         .arg(
-            &format!("{name}=@{filename};type=video/mp4",
+            &format!("{name}=@{filename};type={content_type}",
                      name = video.name,
                      filename = video.filename,
+                     content_type = &config.content_type,
             )
         )
         .arg("-H")
@@ -176,6 +178,15 @@ async fn run_upload(config: &TomlConfig,
             &format!("group: {}",
                      &config.video_group,
             )
+        )
+        .arg("--no-buffer"
+        )
+        .arg("--limit-rate"
+        )
+        .arg(
+            &format!("{}",
+                     &config.curl_limit_rate,
+            )
         );
     
     println!("#CMD: {:?}", cmd);
@@ -188,6 +199,10 @@ async fn run_upload(config: &TomlConfig,
 }
 
 
+/// list config video dir 
+/// filter files
+/// generate html + video tag
+/// run async command with curl upload 
 #[async_std::main]
 async fn main() -> std::io::Result<()> {
     // COMMAND ARGS

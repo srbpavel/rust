@@ -1,0 +1,113 @@
+#going nice and slow, i see multiple chunks
+#both fn download + play ok
+#+type
+curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" --no-buffer --limit-rate 100K
+# ok -> vlc "http://127.0.0.1:8081/video/download/123"
+
+#-type
+curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4" -H "video_id: 123" -H "group: stream_001" --no-buffer --limit-rate 100K
+#this we get via multipart payload -> "application/octet-stream"
+# ok -> vlc "http://127.0.0.1:8081/video/download/123"
+
+#video upload with 10K + html video tag play
+#with chunk 2 we are allowed to play video
+$ time cargo run --example main /home/conan/soft/rust/handler_video/examples/example_fill_config.toml
+   Compiling handler_video v0.1.0 (/home/conan/soft/rust/handler_video)
+    Finished dev [unoptimized + debuginfo] target(s) in 3.00s
+     Running `/home/conan/soft/rust/handler_video/target/debug/examples/main /home/conan/soft/rust/handler_video/examples/example_fill_config.toml`
+#CMD: "curl" "-X" "PUT" "-H" "Content-type: multipart/form-data" "http://localhost:8081/video/upload" "-F" "rave_party_1997_level_6_dance_or_die_360p_=@/home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4;type=video/mp4" "-H" "video_id: ab79b74d-4590-4be6-bd08-6be45298bfc1" "-H" "group: youtube" "--no-buffer" "--limit-rate" "10K"
+#UPLOADED: /home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4
+
+
+#https://www.gutenberg.org/ebooks/164
+#large txt file for chunk testing
+curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "jules_verne_twenty thousand=@/home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt;type=text/plain" -H "video_id: twenty_thousand" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+
+#10K / 3K
+
+#curl chunk size 64Kb
+#txt 709440b -> 11x chunks
+
+#first chunk
+#total size as chunk size
+#
+fill_video conan@spongebob:~/video/youtube$ curl "http://127.0.0.1:8081/video/download/twenty_thousand" | tail
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100 65322  100 65322    0     0  62.2M      0 --:--:-- --:--:-- --:--:-- 62.2M
+  1179  their stepping holes, and the clouds of smoke could hardly find way out
+  1180  of the narrow funnels.
+  1181
+  1182  They heaved the log a second time.
+  1183
+  1184  "Well?" asked the captain of the man at the wheel.
+  1185
+  1186  "Nineteen miles and three-tenths, sir."
+  1187
+
+#second
+fill_video conan@spongebob:~/video/youtube$ curl "http://127.0.0.1:8081/video/download/twenty_thousand" | tail
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  127k  100  127k    0     0  62.3M      0 --:--:-- --:--:-- --:--:-- 62.3M
+  2396  varieties of the aspirgillum of Java, a kind of calcareous tube, edged
+  2397  with leafy folds, and much debated by amateurs; a whole series of
+  2398  trochi, some a greenish-yellow, found in the American seas, others a
+  2399  reddish-brown, natives of Australian waters; others from the Gulf of
+  2400  Mexico, remarkable for their imbricated shell; stellari found in the
+  2401  Southern Seas; and last, the rarest of all, the magnificent spur of New
+  2402  Zealand; and every description of delicate and fragile shells to which
+  2403  science has given appropriate names.
+  2404
+  2405  Apart, in separate compartments, were spread out chaplets of
+
+#last
+#upload finished
+fill_video conan@spongebob:~/video/youtube$ curl "http://127.0.0.1:8081/video/download/twenty_thousand" | tail
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  692k  100  692k    0     0  61.5M      0 --:--:-- --:--:-- --:--:-- 75.1M
+ 12530
+ 12531
+ 12532  Most people start at our Web site which has the main PG search facility:
+ 12533
+ 12534       https://www.gutenberg.org
+ 12535
+ 12536  This Web site includes information about Project Gutenberg-tm,
+ 12537  including how to make donations to the Project Gutenberg Literary
+ 12538  Archive Foundation, how to help produce our new eBooks, and how to
+ 12539  subscribe to our email newsletter to hear about new eBooks.
+
+
+#piped
+#third chunk
+# $ curl "http://127.0.0.1:8081/video/download/verne_piped" | tail
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  191k  100  191k    0     0   187M      0 --:--:-- --:--:-- --:--:--  187M
+  3562  than air, in the ratio of four to one.  At this period the earth sloped
+  3563  downwards; the light took a uniform tint.  We were at a depth of a
+  3564  hundred and five yards and twenty inches, undergoing a pressure of six
+  3565  atmospheres.
+  3566
+  3567  At this depth I could still see the rays of the sun, though feebly; to
+  3568  their intense brilliancy had succeeded a reddish twilight, the lowest
+  3569  state between day and night; but we could still see well enough; it was
+  3570  not necessary to resort to the Ruhmkorff apparatus as yet.  At this
+cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+
+
+#various: date samples
+for i in $(seq 5)
+do date +%s%N
+#do date ; echo "\n"
+   sleep 1
+done |
+    dd conv=block cbs=512 |
+    #dd conv=block cbs=64 |
+    #strace -t -e sendto,read -o /home/conan/soft/rust/handler_video/timestamp.txt curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: now" -H "group: timestamp" --no-buffer
+    strace -t -e sendto,read -o /home/conan/soft/rust/handler_video/timestamp.txt curl --trace-ascii - -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: now" -H "group: timestamp" --no-buffer --limit-rate 10b
+
+
+#various: seq
+seq 17000 1 17010 | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "seq=@-;type=text/plain" -H "video_id: sequence" -H "group: chunk_tester" --no-buffer --limit-rate 10K

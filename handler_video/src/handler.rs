@@ -9,11 +9,11 @@ use actix_web::{
      Data,
      JsonConfig,
     },
-    //guard,
+    guard,
     middleware,
     App,
     HttpServer,
-    //HttpResponse,
+    HttpResponse,
 };
 
 use std::{
@@ -71,7 +71,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
-            /*
             // https://actix.rs/docs/url-dispatch/
             .default_service(
                 web::route()
@@ -81,14 +80,14 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                         )
                     )
                     // -> 405
-                    //.to(HttpResponse::MethodNotAllowed),
+                    .to(HttpResponse::MethodNotAllowed),
                     // -> 200
-                    // /*
+                    /*
                     .to(|| async {
                         HttpResponse::Ok()
                             .body("url not active\n")
                     }),
-                    // */
+                    */
 
                     /*
                     .route(web::get()
@@ -112,7 +111,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     }),
                     */
             )
-            */
             .service(
                 web::scope(video::SCOPE)
                     /*
@@ -206,7 +204,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     config.port,
             )             
         )?
-        // default: number of logical CPUs
         .workers(config.workers)
         .run()
         .await

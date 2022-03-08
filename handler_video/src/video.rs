@@ -3,7 +3,7 @@ use crate::{
     }, 
     status,
 };
-//use log::debug;
+use log::debug;
 use actix_web::{get,
                 post,
                 web,
@@ -14,9 +14,6 @@ use actix_web::{get,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
-//use futures_util::stream::TryStreamExt;
-
-
 use serde::{Serialize,
             Deserialize,
 };
@@ -39,14 +36,17 @@ pub type BinaryValue = Binary;
 pub struct Binary {
     pub data: BytesMut,
     pub filename: String,
+    pub mime: String,
 }
 
-/// detail
+type VideoType = String; 
+
+/// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
-    id: String,
-    group: String,
-    name: String,
+    id: VideoType,
+    group: VideoType,
+    name: VideoType,
 }
 
 impl Video {
@@ -73,24 +73,10 @@ pub struct IndexResponse {
     status: String,
 }
 
-/// upload 
-#[derive(Serialize, Debug)]
-pub struct UploadResponse {
-    result: Option<PostOk>,
-    status: String,
-}
-
-/// valid upload
-#[derive(Serialize, Debug)]
-pub struct PostOk {
-    video: Video,
-}
-
 /// detail
 #[derive(Serialize, Debug)]                               
 pub struct DetailResponse {                                   
     result: Option<Video>,
-    url: String,
     status: String,
 }
 
@@ -138,11 +124,6 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let url = format!("{}/detail/{}",
-                      SCOPE,
-                      to_parse_idx,
-    );
-
     let parsed_idx = match to_parse_idx.parse::<String>() {
         Ok(i) => {
             Some(i)
@@ -152,20 +133,12 @@ pub async fn detail(state: web::Data<AppState>,
                 web::Json(
                     DetailResponse {                          
                         result: None,
-                        url,
                         status: format!("{why}"),
                     }
                 )
             )
         },
     };
-
-    /*
-    let video = state
-        .video_map
-        .lock()
-        .unwrap();
-    */
 
     let mut status;
     
@@ -177,10 +150,21 @@ pub async fn detail(state: web::Data<AppState>,
                 .video_map
                 .lock()
                 .unwrap();
-            
+
             video.get(&i).map(|v| {
                 status = status::Status::VideoIdFound;
 
+                let binary = state
+                    .binary_map
+                    .lock()
+                    .unwrap();
+
+                binary
+                    .get(&i)
+                    .map(|b| {
+                        debug!("B: {} -> {}", b.filename, b.mime);
+                    });
+                
                 Video {
                     id: i,
                     group: v.group.to_string(),
@@ -199,7 +183,6 @@ pub async fn detail(state: web::Data<AppState>,
         web::Json(
             DetailResponse {
                 result,
-                url,
                 status: status.as_string(),
             }
         )
@@ -246,7 +229,6 @@ pub async fn delete(state: web::Data<AppState>,
     
     let to_parse_idx = idx.into_inner();
 
-    //let parsed_idx = match to_parse_idx.parse::<usize>() {
     let parsed_idx = match to_parse_idx.parse::<String>() {
         Ok(i) => {
             Some(i)
@@ -263,18 +245,6 @@ pub async fn delete(state: web::Data<AppState>,
     };
 
     //debug!("PARSED_IDX: {parsed_idx:?}");
-
-    /*
-    let mut video_hashmap = state
-        .video_map
-        .lock()
-        .unwrap();
-
-    let mut binary_hashmap = state
-        .binary_map
-        .lock()
-        .unwrap();
-    */
 
     // even we get string, we still parse as later we will get id as usize/...
     let result = match parsed_idx {
@@ -366,27 +336,11 @@ pub async fn list_group(state: web::Data<AppState>,
 ///
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
-                          req: HttpRequest)  -> Result<web::Json<UploadResponse>> {
+                          req: HttpRequest)  -> Result<web::Json<DetailResponse>> {
 
     //debug!("REQ: {req:?}");
 
     let AppState { video_map, binary_map } = &*state.into_inner();
-    // DO NOT BLOCK until needed!
-    //let mut video_hashmap = video_map.lock().unwrap();
-    //let mut binary_hashmap = binary_map.lock().unwrap();
-    
-    /*
-    let mut video_hashmap = state
-        .video_map
-        .lock()
-        .unwrap();
-
-    //let mut binary_hashmap = state
-    let binary_hashmap = &mut state
-        .binary_map
-        .lock()
-        .unwrap();
-    */
 
     let mut status = status::Status::Init;
     let mut new_video = Video::default();
@@ -410,7 +364,7 @@ pub async fn insert_video(mut payload: Multipart,
             // but still we receive JSON response with status
             return Ok(
                 web::Json(
-                    UploadResponse {                          
+                    DetailResponse {                          
                         result: None,
                         status: status::Status::EmptyVideoId.as_string(),
                     }                                        
@@ -431,7 +385,7 @@ pub async fn insert_video(mut payload: Multipart,
         None => {
             return Ok(
                 web::Json(
-                    UploadResponse {                          
+                    DetailResponse {                          
                         result: None,
                         status: status::Status::EmptyGroupId.as_string(),
                     }
@@ -461,7 +415,7 @@ pub async fn insert_video(mut payload: Multipart,
                         if name.trim().eq("") {
                             return Ok(
                                 web::Json(
-                                    UploadResponse {
+                                    DetailResponse {                          
                                         result: None,
                                         status: status::Status::EmptyFormName.as_string(),
                                     }
@@ -474,7 +428,7 @@ pub async fn insert_video(mut payload: Multipart,
                     None =>{
                         return Ok(
                             web::Json(
-                                UploadResponse {
+                                DetailResponse {                          
                                     result: None,
                                     status: status::Status::EmptyFormName.as_string(),
                                 }
@@ -486,10 +440,16 @@ pub async fn insert_video(mut payload: Multipart,
                 // FORM
                 match content_disposition.get_filename() {
                     Some(filename) => {
+
+                        let content_type = field.content_type().essence_str();
+                        debug!("CONTENT_TYPE: {:?}", content_type);
+                        
                         // /* // https://actix.rs/docs/server/
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
                             filename: filename.to_string(),
+                            mime: String::from(content_type),
+
                         };
                         // */
                         
@@ -518,9 +478,13 @@ pub async fn insert_video(mut payload: Multipart,
                             }
 
                             buf.data = web::block(move || {
+                                let ch = &*chunk;
+                                debug!("CHUNK: {chunk_counter}");
+
                                 buf
                                     .data
-                                    .put(&*chunk);
+                                    //.put(&*chunk);
+                                    .put(ch);
 
                                 buf.data
                             }).await?;
@@ -542,7 +506,7 @@ pub async fn insert_video(mut payload: Multipart,
                     None => {
                         return Ok(
                             web::Json(
-                                UploadResponse {
+                                DetailResponse {                          
                                     result: None,
                                     status: status::Status::EmptyFormFilename.as_string(),
                                 }
@@ -553,7 +517,7 @@ pub async fn insert_video(mut payload: Multipart,
             } else {
                 return Ok(
                     web::Json(
-                        UploadResponse {
+                        DetailResponse {                          
                             result: None,
                             status: status::Status::TooManyForms.as_string(),
                         }
@@ -564,11 +528,9 @@ pub async fn insert_video(mut payload: Multipart,
 
     Ok(
         web::Json(
-            UploadResponse {
+            DetailResponse {                          
                 result: Some(
-                    PostOk {
-                        video: new_video,
-                    }
+                    new_video
                 ),
                 status: status.as_string(),
             }
@@ -599,13 +561,6 @@ pub async fn download(state: web::Data<AppState>,
         },
     };
 
-    /*
-    let binary = state
-        .binary_map
-        .lock()
-        .unwrap();
-    */
-
     let result = match parsed_idx {
         Some(i) => {
             let binary = state
@@ -617,6 +572,8 @@ pub async fn download(state: web::Data<AppState>,
                                Binary {
                                    data: v.data.clone(),  // niet goed
                                    filename: v.filename.clone(),
+                                   //mime: String::from("MIME"),
+                                   mime: v.mime.clone(),
                                }
             )
         },
@@ -651,49 +608,6 @@ pub async fn download(state: web::Data<AppState>,
     }
 }
 
-/*
-// INDEX + 404 + ...
-
-#[derive(Serialize)]
-struct Index<'s> {
-    status: &'s str,
-}
-
-#[get("/")]
-async fn index_trail(_req: HttpRequest) -> impl Responder {
-    web::Json(
-        Index {
-            status: "index",
-        }
-    )
-}
-
-
-#[get("")]
-async fn index(req: HttpRequest,
-               data: web::Data<AppState>) -> Result<impl Responder> {
-
-
-    
-    let result = format!("req: {:?}\n{}\n{:?}",
-                         req,
-                         "index",
-                         &data
-                         .video_map
-                         .clone(),
-    );
-    
-    Ok(result)       
-}
-
-
-/// curl -X POST "http://127.0.0.1:8081/video" -H "yeah: baby" -d '{"video_id": "456", "group_id": "on_demand"}' 2>/dev/null | jq
-///
-pub async fn index_post(req_body: String) -> impl Responder {
-    HttpResponse::Ok().body(req_body)
-}
-*/
-
 
 /// PLAYER
 /// 
@@ -713,13 +627,6 @@ pub async fn play(state: web::Data<AppState>,
         },
     };
 
-    /*
-    let binary = state
-        .binary_map
-        .lock()
-        .unwrap();
-    */
-
     let result = match parsed_idx {
         Some(i) => {
             let binary = state
@@ -731,6 +638,8 @@ pub async fn play(state: web::Data<AppState>,
                                Binary {
                                    data: v.data.clone(),  // niet goed jochie
                                    filename: v.filename.clone(),
+                                   //mime: String::from("MIME"),
+                                   mime: v.mime.clone(),
                                }
             )
         },
