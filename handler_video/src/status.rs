@@ -20,8 +20,8 @@ pub enum Status {
     DeleteOk,
     DeleteError,
     DeleteInvalidId,
-    InvalidVideoMap,
-    InvalidBinaryMap,
+    //InvalidVideoMap,
+    //InvalidBinaryMap,
 }
 
 impl Status {
@@ -50,8 +50,8 @@ impl Status {
             Self::DeleteOk => String::from("delete ok"),
             Self::DeleteError => String::from("delete error"),
             Self::DeleteInvalidId => String::from("delete invalid id"),
-            Self::InvalidVideoMap => String::from("invalid video_map"),
-            Self::InvalidBinaryMap => String::from("invalid binary_map"),
+            //Self::InvalidVideoMap => String::from("invalid video_map"),
+            //Self::InvalidBinaryMap => String::from("invalid binary_map"),
         }
     }
 }

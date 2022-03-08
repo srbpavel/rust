@@ -18,7 +18,7 @@ use serde::{Serialize,
             Deserialize,
 };
 use std::collections::HashMap;
-use uuid::Uuid;
+//use uuid::Uuid;
 use bytes::{BytesMut,
             BufMut,
 };
@@ -39,14 +39,14 @@ pub struct Binary {
     pub mime: String,
 }
 
-type VideoType = String; 
+type FieldType = String; 
 
 /// video
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Video {
-    id: VideoType,
-    group: VideoType,
-    name: VideoType,
+    id: FieldType,
+    group: FieldType,
+    name: FieldType,
 }
 
 impl Video {
@@ -94,21 +94,10 @@ pub struct DeleteResponse {
 #[get("/all")]
 pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
-    let all_videos = match state                                  
+    let all_videos = state                                  
         .video_map
-        .lock() {
-            Ok(video_map) => video_map,
-            Err(_) => {
-                return Ok(                                              
-                    web::Json(                                   
-                        IndexResponse {                          
-                            result: None,
-                            status: status::Status::InvalidVideoMap.as_string(),
-                        }                                        
-                    )                                            
-                )                                                
-            },
-        };                     
+        .lock()
+        .unwrap();
     
     Ok(                                              
         web::Json(                                   
@@ -129,25 +118,14 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
+    let video = state                                  
+        .video_map
+        .lock()
+        .unwrap();
+
     let mut status;
     status = status::Status::VideoIdNotFound;
-
-    let video = match state                                  
-        .video_map
-        .lock() {
-            Ok(videos_map) => videos_map,
-            Err(_) => {
-                return Ok(                                              
-                    web::Json(                                   
-                        DetailResponse {                          
-                            result: None,
-                            status: status::Status::InvalidVideoMap.as_string(),
-                        }                                        
-                    )                                            
-                ) 
-            },
-        };                     
-
+    
     let result = video.get(&to_parse_idx).map(|v| {
         status = status::Status::VideoIdFound;
         
@@ -174,39 +152,17 @@ pub async fn detail(state: web::Data<AppState>,
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
-    let mut all_videos = match state                                  
+    let mut all_videos = state                                  
         .video_map
-        .lock() {
-            Ok(video_map) => video_map,
-            Err(_) => {
-                return Ok(                                              
-                    web::Json(                                   
-                        IndexResponse {                          
-                            result: None,
-                            status: status::Status::InvalidVideoMap.as_string(),
-                        }                                        
-                    )                                            
-                )                                                
-            },
-        };                     
-
+        .lock()
+        .unwrap();
+    
     all_videos.clear();
     
-    let mut all_binary = match state                                  
+    let mut all_binary = state                                  
         .binary_map
-        .lock() {
-            Ok(binary_map) => binary_map,
-            Err(_) => {
-                return Ok(                                              
-                    web::Json(                                   
-                        IndexResponse {                          
-                            result: None,
-                            status: status::Status::InvalidBinaryMap.as_string(),
-                        }                                        
-                    )                                            
-                )                                                
-            },
-        };                     
+        .lock()
+        .unwrap();
 
     all_binary.clear();
     
@@ -348,21 +304,23 @@ pub async fn insert_video(mut payload: Multipart,
 
     //debug!("HEADERS: {:?}", req.headers());
 
-    // VIDEO_ID
     match req.headers().get("video_id") {
         Some(id) => {  // HeaderValue
-            new_video.id = id
-                .to_str()
-                //.unwrap() // NOT SAFE
-                // we will rather return Err msg instead generate uuid
-                .unwrap_or(&Uuid::new_v4()
-                           .to_string()
-                )
-                .to_string();
+            new_video.id = match id.to_str() {
+                Ok(i) => String::from(i),
+                Err(why) => {
+                    return Ok(
+                        web::Json(
+                            DetailResponse {                          
+                                result: None,
+                                status: format!("{why}"),
+                            }                                        
+                        )
+                    )
+                },
+            };
         },
         None => {
-            // curl: (55) Send failure: Connection reset by peer
-            // but still we receive JSON response with status
             return Ok(
                 web::Json(
                     DetailResponse {                          
@@ -374,14 +332,21 @@ pub async fn insert_video(mut payload: Multipart,
         },
     }
 
-    // GROUP
     match req.headers().get("group") {
         Some(group) => {
-            new_video.group = group
-                .to_str()
-                .unwrap() // NOT SAFE
-                .to_string()
-                
+            new_video.group = match group.to_str() {
+                Ok(i) => String::from(i),
+                Err(why) => {
+                    return Ok(
+                        web::Json(
+                            DetailResponse {                          
+                                result: None,
+                                status: format!("{why}"),
+                            }                                        
+                        )
+                    )
+                },
+            };
         },
         None => {
             return Ok(
@@ -400,13 +365,10 @@ pub async fn insert_video(mut payload: Multipart,
     let mut content_counter = 0;
 
     while let Some(mut field) = payload
-    // // while let Some(item) = payload
         .try_next()
         .await? {
             content_counter += 1;
 
-            // // let mut field = item;
-            
             // we only accept one form with file
             if content_counter == 1 {
                 let content_disposition = field.content_disposition();
@@ -423,10 +385,10 @@ pub async fn insert_video(mut payload: Multipart,
                                 )
                             )
                         }
-                        
+
                         new_video.name = String::from(name);
                     },
-                    None =>{
+                    None => {
                         return Ok(
                             web::Json(
                                 DetailResponse {                          
@@ -438,43 +400,36 @@ pub async fn insert_video(mut payload: Multipart,
                     },
                 }
 
-                // FORM
                 match content_disposition.get_filename() {
                     Some(filename) => {
 
-                        let content_type = field.content_type().essence_str();
-                        //debug!("CONTENT_TYPE: {:?}", content_type);
+                        let content_type = field
+                            .content_type()
+                            .essence_str();
                         
-                        // /* // https://actix.rs/docs/server/
                         let mut buf = Binary {
                             data: BytesMut::with_capacity(1024),
                             filename: filename.to_string(),
                             mime: String::from(content_type),
 
                         };
-                        // */
                         
-                        /*
-                        let mut buf = web::block(move || {
-                            Binary {
-                                data: BytesMut::with_capacity(1024),
-                                filename: filename.to_string(),
-                            }
-                        }).await?;
-                        */
-
                         let mut chunk_counter = 0;
+
                         while let Some(chunk) = field.try_next().await? {
                             chunk_counter += 1;
 
                             // FIRST CHUNK
                             if chunk_counter == 1 {
                                 // LOCK DETAIL
-                                let mut video_hashmap = video_map.lock().unwrap();
+                                let mut video_hashmap = video_map
+                                    .lock()
+                                    .unwrap();
+
                                 video_hashmap
                                     .insert(
-                                        new_video.id.clone(), // KEY: video.id
-                                        new_video.clone(), // VALUE: Video {}
+                                        new_video.id.clone(), // K: video.id
+                                        new_video.clone(), // V: Video {}
                                     );
                             }
 
@@ -490,16 +445,15 @@ pub async fn insert_video(mut payload: Multipart,
                                 buf.data
                             }).await?;
 
-                            // /*
                             // LOCK DATA
                             let mut binary_hashmap = binary_map.lock().unwrap();
+
                             binary_hashmap
                                 .insert(
-                                    new_video.id.clone(), // KEY: video.id
+                                    new_video.id.clone(), // K: video.id
                                     buf
-                                        .clone(), // VALUE: Binary {}
+                                        .clone(), // V: Binary {}
                                 );
-                            // */
                         };
 
                         status = status::Status::UploadDone;
@@ -540,7 +494,7 @@ pub async fn insert_video(mut payload: Multipart,
 }
 
 
-/// RAM download
+/// download
 /// 
 #[get("/download/{idx}")]
 pub async fn download(state: web::Data<AppState>,
@@ -548,38 +502,16 @@ pub async fn download(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(why) => {
-            return HttpResponse::NotFound()
-                .json(
-                    &ParseError {
-                        status: format!("{why}"),
-                }
-            )
-        },
-    };
-
-    let result = match parsed_idx {
-        Some(i) => {
-            let binary = state
-                .binary_map
-                .lock()
-                .unwrap();
-            
-            binary.get(&i).map(|v|
-                               Binary {
-                                   data: v.data.clone(),  // niet goed
-                                   filename: v.filename.clone(),
-                                   //mime: String::from("MIME"),
-                                   mime: v.mime.clone(),
-                               }
-            )
-        },
-        None => None,
-    };
+    let binary = state
+        .binary_map
+        .lock()
+        .unwrap();
+    
+    let result = binary
+        .get(&to_parse_idx)
+        .map(|v|
+             v.clone()
+        );
 
     match result {
         Some(v) => {
@@ -591,12 +523,6 @@ pub async fn download(state: web::Data<AppState>,
                      ),
                     )
                 )
-                /*
-                .content_type(
-                    actix_web::http::header::ContentType::octet_stream()
-                )
-                .status(actix_web::http::StatusCode::OK)
-                */
                 .body(v.data)
         },
         None => {
@@ -618,53 +544,33 @@ pub async fn play(state: web::Data<AppState>,
 
     let to_parse_idx = idx.into_inner();
 
-    let parsed_idx = match to_parse_idx.parse::<String>() {
-        Ok(i) => {
-            Some(i)
-        },
-        Err(_why) => {
-            // Infallible
-            return web::Bytes::from_static(b"player: index String parse error")
-        },
-    };
-
-    let result = match parsed_idx {
-        Some(i) => {
-            let binary = state
-                .binary_map
-                .lock()
-                .unwrap();
-            
-            binary.get(&i).map(|v|
-                               Binary {
-                                   data: v.data.clone(),  // niet goed jochie
-                                   filename: v.filename.clone(),
-                                   //mime: String::from("MIME"),
-                                   mime: v.mime.clone(),
-                               }
-            )
-        },
-        None => return web::Bytes::from_static(b"player: parsed None")
-    };
+    let binary = state
+        .binary_map
+        .lock()
+        .unwrap();
+    
+    let result = binary
+        .get(&to_parse_idx)
+        .map(|v|
+             v.clone()
+        );
 
     match result {
         Some(v) => {
             web::Bytes::from(v.data)
         },
         None => {
-            // we should rather return 404 
-            return web::Bytes::from_static(b"player: binary_id not found")
+            web::Bytes::from_static(b"player: binary_id not found")
         },
     }
 }
 
 
-/// hashmap inside option
-fn hash_to_option(hash: HashMap<VideoKey, VideoValue>) -> Option<HashMap<VideoKey, VideoValue>> {
+/// hashmap into option
+fn hash_to_option<K, V>(hash: HashMap<K, V>) -> Option<HashMap<K, V>> {
     if hash.is_empty() {
         None
     } else {
         Some(hash)
     }
 }
-
