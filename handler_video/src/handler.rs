@@ -64,7 +64,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
         );
 
-    let server = HttpServer::new(move || {
+    let mut server = HttpServer::new(move || {
         App::new()
             .app_data(Data::new(AppState {
                 video_map: video_map.clone(),
@@ -114,19 +114,23 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )             
         )?;
 
-    match &config.workers {
-        -1 => server
-            .run()
-            .await,
+    server = match &config.workers {
+        -1 => server,
+            //.run()
+            //.await,
         n @ 1.. => server
-            .workers(*n as usize)
-            .run()
-            .await,
+            .workers(*n as usize),
+            //.run()
+            //.await,
         _ => {
             eprintln!("\nEXIT: set correct number of workers:\n default: -1\n user defined: 1/2/4/..");
             std::process::exit(1);
-        }
-    }
+        },
+    };
+
+    server
+        .run()
+        .await
 }
 
 
