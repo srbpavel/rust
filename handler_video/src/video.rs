@@ -144,7 +144,7 @@ pub async fn detail(state: web::Data<AppState>,
                             status: status::Status::InvalidVideoMap.as_string(),
                         }                                        
                     )                                            
-                )                                                
+                ) 
             },
         };                     
 
@@ -667,3 +667,4 @@ fn hash_to_option(hash: HashMap<VideoKey, VideoValue>) -> Option<HashMap<VideoKe
         Some(hash)
     }
 }
+
