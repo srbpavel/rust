@@ -48,9 +48,9 @@ features = ["derive"]
 [dev-dependencies]
 uuid = { version = "0.8", features = ["v4"] }
 
-[dev-dependencies.serde]
-version = "1.0.136"                                                     
-features = ["derive"]                                                    
+#[dev-dependencies.serde]
+#version = "1.0.136"                                                     
+#features = ["derive"]                                                    
 
 #[dev-dependencies.easy_config]                                           
 #version = "^0"                                                           

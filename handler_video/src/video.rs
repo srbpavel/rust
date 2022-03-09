@@ -86,7 +86,6 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
 
     let status;
 
-    /*
     let all_videos = match state                                  
         .video_map
         .lock() {
@@ -99,12 +98,13 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
                     }
                 ),
         };
-    */
 
+    /*
     let all_videos = state                                  
         .video_map
         .lock()
         .unwrap();
+    */
 
     let result = if all_videos.is_empty() {
         status = status::Status::ListNone;
@@ -329,7 +329,7 @@ pub async fn insert_video(mut payload: Multipart,
                 }
             ),
     }
-    
+
     let mut content_counter = 0;
 
     while let Some(mut field) = payload
@@ -394,8 +394,6 @@ pub async fn insert_video(mut payload: Multipart,
                                         new_video.id.clone(), // K: video.id
                                         new_video.clone(), // V: Video {}
                                     );
-                            } else if chunk_counter == 2 {
-
                             }
 
                             buf.data = web::block(move || {
@@ -544,51 +542,3 @@ pub fn inner_trim(idx: web::Path<String>) -> String {
         .trim()
         .to_string()
 }
-
-/*
-enum ValueType {
-    Detail,
-    Binary
-}
-
-///
-pub fn verify_state<T>(t: T,
-                       //state: web::Data<AppState>) -> std::sync::MutexGuard<'static, HashMap<std::string::String, T>> {
-                       state: web::Data<AppState>) -> Result<std::sync::MutexGuard<'static, HashMap<String, Video>>, std::sync::PoisonError<std::sync::MutexGuard<'static, HashMap<std::string::String, Video>>>> {
-
-    let s = state
-        .video_map
-        .lock();
-
-    
-        
-    /*
-    match t {
-        VideoValue => {
-            match state
-                .video_map
-                .lock() {
-                    Ok(v) => {
-                        v
-                    },
-                    Err(_) => {},
-                }
-        },
-        BinaryValue => {
-            match state
-                .binary_map
-                .lock() {
-                    Ok(b) => {
-                        b
-                    },
-                    Err(_) => {},
-                }           
-        },
-        /*
-        ValueType::Detail => {},
-        ValueType::Binary => {},
-        */
-    }
-    */
-}
-*/
