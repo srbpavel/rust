@@ -116,12 +116,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     server = match &config.workers {
         -1 => server,
-            //.run()
-            //.await,
         n @ 1.. => server
             .workers(*n as usize),
-            //.run()
-            //.await,
         _ => {
             eprintln!("\nEXIT: set correct number of workers:\n default: -1\n user defined: 1/2/4/..");
             std::process::exit(1);
