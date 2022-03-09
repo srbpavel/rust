@@ -6,7 +6,7 @@ pub enum Status {
     ListAll,
     ListNone,
     EmptyVideoId,
-    EmptyGroupId,
+    EmptyGroup,
     EmptyFormFilename,
     EmptyFormName,
     //EmptyForms,
@@ -33,7 +33,7 @@ impl Status {
             Self::ListAll => String::from("some videos found"),
             Self::ListNone => String::from("none videos found"),
             Self::EmptyVideoId => String::from("header 'video_id' not provided"),
-            Self::EmptyGroupId => String::from("header 'group' not provided"),
+            Self::EmptyGroup => String::from("header 'group' not provided"),
             Self::EmptyFormFilename => String::from("form 'filename' not provided"),
             Self::EmptyFormName => String::from("form 'name' not provided"),
             // curl with no form -F -> Multipart boundary is not found

@@ -11,6 +11,7 @@ use actix_web::{get,
                 HttpResponse,
                 HttpRequest,
                 Responder,
+                http::header::HeaderMap,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
@@ -74,6 +75,21 @@ pub struct DetailResponse {
 #[derive(Serialize, Debug)]
 pub struct StatusResponse {     
     status: String,
+}
+
+
+enum HeaderKey {
+    VideoId,
+    Group,
+}
+
+impl HeaderKey {
+    pub fn as_string(&self) -> String {
+        match *self {
+            Self::VideoId => String::from("video_id"),
+            Self::Group => String::from("group"),
+        }
+    }
 }
 
 
@@ -277,59 +293,35 @@ pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest)  -> Result<web::Json<DetailResponse>> {
 
-    //debug!("REQ: {req:?}");
-
     let AppState { video_map, binary_map } = &*state.into_inner();
 
     let mut status = status::Status::Init;
     let mut new_video = Video::default();
 
-    //debug!("HEADERS: {:?}", req.headers());
+    new_video.id = match verify_header(HeaderKey::VideoId,
+                                       req.headers(),
+    ) {
+        Some(value) => value,
+        None => return ok_json(
+            DetailResponse {                          
+                result: None,
+                status: status::Status::EmptyVideoId.as_string(),
+            }
+        ),
+    };
 
-    match req.headers().get("video_id") {
-        Some(id) => {
-            new_video.id = match id.to_str() {
-                Ok(i) => String::from(i),
-                Err(why) =>
-                    return ok_json(
-                        DetailResponse {                          
-                            result: None,
-                            status: format!("{why}"),
-                        }
-                    ),
-            };
-        },
-        None =>
-            return ok_json(
-                        DetailResponse {                          
-                            result: None,
-                            status: status::Status::EmptyVideoId.as_string(),
-                        }
-                    ),
-    }
-
-    match req.headers().get("group") {
-        Some(group) => {
-            new_video.group = match group.to_str() {
-                Ok(i) => String::from(i),
-                Err(why) =>
-                    return ok_json(
-                        DetailResponse {                          
-                            result: None,
-                            status: format!("{why}"),
-                        }
-                    ),
-            };
-        },
-        None =>
-            return ok_json(
-                DetailResponse {                          
-                    result: None,
-                    status: status::Status::EmptyGroupId.as_string(),
-                }
-            ),
-    }
-
+    new_video.group = match verify_header(HeaderKey::Group,
+                                          req.headers(),
+    ) {
+        Some(value) => value,
+        None => return ok_json(
+            DetailResponse {                          
+                result: None,
+                status: status::Status::EmptyGroup.as_string(),
+            }
+        ),
+    };
+    
     let mut content_counter = 0;
 
     while let Some(mut field) = payload
@@ -541,4 +533,20 @@ fn inner_trim(idx: web::Path<String>) -> String {
         .into_inner()
         .trim()
         .to_string()
+}
+
+
+/// search for header key
+fn verify_header(key: HeaderKey,
+                 headers: &HeaderMap) -> Option<String> {
+
+    match headers.get(key.as_string()) {
+        Some(id) => {
+            match id.to_str() {
+                Ok(i) => Some(String::from(i)),
+                Err(_) => None,
+            }
+        },
+        None => None,
+    }
 }
