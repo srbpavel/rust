@@ -208,6 +208,17 @@ fill_video conan@spongebob:~/video/youtube$ curl http://127.0.0.1:8081/video/all
   "status": "some videos found"
 }
 
+$ curl "http://127.0.0.1:8081/video/detail/9e3aaad9-f5bc-4cba-b259-3b712e49622f" 2>/dev/null| jq
+{
+  "result": {
+    "id": "9e3aaad9-f5bc-4cba-b259-3b712e49622f",
+    "group": "youtube",
+    "name": "x_mix_electro_boogie_480p_"
+  },
+  "status": "video_id found"
+}
+
+
 #now we can play uploaded chunks video
 $ cat /home/conan/soft/rust/handler_video/html/9e3aaad9-f5bc-4cba-b259-3b712e49622f_x_mix_electro_boogie_480p_.html 
 <html>
