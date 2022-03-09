@@ -65,7 +65,8 @@ $ ls -la *mp4
 -rw-r--r-- 1 conan conan  20715589 Oct 24 17:49 smack.mp4
 -rw-r--r-- 1 conan conan 273074254 Mar  5 22:38 x_mix_electro_boogie_480p_.mp4
 -rw-r--r-- 1 conan conan  30467586 Oct 24 18:10 zhu_in_the_morning_bassboost_extended_remix.mp4
-fill_video conan@spongebob:~/video/youtube$ ls -la /home/conan/soft/rust/handler_video/html/
+
+$ ls -la /home/conan/soft/rust/handler_video/html/
 total 124
 drwxr-xr-x 2 conan conan 24576 Mar  9 12:07 .
 drwxr-xr-x 7 conan conan  4096 Mar  9 10:16 ..
@@ -92,7 +93,8 @@ drwxr-xr-x 7 conan conan  4096 Mar  9 10:16 ..
 -rw-r--r-- 1 conan conan   266 Mar  9 12:07 9e3aaad9-f5bc-4cba-b259-3b712e49622f_x_mix_electro_boogie_480p_.html
 -rw-r--r-- 1 conan conan   249 Mar  9 12:07 ba7c8b0f-6672-48ee-bba8-a54b87304432_timestamp.html
 -rw-r--r-- 1 conan conan   294 Mar  9 12:07 d7c01c7e-4f26-424a-b41e-6ffe45be98a4_dr_motte_you_cant_stop_us_loveparade_2001_anthem_360p_.html
-fill_video conan@spongebob:~/video/youtube$ curl http://127.0.0.1:8081/video/all 2>/dev/null| jq
+
+$ curl http://127.0.0.1:8081/video/all 2>/dev/null| jq
 {
   "result": {
     "7a1fa6fe-ea4a-4082-bc9d-04e0a74c4be6": {
