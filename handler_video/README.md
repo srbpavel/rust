@@ -53,7 +53,7 @@ $curl "http://127.0.0.1:8081/video/detail/verne_piped
 $curl http://localhost:8081/video/list/chunk_tester
 
 /video/all
-curl http://localhost:8081/video/all
+$curl http://localhost:8081/video/all
 
 /video/play/{video_id}
 $curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
