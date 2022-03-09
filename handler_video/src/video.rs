@@ -37,15 +37,12 @@ pub struct Binary {
 }
 
 
-type FieldType = String;
-
 /// video
-//#[derive(Serialize, Debug, Clone, PartialEq)]
 #[derive(Serialize, Debug, Clone)]
 pub struct Video {
-    id: FieldType,
-    group: FieldType,
-    name: FieldType,
+    id: String,
+    group: String,
+    name: String,
 }
 
 impl Video {
@@ -88,7 +85,22 @@ pub struct StatusResponse {
 pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
     let status;
-    
+
+    /*
+    let all_videos = match state                                  
+        .video_map
+        .lock() {
+            Ok(video_map) => video_map,
+            Err(_) => 
+                return ok_json(
+                    IndexResponse {                          
+                        result: None,
+                        status: status::Status::InvalidVideoMap.as_string(),
+                    }
+                ),
+        };
+    */
+
     let all_videos = state                                  
         .video_map
         .lock()
@@ -110,16 +122,6 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
             status: status.as_string(),
         }
     )
-    /*
-    Ok(                                              
-        web::Json(                                   
-            IndexResponse {                          
-                result,
-                status: status.as_string(),
-            }                                        
-        )                                            
-    ) 
-    */
 }
 
 
@@ -131,13 +133,6 @@ pub async fn detail(state: web::Data<AppState>,
 
     let to_parse_idx = inner_trim(idx);
     
-    /*
-    let to_parse_idx = idx
-        .into_inner()
-        .trim()
-        .to_string();
-    */
-
     let video = state                                  
         .video_map
         .lock()
@@ -162,16 +157,6 @@ pub async fn detail(state: web::Data<AppState>,
             status: status.as_string(),
         }
     )
-    /*
-    Ok(
-        web::Json(
-            DetailResponse {
-                result,
-                status: status.as_string(),
-            }
-        )
-    )
-    */
 }
 
 
@@ -198,16 +183,6 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
             status: status::Status::ClearOk.as_string(),
         }
     )
-    /*
-    Ok(
-        web::Json(
-            IndexResponse {
-                result: None,
-                status: status::Status::ClearOk.as_string(),
-            }
-        )
-    )
-    */
 }
 
 
@@ -217,17 +192,9 @@ pub async fn delete(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<StatusResponse>> {
 
     let to_parse_idx = inner_trim(idx);
-    
-    /*
-    let to_parse_idx = idx
-        .into_inner()
-        .trim()
-        .to_string();
-    */
 
-    // delete first detail or binary?
-    // when delete detail durring upload
-    // but still we have to wait until last chunk
+    // if deleted detail durring upload,
+    // we have to wait until last chunk to remove binary
     let mut video_hashmap = state
         .video_map
         .lock()
@@ -260,15 +227,6 @@ pub async fn delete(state: web::Data<AppState>,
             status: result.as_string(),
         }                                        
     )
-    /*
-    Ok(
-        web::Json(
-            StatusResponse {
-                status: result.as_string(),
-            }                                        
-        )
-    )
-    */
 }
 
 
@@ -279,13 +237,6 @@ pub async fn list_group(state: web::Data<AppState>,
                         idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
 
     let to_parse_idx = inner_trim(idx);
-    
-    /*
-    let to_parse_idx = idx
-        .into_inner()
-        .trim()
-        .to_string();
-    */
     
     let video = state                                  
         .video_map
@@ -339,24 +290,13 @@ pub async fn insert_video(mut payload: Multipart,
         Some(id) => {
             new_video.id = match id.to_str() {
                 Ok(i) => String::from(i),
-                Err(why) => //{
+                Err(why) =>
                     return ok_json(
                         DetailResponse {                          
-                            result: None,
+                        result: None,
                             status: format!("{why}"),
                         }
-                    )
-                    /*
-                    return Ok(
-                        web::Json(
-                            DetailResponse {                          
-                                result: None,
-                                status: format!("{why}"),
-                            }                                        
-                        )
-                    )
-                    */
-                ,//},
+                    ),
             };
         },
         None =>
@@ -365,20 +305,7 @@ pub async fn insert_video(mut payload: Multipart,
                             result: None,
                             status: status::Status::EmptyVideoId.as_string(),
                         }
-                    )
-        /*
-        {
-            return Ok(
-                web::Json(
-                    DetailResponse {                          
-                        result: None,
-                        status: status::Status::EmptyVideoId.as_string(),
-                    }                                        
-                )
-            )
-        },
-         */
-            ,
+                    ),
     }
 
     match req.headers().get("group") {
@@ -391,20 +318,7 @@ pub async fn insert_video(mut payload: Multipart,
                             result: None,
                             status: format!("{why}"),
                         }
-                    )
-                    /*
-                {
-                    return Ok(
-                        web::Json(
-                            DetailResponse {                          
-                                result: None,
-                                status: format!("{why}"),
-                            }                                        
-                        )
-                    )
-                },
-                 */
-                    ,
+                    ),
             };
         },
         None =>
@@ -413,20 +327,7 @@ pub async fn insert_video(mut payload: Multipart,
                     result: None,
                     status: status::Status::EmptyGroupId.as_string(),
                 }
-            )
-            /*
-        {
-            return Ok(
-                web::Json(
-                    DetailResponse {                          
-                        result: None,
-                        status: status::Status::EmptyGroupId.as_string(),
-                    }
-                )
-            )
-        },
-         */
-            ,
+            ),
     }
     
     let mut content_counter = 0;
@@ -449,17 +350,6 @@ pub async fn insert_video(mut payload: Multipart,
                                     status: status::Status::EmptyFormName.as_string(),                     
                                 }
                             )
-
-                            /*
-                            return Ok(
-                                web::Json(
-                                    DetailResponse {                          
-                                        result: None,
-                                        status: status::Status::EmptyFormName.as_string(),
-                                    }
-                                )
-                            )
-                            */
                         }
 
                         new_video.name = String::from(name);
@@ -470,21 +360,7 @@ pub async fn insert_video(mut payload: Multipart,
                                 result: None,
                                 status: status::Status::EmptyFormName.as_string(),                     
                             }
-                        )
-                        
-                        /*
-                    {
-                        return Ok(
-                            web::Json(
-                                DetailResponse {                          
-                                    result: None,
-                                    status: status::Status::EmptyFormName.as_string(),
-                                }
-                            )
-                        )
-                    },
-                     */
-                        ,
+                        ),
                 }
 
                 match content_disposition.get_filename() {
@@ -553,20 +429,7 @@ pub async fn insert_video(mut payload: Multipart,
                                 result: None,
                                 status: status::Status::EmptyFormFilename.as_string(),
                             }
-                        )
-                    /*
-                    {
-                        return Ok(
-                            web::Json(
-                                DetailResponse {                          
-                                    result: None,
-                                    status: status::Status::EmptyFormFilename.as_string(),
-                                }
-                            )
-                        )
-                    },
-                     */
-                        ,
+                        ),
                 }
             } else {
 
@@ -576,17 +439,6 @@ pub async fn insert_video(mut payload: Multipart,
                         status: status::Status::TooManyForms.as_string(),
                     }
                 )
-                
-                /*
-                return Ok(
-                    web::Json(
-                        DetailResponse {                          
-                            result: None,
-                            status: status::Status::TooManyForms.as_string(),
-                        }
-                    )
-                )
-                */
             }
         }
 
@@ -597,18 +449,6 @@ pub async fn insert_video(mut payload: Multipart,
             status: status.as_string(),
         }
     )
-    /*
-    Ok(
-        web::Json(
-            DetailResponse {                          
-                result: Some(
-                    new_video
-                ),
-                status: status.as_string(),
-            }
-        )
-    )
-    */
 }
 
 
@@ -618,7 +458,6 @@ pub async fn insert_video(mut payload: Multipart,
 pub async fn download(state: web::Data<AppState>,
                       idx: web::Path<String>) -> HttpResponse {
 
-    //let to_parse_idx = idx.into_inner();
     let to_parse_idx = inner_trim(idx);
 
     let binary = state
@@ -661,7 +500,6 @@ pub async fn download(state: web::Data<AppState>,
 pub async fn play(state: web::Data<AppState>,
                   idx: web::Path<String>) -> impl Responder {
 
-    //let to_parse_idx = idx.into_inner();
     let to_parse_idx = inner_trim(idx);
 
     let binary = state
@@ -706,3 +544,51 @@ pub fn inner_trim(idx: web::Path<String>) -> String {
         .trim()
         .to_string()
 }
+
+/*
+enum ValueType {
+    Detail,
+    Binary
+}
+
+///
+pub fn verify_state<T>(t: T,
+                       //state: web::Data<AppState>) -> std::sync::MutexGuard<'static, HashMap<std::string::String, T>> {
+                       state: web::Data<AppState>) -> Result<std::sync::MutexGuard<'static, HashMap<String, Video>>, std::sync::PoisonError<std::sync::MutexGuard<'static, HashMap<std::string::String, Video>>>> {
+
+    let s = state
+        .video_map
+        .lock();
+
+    
+        
+    /*
+    match t {
+        VideoValue => {
+            match state
+                .video_map
+                .lock() {
+                    Ok(v) => {
+                        v
+                    },
+                    Err(_) => {},
+                }
+        },
+        BinaryValue => {
+            match state
+                .binary_map
+                .lock() {
+                    Ok(b) => {
+                        b
+                    },
+                    Err(_) => {},
+                }           
+        },
+        /*
+        ValueType::Detail => {},
+        ValueType::Binary => {},
+        */
+    }
+    */
+}
+*/

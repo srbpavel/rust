@@ -20,6 +20,7 @@ pub enum Status {
     DeleteDetailError,
     DeleteBinaryError,
     PlayerBinaryNotFound,
+    InvalidVideoMap,
 }
 
 impl Status {
@@ -50,7 +51,7 @@ impl Status {
             Self::PlayerBinaryNotFound => String::from(
                 "{\"status\": \"player binary_id not found\"}"
             ),
-            
+            Self::InvalidVideoMap => String::from("error unpack video_map"),
         }
     }
 }
