@@ -3,8 +3,8 @@
 pub enum Status {
     Init,
     ClearOk,
-    ClearErrorVideoMap,
-    ClearErrorBinaryMap,
+    //ClearErrorVideoMap,
+    //ClearErrorBinaryMap,
     ListAll,
     ListNone,
     EmptyVideoId,
@@ -22,7 +22,7 @@ pub enum Status {
     DeleteDetailError,
     DeleteBinaryError,
     PlayerBinaryNotFound,
-    InvalidVideoMap,
+    //InvalidVideoMap,
 }
 
 impl Status {
@@ -32,8 +32,8 @@ impl Status {
         match *self {
             Self::Init => String::from("init"),
             Self::ClearOk => String::from("clear ok"),
-            Self::ClearErrorVideoMap => String::from("clear error video_map"),
-            Self::ClearErrorBinaryMap => String::from("clear error binary_map"),
+            //Self::ClearErrorVideoMap => String::from("clear error video_map"),
+            //Self::ClearErrorBinaryMap => String::from("clear error binary_map"),
             Self::ListAll => String::from("some videos found"),
             Self::ListNone => String::from("none videos found"),
             Self::EmptyVideoId => String::from("header 'video_id' not provided"),
@@ -55,7 +55,7 @@ impl Status {
             Self::PlayerBinaryNotFound => String::from(
                 "{\"status\": \"player binary_id not found\"}"
             ),
-            Self::InvalidVideoMap => String::from("error unpack video_map"),
+            //Self::InvalidVideoMap => String::from("error unpack video_map"),
         }
     }
 }
