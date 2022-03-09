@@ -61,7 +61,7 @@ $ curl "http://127.0.0.1:8081/video/detail/verne_piped" 2>/dev/null | jq
   "status": "video_id not found"
 }
 
-$ curl -X DELETE "http://127.0.0.1:8081/video/delete/c8eda7ce-3b4c-4e21-a5ab-8fb2c5c15a0d" 2>/dev/null | jq
+$ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null | jq
 {
   "status": "video_id not found"
 }
