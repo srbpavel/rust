@@ -3,6 +3,8 @@
 pub enum Status {
     Init,
     ClearOk,
+    ClearErrorVideoMap,
+    ClearErrorBinaryMap,
     ListAll,
     ListNone,
     EmptyVideoId,
@@ -30,6 +32,8 @@ impl Status {
         match *self {
             Self::Init => String::from("init"),
             Self::ClearOk => String::from("clear ok"),
+            Self::ClearErrorVideoMap => String::from("clear error video_map"),
+            Self::ClearErrorBinaryMap => String::from("clear error binary_map"),
             Self::ListAll => String::from("some videos found"),
             Self::ListNone => String::from("none videos found"),
             Self::EmptyVideoId => String::from("header 'video_id' not provided"),

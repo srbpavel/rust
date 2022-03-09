@@ -1,9 +1,12 @@
 use crate::{
-    handler::{AppState,
-    }, 
+    handler::AppState,
     status::Status,
 };
-//use log::debug;
+/*
+use log::{debug,
+          error,
+};
+*/
 use actix_web::{get,
                 post,
                 web,
@@ -21,7 +24,6 @@ use bytes::{BytesMut,
             BufMut,
 };
 
-
 pub const SCOPE: &str = "/video";
 
 /// types for hash_maps
@@ -36,7 +38,6 @@ pub struct Binary {
     pub filename: String,
     pub mime: String,
 }
-
 
 /// video
 #[derive(Serialize, Debug, Clone)]
@@ -77,8 +78,7 @@ pub struct StatusResponse {
     status: String,
 }
 
-
-/// header keys
+/// req header keys
 enum HeaderKey {
     VideoId,
     Group,
@@ -116,13 +116,6 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
                 ),
         };
 
-    /*
-    let all_videos = state                                  
-        .video_map
-        .lock()
-        .unwrap();
-    */
-
     let result = if all_videos.is_empty() {
         status = Status::ListNone;
         
@@ -149,15 +142,15 @@ pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
 
     let to_parse_idx = inner_trim(idx);
+
+    let mut status;
+    status = Status::VideoIdNotFound;
     
     let video = state                                  
         .video_map
         .lock()
         .unwrap();
 
-    let mut status;
-    status = Status::VideoIdNotFound;
-    
     let result = video.get(&to_parse_idx).map(|v| {
         status = Status::VideoIdFound;
         
@@ -182,22 +175,34 @@ pub async fn detail(state: web::Data<AppState>,
 #[post("/clear")]
 pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
 
-    let _ = state                                  
+    let mut status = Status::ClearOk;
+    
+    match state
         .video_map
         .lock()
         .map(|mut v| v.clear()
-        );
-
-    let _ = state                                  
+        ) {
+            Ok(_) => {},
+            Err(_) => {
+                status = Status::ClearErrorVideoMap;
+            },
+        }
+    
+     match state
         .binary_map
         .lock()
         .map(|mut b| b.clear()
-        );
+        ) {
+            Ok(_) => {},
+            Err(_) => {
+                status = Status::ClearErrorBinaryMap;
+            },
+        }
 
     ok_json(
         IndexResponse {                          
             result: None,
-            status: Status::ClearOk.as_string(),
+            status: status.as_string(),
         }
     )
 }
@@ -210,8 +215,6 @@ pub async fn delete(state: web::Data<AppState>,
 
     let to_parse_idx = inner_trim(idx);
 
-    // if deleted detail durring upload,
-    // we have to wait until last chunk to remove binary
     let mut video_hashmap = state
         .video_map
         .lock()
@@ -254,6 +257,8 @@ pub async fn list_group(state: web::Data<AppState>,
                         idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
 
     let to_parse_idx = inner_trim(idx);
+
+    let status;
     
     let video = state                                  
         .video_map
@@ -266,9 +271,7 @@ pub async fn list_group(state: web::Data<AppState>,
                     value.group.eq(&to_parse_idx)
         )
         .collect();
-
-    let status;
-    
+   
     let result = if group_map.is_empty() {
         status = Status::GroupNotFound;
 
@@ -293,8 +296,6 @@ pub async fn list_group(state: web::Data<AppState>,
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest)  -> Result<web::Json<DetailResponse>> {
-
-    let AppState { video_map, binary_map } = &*state.into_inner();
 
     let mut status = Status::Init;
     let mut new_video = Video::default();
@@ -325,6 +326,8 @@ pub async fn insert_video(mut payload: Multipart,
     
     let mut content_counter = 0;
 
+    let AppState { video_map, binary_map } = &*state.into_inner();
+    
     while let Some(mut field) = payload
         .try_next()
         .await? {
@@ -367,7 +370,6 @@ pub async fn insert_video(mut payload: Multipart,
                             data: BytesMut::with_capacity(1024),
                             filename: filename.to_string(),
                             mime: String::from(content_type),
-
                         };
                         
                         let mut chunk_counter = 0;
@@ -402,7 +404,9 @@ pub async fn insert_video(mut payload: Multipart,
                             }).await?;
 
                             // LOCK DATA
-                            let mut binary_hashmap = binary_map.lock().unwrap();
+                            let mut binary_hashmap = binary_map
+                                .lock()
+                                .unwrap();
 
                             binary_hashmap
                                 .insert(
@@ -433,7 +437,6 @@ pub async fn insert_video(mut payload: Multipart,
             }
         }
 
-
     ok_json(
         DetailResponse {                          
             result: Some(new_video),
@@ -455,13 +458,11 @@ pub async fn download(state: web::Data<AppState>,
         .binary_map
         .lock()
         .unwrap();
-    
+
     let result = binary
         .get(&to_parse_idx)
-        .map(|v|
-             v.clone()
-        );
-
+        .cloned();
+    
     match result {
         Some(v) => {
             HttpResponse::Ok()
@@ -497,12 +498,10 @@ pub async fn play(state: web::Data<AppState>,
         .binary_map
         .lock()
         .unwrap();
-    
+
     let result = binary
         .get(&to_parse_idx)
-        .map(|v|
-             v.clone()
-        );
+        .cloned();
 
     match result {
         Some(v) => {
