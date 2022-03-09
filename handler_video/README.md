@@ -67,7 +67,10 @@ $curl -X POST "http://127.0.0.1:8081/video/clear"
 
 PUT:
 /video/upload
-$curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4" -H "video_id: 123" -H "group: stream_001"
+-H "video_id: 123"
+-H "group: vod"
+-F "music=@/home/conan/video/youtube/smack.mp4;type=video/mp4"
+$curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001"
 
 DELETE:
 /video/delete/{video_id}
