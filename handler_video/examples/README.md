@@ -1,6 +1,6 @@
-*batch fill*
-- to verify service accessibility durring upload
-- how fast is response for methods, when threads busy uploading
+<b>batch fill</b>
+*to verify service accessibility durring upload
+*how fast is response for methods, when threads busy uploading
 
 ```
 $ rm /home/conan/soft/rust/handler_video/html/*html
