@@ -41,6 +41,8 @@ TomlConfig {
 }
 #CMD: "curl" "-X" "PUT" "-H" "Content-type: multipart/form-data" "http://localhost:8081/video/upload" "-F" "rave_party_1997_level_6_dance_or_die_360p_=@/home/conan/video/youtube/rave_party_1997_level_6_dance_or_die_360p_.mp4;type=video/mp4" "-H" "video_id: 4232f777-52e3-4bde-9c22-7ba357fa24bf" "-H" "group: youtube" "--no-buffer" "--limit-rate" "10M"
 ...
+#UPLOADED: /home/conan/video/youtube/da_hool_meet_her_at_the_loveparade_official_video_hq_360p_.mp4
+...
 
 $ ls -la *mp4
 -rw-r--r-- 1 conan conan  17557991 Mar  5 22:48 da_hool_meet_her_at_the_loveparade_official_video_hq_360p_.mp4
