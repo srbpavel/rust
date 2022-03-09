@@ -9,9 +9,6 @@ bytes = "1.1.0"
 actix-multipart = "0.4.0"
 futures-util = "0.3.21"
 uuid = { version = "0.8", features = ["v4"] }
-#sanitize-filename = "0.3"
-#base64 = "0.13.0"
-mime = "0.3.16"
 
 [dependencies.actix-web]   
 version = "4.0.1"
@@ -22,9 +19,6 @@ version = "0.4.14"
 [dependencies.env_logger]  
 version = "0.9.0"         
                            
-#[dependencies.chrono]      
-#version = "0.4.19"
-
 # unpublished local crate EASY_CONFIG                                    
 # https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html 
 # https://github.com/rust-lang/cargo/issues/1462                         
@@ -35,27 +29,14 @@ version = "^0"
 # REMOTE
 git = "https://github.com/srbpavel/rust"
 package = "easy_config"
-#subfolder = { git = "easy_config" } # ???
 
 [dependencies.serde]
 version = "1.0.136"                                                     
 features = ["derive"]                                                    
                                                                          
-#[dependencies.serde_json]                                                
-#version= "1.0.79"                                                       
-
 ### EXAMPLES
 [dev-dependencies]
 uuid = { version = "0.8", features = ["v4"] }
-
-#[dev-dependencies.serde]
-#version = "1.0.136"                                                     
-#features = ["derive"]                                                    
-
-#[dev-dependencies.easy_config]                                           
-#version = "^0"                                                           
-#git = "https://github.com/srbpavel/rust"
-#package = "easy_config"
 
 [dev-dependencies.template_formater]                 
 version = "^0"                                   

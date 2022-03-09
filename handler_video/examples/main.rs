@@ -152,43 +152,34 @@ async fn run_upload(config: &TomlConfig,
     
     // UPLOAD
     let mut cmd = async_process::Command::new("curl");
-    
-    cmd.arg("-X")
-        .arg("PUT")
-        .arg("-H")
-        .arg("Content-type: multipart/form-data")
-        .arg(video.upload_url)
-        .arg("-F")
+
+    cmd.args(&[
+        "-X",
+        "PUT",
+        "-H",
+        "Content-type: multipart/form-data",
+        &video.upload_url,
+        "-F",
         // type hardcoded as all mp4
-        .arg(
-            &format!("{name}=@{filename};type={content_type}",
-            //&format!("{name}=@{filename}",
-                     name = video.name,
-                     filename = video.filename,
-                     content_type = &config.content_type,
-            )
+        &format!("{name}=@{filename};type={content_type}",
+                 name = video.name,
+                 filename = video.filename,
+                 content_type = &config.content_type,
+        ),
+        "-H",
+        &format!("video_id: {}",
+                 video.video_id,
+        ),
+        "-H",
+        &format!("group: {}",
+                 &config.video_group,
+        ),
+        "--no-buffer",
+        "--limit-rate",
+        &format!("{}",
+                 &config.curl_limit_rate,
         )
-        .arg("-H")
-        .arg(
-            &format!("video_id: {}",
-                     video.video_id,
-            )
-        )
-        .arg("-H")
-        .arg(
-            &format!("group: {}",
-                     &config.video_group,
-            )
-        )
-        .arg("--no-buffer"
-        )
-        .arg("--limit-rate"
-        )
-        .arg(
-            &format!("{}",
-                     &config.curl_limit_rate,
-            )
-        );
+    ]);
     
     println!("#CMD: {:?}", cmd);
 

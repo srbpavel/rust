@@ -293,7 +293,7 @@ pub async fn insert_video(mut payload: Multipart,
                 Err(why) =>
                     return ok_json(
                         DetailResponse {                          
-                        result: None,
+                            result: None,
                             status: format!("{why}"),
                         }
                     ),
@@ -526,7 +526,7 @@ pub async fn play(state: web::Data<AppState>,
 
 
 /// wrap struct inside json
-pub fn ok_json<T>(response: T) -> Result<web::Json<T>> {
+fn ok_json<T>(response: T) -> Result<web::Json<T>> {
     Ok(
         web::Json(
             response
@@ -536,7 +536,7 @@ pub fn ok_json<T>(response: T) -> Result<web::Json<T>> {
 
 
 /// unpack pattern and trim
-pub fn inner_trim(idx: web::Path<String>) -> String {
+fn inner_trim(idx: web::Path<String>) -> String {
     idx
         .into_inner()
         .trim()
