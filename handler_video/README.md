@@ -41,6 +41,43 @@ $ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml
 [2022-03-09T10:29:26Z INFO  actix_server::server] Actix runtime found; starting in Actix runtime
 ```
 
+*SERVICES*
+```
+SCOPE: /video
+
+GET:
+/video/detail/{video_id}
+/video/list/{group}
+/video/all
+/video/play/{video_id}
+/video/download/{video_id}
+
+POST:
+/video/clear
+
+PUT:
+/video/upload
+
+DELETE:
+/video/delete/{video_id}
+
+#all other is not allowed
+$ curl -v "http://127.0.0.1:8081/hello"
+*   Trying 127.0.0.1:8081...
+* Connected to 127.0.0.1 (127.0.0.1) port 8081 (#0)
+> GET /hello HTTP/1.1
+> Host: 127.0.0.1:8081
+> User-Agent: curl/7.74.0
+> Accept: */*
+> 
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 405 Method Not Allowed
+< content-length: 0
+< date: Wed, 09 Mar 2022 10:59:00 GMT
+< 
+* Connection #0 to host 127.0.0.1 left intact
+```
+
 *EMPTY START*
 ```
 $ curl http://localhost:8081/video/all 2>/dev/null | jq
