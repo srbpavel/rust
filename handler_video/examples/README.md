@@ -1,3 +1,4 @@
+*batch fill*
 - to verify service accessibility durring upload
 - how fast is response for methods, when threads busy uploading
 
