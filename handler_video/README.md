@@ -47,19 +47,31 @@ SCOPE: /video
 
 GET:
 /video/detail/{video_id}
+$curl "http://127.0.0.1:8081/video/detail/verne_piped
+
 /video/list/{group}
+$curl http://localhost:8081/video/list/chunk_tester
+
 /video/all
+curl http://localhost:8081/video/all
+
 /video/play/{video_id}
+$curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
+
 /video/download/{video_id}
+$curl "http://127.0.0.1:8081/video/download/verne_piped" 2>/dev/null | tail
 
 POST:
 /video/clear
+$curl -X POST "http://127.0.0.1:8081/video/clear"
 
 PUT:
 /video/upload
+$curl -v -X PUT -H "Content-type: multipart/form-data" "http://127.0.01:8081/video/upload" -F "smack=@/home/conan/video/youtube/smack.mp4" -H "video_id: 123" -H "group: stream_001"
 
 DELETE:
 /video/delete/{video_id}
+$curl -X DELETE "http://127.0.0.1:8081/video/delete/c8eda7ce-3b4c-4e21-a5ab-8fb2c5c15a0d"
 
 #all other is not allowed
 $ curl -v "http://127.0.0.1:8081/hello"
