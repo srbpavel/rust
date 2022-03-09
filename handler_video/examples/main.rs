@@ -16,7 +16,9 @@ use std::{
         Path,
         PathBuf,
     },
-    fs::File,
+    fs::{File,
+         create_dir,
+    },
 };
 
 use uuid::Uuid;
@@ -138,13 +140,20 @@ async fn run_upload(config: &TomlConfig,
         config.flag.debug_template,
     );
 
+    let html_dir = Path::new(&*config.html_path);
+
+    if !html_dir.exists() {
+        create_dir(html_dir)?
+    }
+    
     let mut html_file = File::create(
-        format!("{}{}_{}.html",
-                &*config.html_path,
-                &video.video_id,
-                &video.name,
+        Path::new(html_dir).join(
+            format!("{}_{}.html",
+                    &video.video_id,
+                    &video.name,
+            )
         )
-    ).unwrap();
+    )?;
     
     html_file.write_all(
         html_code.as_bytes()
@@ -160,7 +169,6 @@ async fn run_upload(config: &TomlConfig,
         "Content-type: multipart/form-data",
         &video.upload_url,
         "-F",
-        // type hardcoded as all mp4
         &format!("{name}=@{filename};type={content_type}",
                  name = video.name,
                  filename = video.filename,

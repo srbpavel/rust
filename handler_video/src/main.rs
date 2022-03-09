@@ -22,10 +22,12 @@ async fn main() -> std::io::Result<()> {
     // CONFIG
     let config = config::sample_config(&config_file);
 
-    println!("CPU get: {} / phy: {}",
-    		  num_cpus::get(),
-		  num_cpus::get_physical(),
+    /*
+    println!("\nCPU get: {} / phy: {}",
+             num_cpus::get(),
+             num_cpus::get_physical(),
     );
+    */
 
     //HANDLER
     run(config).await
