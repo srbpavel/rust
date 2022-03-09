@@ -224,8 +224,5 @@ $ curl http://127.0.0.1:8081/video/all 2>/dev/null| jq
 }
 ```
 
-#############################
-
-
 *BATCH FILL*
 [examples](examples)
