@@ -21,7 +21,7 @@ workers = -1 # 2 # 64 # -1 as default cpu number
 log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
 
 [flag]
-debug_config = true # false
+debug_config = false
 
 $ cargo run
     Finished dev [unoptimized + debuginfo] target(s) in 0.72s
