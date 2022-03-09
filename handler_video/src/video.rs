@@ -1,7 +1,7 @@
 use crate::{
     handler::{AppState,
     }, 
-    status,
+    status::Status,
 };
 //use log::debug;
 use actix_web::{get,
@@ -78,6 +78,7 @@ pub struct StatusResponse {
 }
 
 
+/// header keys
 enum HeaderKey {
     VideoId,
     Group,
@@ -110,7 +111,7 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
                 return ok_json(
                     IndexResponse {                          
                         result: None,
-                        status: status::Status::InvalidVideoMap.as_string(),
+                        status: Status::InvalidVideoMap.as_string(),
                     }
                 ),
         };
@@ -123,11 +124,11 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
     */
 
     let result = if all_videos.is_empty() {
-        status = status::Status::ListNone;
+        status = Status::ListNone;
         
         None
     } else {
-        status = status::Status::ListAll;
+        status = Status::ListAll;
         
         Some(all_videos.clone())
     };
@@ -155,10 +156,10 @@ pub async fn detail(state: web::Data<AppState>,
         .unwrap();
 
     let mut status;
-    status = status::Status::VideoIdNotFound;
+    status = Status::VideoIdNotFound;
     
     let result = video.get(&to_parse_idx).map(|v| {
-        status = status::Status::VideoIdFound;
+        status = Status::VideoIdFound;
         
         Video {
             id: to_parse_idx,
@@ -196,7 +197,7 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
     ok_json(
         IndexResponse {                          
             result: None,
-            status: status::Status::ClearOk.as_string(),
+            status: Status::ClearOk.as_string(),
         }
     )
 }
@@ -227,15 +228,15 @@ pub async fn delete(state: web::Data<AppState>,
                     
                     match binary_hashmap.remove(&to_parse_idx) {
                         Some(_) => {
-                            status::Status::DeleteOk
+                            Status::DeleteOk
                         },
-                        None => status::Status::DeleteBinaryError,
+                        None => Status::DeleteBinaryError,
                     }
                 },
-                None => status::Status::DeleteDetailError,
+                None => Status::DeleteDetailError,
             }
         },
-        None => status::Status::VideoIdNotFound,
+        None => Status::VideoIdNotFound,
     };
 
     ok_json(
@@ -269,11 +270,11 @@ pub async fn list_group(state: web::Data<AppState>,
     let status;
     
     let result = if group_map.is_empty() {
-        status = status::Status::GroupNotFound;
+        status = Status::GroupNotFound;
 
         None
     } else {
-        status = status::Status::GroupFound;
+        status = Status::GroupFound;
             
         Some(group_map)
     };
@@ -295,7 +296,7 @@ pub async fn insert_video(mut payload: Multipart,
 
     let AppState { video_map, binary_map } = &*state.into_inner();
 
-    let mut status = status::Status::Init;
+    let mut status = Status::Init;
     let mut new_video = Video::default();
 
     new_video.id = match verify_header(HeaderKey::VideoId,
@@ -305,7 +306,7 @@ pub async fn insert_video(mut payload: Multipart,
         None => return ok_json(
             DetailResponse {                          
                 result: None,
-                status: status::Status::EmptyVideoId.as_string(),
+                status: Status::EmptyVideoId.as_string(),
             }
         ),
     };
@@ -317,7 +318,7 @@ pub async fn insert_video(mut payload: Multipart,
         None => return ok_json(
             DetailResponse {                          
                 result: None,
-                status: status::Status::EmptyGroup.as_string(),
+                status: Status::EmptyGroup.as_string(),
             }
         ),
     };
@@ -339,7 +340,7 @@ pub async fn insert_video(mut payload: Multipart,
                             return ok_json(
                                 DetailResponse {                          
                                     result: None,
-                                    status: status::Status::EmptyFormName.as_string(),                     
+                                    status: Status::EmptyFormName.as_string(),                     
                                 }
                             )
                         }
@@ -350,7 +351,7 @@ pub async fn insert_video(mut payload: Multipart,
                         return ok_json(
                             DetailResponse {                          
                                 result: None,
-                                status: status::Status::EmptyFormName.as_string(),                     
+                                status: Status::EmptyFormName.as_string(),                     
                             }
                         ),
                 }
@@ -411,13 +412,13 @@ pub async fn insert_video(mut payload: Multipart,
                                 );
                         };
 
-                        status = status::Status::UploadDone;
+                        status = Status::UploadDone;
                     },
                     None =>
                         return ok_json(
                             DetailResponse {                          
                                 result: None,
-                                status: status::Status::EmptyFormFilename.as_string(),
+                                status: Status::EmptyFormFilename.as_string(),
                             }
                         ),
                 }
@@ -426,7 +427,7 @@ pub async fn insert_video(mut payload: Multipart,
                 return ok_json(
                     DetailResponse {                          
                         result: None,
-                        status: status::Status::TooManyForms.as_string(),
+                        status: Status::TooManyForms.as_string(),
                     }
                 )
             }
@@ -476,7 +477,7 @@ pub async fn download(state: web::Data<AppState>,
         None => {
             HttpResponse::NotFound().json(
                 &StatusResponse {
-                    status: status::Status::VideoIdNotFound.as_string(),
+                    status: Status::VideoIdNotFound.as_string(),
                 }
             )
         },
@@ -509,7 +510,7 @@ pub async fn play(state: web::Data<AppState>,
         },
         None => {
             web::Bytes::from(
-                status::Status::PlayerBinaryNotFound
+                Status::PlayerBinaryNotFound
                     .as_string()
             )
         },
