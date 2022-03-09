@@ -43,12 +43,14 @@ $ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml
 
 *EMPTY START*
 ```
-$ curl http://localhost:8081/video/all 2>/dev/null | jq{
+$ curl http://localhost:8081/video/all 2>/dev/null | jq
+{
   "result": null,
   "status": "none videos found"
 }
 
-$ curl http://localhost:8081/video/list/chunk_tester 2>/dev/null | jq{
+$ curl http://localhost:8081/video/list/chunk_tester 2>/dev/null | jq
+{
   "result": null,
   "status": "group not found"
 }
@@ -67,154 +69,112 @@ $ curl -X DELETE "http://127.0.0.1:8081/video/delete/c8eda7ce-3b4c-4e21-a5ab-8fb
 $ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
 {"status": "player binary_id not found"}
 ```
-#############################
-
-
-
 
 *IMPORT*
 ```
-$ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "auticko=/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" 2>/dev/null | jq
-{
-  "result": null,
-  "status": "form 'filename' not provided"
-}
+#no header video_id
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "###group: chunk_tester" --no-buffer --limit-rate 10K
+{"result":null,"status":"header 'group' not provided"}
 
-$ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "=@/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" 2>/dev/null | jq
-{
-  "result": null,
-  "status": "'name' not provided for form"
-}
+#no header group
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "###video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+{"result":null,"status":"header 'video_id' not provided"}
 
-$ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "=@/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "video_id: 123" -H "Xgroup: stream_001" 2>/dev/null | jq
-{
-  "result": null,
-  "status": "header 'group' not provided"
-}
+#missing form filename
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+{"result":null,"status":"form 'filename' not provided"}
 
-$ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "remix=@/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "Xvideo_id: 123" -H "group: stream_001" 2>/dev/null | jq
-{
-  "result": null,
-  "status": "header 'video_id' not provided"
-}
+#missing form name
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+No Content-Disposition `form-data` header* Closing connection 0
 
-$ curl -X PUT -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/put" -F "remix=@/home/conan/video/youtube/dmnds.mp4;type=video/mp4" -H "video_id: 123" -H "group: stream_001" 2>/dev/null | jq
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
+
+#first chunk
+$ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
+  1181
+  1182  They heaved the log a second time.
+  1183
+  1184  "Well?" asked the captain of the man at the wheel.
+  1185
+  1186  "Nineteen miles and three-tenths, sir."
+  1187
+  1188  "Clap on more steam."
+  1189
+
+$ curl "http://127.0.0.1:8081/video/detail/verne_piped" 2>/dev/null| jq
 {
   "result": {
-    "server_id": 2,
-    "request_count": 3,
-    "video": {
-      "id": "123",
-      "group": "stream_001",
-      "name": "remix",
-      "path": "/home/conan/soft/rust/handler_video/storage/123_dmnds.mp4"
+    "id": "verne_piped",
+    "group": "chunk_tester",
+    "name": "ts"
+  },
+  "status": "video_id found"
+}
+
+$ curl http://127.0.0.1:8081/video/all 2>/dev/null| jq
+{
+  "result": {
+    "verne_piped": {
+      "id": "verne_piped",
+      "group": "chunk_tester",
+      "name": "ts"
     }
   },
-  "status": "ok"
+  "status": "some videos found"
 }
 
-$ ls -la storage/
-total 57104
-drwxr-xr-x 2 conan conan     4096 Mar  2 18:59 .
-drwxr-xr-x 6 conan conan     4096 Mar  2 18:34 ..
--rw-r--r-- 1 conan conan 58462389 Mar  2 18:59 123_dmnds.mp4
--rw-r--r-- 1 conan conan        0 Mar  2 18:59 touch.verify
-
-```
-
-```
-$ curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq{
-  "server_id": 1,
-  "request_count": 3,
-  "result": {
-    "id": "123",
-    "group": "stream_001",
-    "name": "remix",
-    "path": "/home/conan/soft/rust/handler_video/storage/123_dmnds.mp4"
-  },
-  "url": "/video/detail/123",
-  "status": "video found"
-}
-
-$ curl http://localhost:8081/video/list/stream_001 2>/dev/null | jq
+$ curl http://127.0.0.1:8081/video/list/chunk_tester 2>/dev/null | jq
 {
-  "server_id": 3,
-  "request_count": 3,
   "result": {
-    "123": {
-      "id": "123",
-      "group": "stream_001",
-      "name": "remix",
-      "path": "/home/conan/soft/rust/handler_video/storage/123_dmnds.mp4"
+    "verne_piped": {
+      "id": "verne_piped",
+      "group": "chunk_tester",
+      "name": "ts"
     }
   },
   "status": "group found"
 }
 
-$ curl "http://127.0.0.1:8081/video/groups" 2>/dev/null| jq{
-  "server_id": 0,
-  "request_count": 4,
-  "result": [
-    "stream_001"
-  ],
-  "status": "some groups found"
-}
-```
-
-```
-$ curl -X POST "http://127.0.0.1:8081/video/update/group" -H "Content-Type: application/json" -d '{"video_id": "123", "group_id": "video_on_demand"}' 2>/dev/null | jq
+#upload done
+$ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
+ 12530
+ 12531
+ 12532  Most people start at our Web site which has the main PG search facility:
+ 12533
+ 12534       https://www.gutenberg.org
+ 12535
+ 12536  This Web site includes information about Project Gutenberg-tm,
+ 12537  including how to make donations to the Project Gutenberg Literary
+ 12538  Archive Foundation, how to help produce our new eBooks, and how to
+ 12539  subscribe to our email newsletter to hear about new eBooks.
+ 
+ $ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null| jq
 {
-  "server_id": 2,
-  "request_count": 4,
-  "result": {
-    "id": "123",
-    "group": "video_on_demand",
-    "name": "remix",
-    "path": "/home/conan/soft/rust/handler_video/storage/123_dmnds.mp4"
-  },
-  "url": "/video/update/group",
-  "status": "update ok"
+  "status": "delete ok"
 }
 
-$ curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
+$ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null| jq
 {
-  "server_id": 1,
-  "request_count": 4,
-  "result": {
-    "id": "123",
-    "group": "video_on_demand",
-    "name": "remix",
-    "path": "/home/conan/soft/rust/handler_video/storage/123_dmnds.mp4"
-  },
-  "url": "/video/detail/123",
-  "status": "video found"
-}
-
-$ curl -X DELETE "http://127.0.0.1:8081/video/delete/123" 2>/dev/null | jq
-{
-  "result":"delete ok"
-}
-
-$ curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
-{
-  "server_id": 0,
-  "request_count": 7,
-  "result": null,
-  "url": "/video/detail/123",
   "status": "video_id not found"
 }
 
-$ ls -la storage/
-total 8
-drwxr-xr-x 2 conan conan 4096 Mar  2 18:56 .
-drwxr-xr-x 6 conan conan 4096 Mar  2 18:34 ..
--rw-r--r-- 1 conan conan    0 Mar  2 18:56 touch.verify
-
-$ curl -X DELETE "http://127.0.0.1:8081/video/delete/123" 2>/dev/null | jq
+$ curl -X POST "http://127.0.0.1:8081/video/clear" 2>/dev/null| jq
 {
-  "result": "video_id not found"
+  "result": null,
+  "status": "clear ok"
+}
+
+$ curl http://127.0.0.1:8081/video/all 2>/dev/null| jq
+{
+  "result": null,
+  "status": "none videos found"
 }
 ```
+
+#############################
+
+
 
 *BATCH FILL*
 ```
