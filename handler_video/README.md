@@ -15,21 +15,18 @@ $ echo "export PATH=$PATH\:$HOME/.cargo/env" >> ~/.bashrc
 $ cat src/handler_video_config.toml
 name = 'HANDLER_VIDEO'
 host = 'spongebob'
-#server = "127.0.0.1"
 server = "localhost"
-#server = "192.168.0.103"
-#server = "192.168.88.253"
 port = 8081
-workers = 4
-static_dir = "/home/conan/soft/rust/handler_video/storage/"
+workers = -1 # 2 # 64 # -1 as default cpu number
 log_format = "\"%r\" %s %b \"%{User-Agent}i\" %D"
 
 [flag]
 debug_config = true # false
-#verify dir is available and we can write before each video safe             
-verify_dir_per_video = true # false
 
 $ cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 0.72s
+     Running `target/debug/handler_video`
+
 EXIT: Problem parsing cmd arguments
 REASON >>> we want exactly one argument
  example:
@@ -37,65 +34,43 @@ REASON >>> we want exactly one argument
   $ /home/conan/soft/rust/handler_video/target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml
 
 $ cargo run /home/conan/soft/rust/handler_video/src/handler_video_config.toml
-VERIFY STORAGE: Error: video_storage directory does not exists: "\"/home/conan/soft/rust/handler_video/storage/\""
-
-$ mkdir storage
-$ /home/conan/soft/rust/handler_video/target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml
-
-#CONFIG:
-TomlConfig {
-    name: "HANDLER_VIDEO",
-    host: "spongebob",
-    server: "localhost",
-    port: 8081,
-    workers: 4,
-    static_dir: "/home/conan/soft/rust/handler_video/storage/",
-    log_format: "\"%r\" %s %b \"%{User-Agent}i\" %D",
-    flag: Flag {
-        debug_config: true,
-        verify_dir_per_video: true,
-    },
-}
-start -> HANDLER_VIDEO at spongebob / localhost
-[2022-03-02T18:13:15Z INFO  actix_server::builder] Starting 4 workers
-[2022-03-02T18:13:15Z INFO  actix_server::builder] Starting "actix-web-service-127.0.0.1:8081" service on 127.0.0.1:8081
+    Finished dev [unoptimized + debuginfo] target(s) in 0.08s
+     Running `target/debug/handler_video /home/conan/soft/rust/handler_video/src/handler_video_config.toml`
+[2022-03-09T10:29:26Z INFO  handler_video::handler] start -> HANDLER_VIDEO at spongebob / localhost
+[2022-03-09T10:29:26Z INFO  actix_server::builder] Starting 2 workers
+[2022-03-09T10:29:26Z INFO  actix_server::server] Actix runtime found; starting in Actix runtime
 ```
 
 *EMPTY START*
 ```
-$ curl "http://127.0.0.1:8081/video/" 2>/dev/null| jq
-{
-  "server_id": 0,
-  "request_count": 1,
-  "video_map": {},
-  "status": "ok"
-}
-
-$ curl "http://127.0.0.1:8081/video/groups" 2>/dev/null| jq
-{
-  "server_id": 2,
-  "request_count": 1,
+$ curl http://localhost:8081/video/all 2>/dev/null | jq{
   "result": null,
-  "status": "no groups found"
+  "status": "none videos found"
 }
 
-$ curl http://localhost:8081/video/list/stream_001 2>/dev/null | jq
-{
-  "server_id": 1,
-  "request_count": 1,
+$ curl http://localhost:8081/video/list/chunk_tester 2>/dev/null | jq{
   "result": null,
   "status": "group not found"
 }
 
-curl "http://127.0.0.1:8081/video/detail/123" 2>/dev/null| jq
+$ curl "http://127.0.0.1:8081/video/detail/verne_piped" 2>/dev/null | jq
 {
-  "server_id": 3,
-  "request_count": 1,
   "result": null,
-  "url": "/video/detail/123",
   "status": "video_id not found"
 }
+
+$ curl -X DELETE "http://127.0.0.1:8081/video/delete/c8eda7ce-3b4c-4e21-a5ab-8fb2c5c15a0d" 2>/dev/null | jq
+{
+  "status": "video_id not found"
+}
+
+$ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
+{"status": "player binary_id not found"}
 ```
+#############################
+
+
+
 
 *IMPORT*
 ```
