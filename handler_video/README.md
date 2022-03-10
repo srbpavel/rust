@@ -125,12 +125,12 @@ $ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
 *IMPORT*
 ```
 #no header video_id
-$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "###group: chunk_tester" --no-buffer --limit-rate 10K
-{"result":null,"status":"header 'group' not provided"}
-
-#no header group
 $ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "###video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
 {"result":null,"status":"header 'video_id' not provided"}
+
+#no header group
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "###group: chunk_tester" --no-buffer --limit-rate 10K
+{"result":null,"status":"header 'group' not provided"}
 
 #missing form filename
 $ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/video/upload" -F "ts=;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 10K
