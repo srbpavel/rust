@@ -72,7 +72,7 @@ pub struct DetailResponse {
     status: String,
 }
 
-/// delete info
+/// info
 #[derive(Serialize, Debug)]
 pub struct StatusResponse {     
     status: String,
@@ -108,21 +108,6 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
         .lock()
         .unwrap();
     
-    /*
-    let all_videos = match state                                  
-        .video_map
-        .lock() {
-            Ok(video_map) => video_map,
-            Err(_) => 
-                return ok_json(
-                    IndexResponse {                          
-                        result: None,
-                        status: Status::InvalidVideoMap.as_string(),
-                    }
-                ),
-        };
-    */
-
     let result = if all_videos.is_empty() {
         status = Status::ListNone;
         
@@ -162,13 +147,6 @@ pub async fn detail(state: web::Data<AppState>,
         status = Status::VideoIdFound;
 
         v.clone()
-        /*
-        Video {
-            id: to_parse_idx,
-            group: v.group.clone(),
-            name: v.name.clone(),
-        }
-        */
     });
 
     ok_json(
@@ -197,36 +175,9 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .map(|mut b| b.clear()
         );
     
-    /*
-    let mut status = Status::ClearOk;
-
-    match state
-        .video_map
-        .lock()
-        .map(|mut v| v.clear()
-        ) {
-            Ok(_) => {},
-            Err(_) => {
-                status = Status::ClearErrorVideoMap;
-            },
-        }
-    
-     match state
-        .binary_map
-        .lock()
-        .map(|mut b| b.clear()
-        ) {
-            Ok(_) => {},
-            Err(_) => {
-                status = Status::ClearErrorBinaryMap;
-            },
-        }
-    */
-
     ok_json(
         IndexResponse {                          
             result: None,
-            //status: status.as_string(),
             status: Status::ClearOk.as_string(),
         }
     )
@@ -575,17 +526,3 @@ fn verify_header(key: HeaderKey,
         None => None,
     }
 }
-
-
-/*
-///
-fn verify_lock(state: web::Data<AppState>) -> Option<HashMap<String, Video>> {
-
-    match state
-        .video_map
-        .lock() {
-            Ok(vmap) => Some(*vmap),
-            Err(_) => None,
-        }
-}
-*/

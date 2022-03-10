@@ -23,7 +23,6 @@ use std::{
 
 use uuid::Uuid;
 
-
 struct Video {
     name: String,
     filename: String,
@@ -31,7 +30,6 @@ struct Video {
     upload_url: String,
     video_id: uuid::Uuid,
 }
-
 
 /// list dir and push files to vec
 fn get_files(config: &TomlConfig) -> Result<Vec<PathBuf>, Error> {
@@ -47,7 +45,6 @@ fn get_files(config: &TomlConfig) -> Result<Vec<PathBuf>, Error> {
                 );
                 
                 std::process::exit(1);
-                
             }
         };
 
