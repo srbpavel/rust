@@ -201,7 +201,19 @@ $ curl "http://127.0.0.1:8081/video/play/verne_piped" 2>/dev/null | tail
  12538  Archive Foundation, how to help produce our new eBooks, and how to
  12539  subscribe to our email newsletter to hear about new eBooks.
  
- $ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null| jq
+$ curl "http://192.168.0.105:8081/video/download/verne_piped" 2>/dev/null | tail
+ 12530
+ 12531
+ 12532  Most people start at our Web site which has the main PG search facility:
+ 12533
+ 12534       https://www.gutenberg.org
+ 12535
+ 12536  This Web site includes information about Project Gutenberg-tm,
+ 12537  including how to make donations to the Project Gutenberg Literary
+ 12538  Archive Foundation, how to help produce our new eBooks, and how to
+ 12539  subscribe to our email newsletter to hear about new eBooks.
+
+$ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null| jq
 {
   "status": "delete ok"
 }
@@ -210,6 +222,12 @@ $ curl -X DELETE "http://127.0.0.1:8081/video/delete/verne_piped" 2>/dev/null| j
 {
   "status": "video_id not found"
 }
+
+$ curl "http://192.168.0.105:8081/video/play/verne_piped" 2>/dev/null | tail
+{"status": "player binary_id not found"}
+
+$ curl "http://192.168.0.105:8081/video/download/verne_piped" 2>/dev/null | tail
+{"status":"video_id not found"}
 
 $ curl -X POST "http://127.0.0.1:8081/video/clear" 2>/dev/null| jq
 {
