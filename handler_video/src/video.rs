@@ -18,7 +18,9 @@ use actix_web::{get,
 };
 use actix_multipart::Multipart;
 use futures_util::TryStreamExt;
-use serde::Serialize;
+use serde::{Serialize,
+            Deserialize,
+};
 use std::collections::HashMap;
 use bytes::{BytesMut,
             BufMut,
@@ -40,7 +42,6 @@ pub struct Binary {
 }
 
 /// video
-//#[derive(Serialize, Debug, Clone)]
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct Video {
     id: String,
@@ -100,7 +101,8 @@ impl HeaderKey {
 /// for debug purpose as tested with dozen records not milions yet
 ///
 #[get("/all")]
-pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+//pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+pub async fn all(state: web::Data<AppState>) -> impl Responder {
 
     let status;
 
@@ -119,12 +121,20 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
         Some(all_videos.clone())
     };
 
+    resp_json(
+        IndexResponse {                          
+            result,
+            status: status.as_string(),
+        }
+    )
+    /*
     ok_json(
         IndexResponse {                          
             result,
             status: status.as_string(),
         }
     )
+    */
 }
 
 
@@ -132,7 +142,8 @@ pub async fn all(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>>
 /// 
 #[get("/detail/{video_id}")]
 pub async fn detail(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
+                    //idx: web::Path<String>) -> Result<web::Json<DetailResponse>> {
+                    idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = inner_trim(idx);
 
@@ -150,19 +161,28 @@ pub async fn detail(state: web::Data<AppState>,
         v.clone()
     });
 
+    resp_json(
+        DetailResponse {
+            result,
+            status: status.as_string(),
+        }
+    )
+    /*
     ok_json(
         DetailResponse {
             result,
             status: status.as_string(),
         }
     )
+    */
 }
 
 
 /// flush video_map + binary_map
 ///
 #[post("/clear")]
-pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+//pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse>> {
+pub async fn clear(state: web::Data<AppState>) -> impl Responder {
 
     let _vm = state
         .video_map
@@ -175,20 +195,29 @@ pub async fn clear(state: web::Data<AppState>) -> Result<web::Json<IndexResponse
         .lock()
         .map(|mut b| b.clear()
         );
-    
+
+    resp_json(
+        IndexResponse {                          
+            result: None,
+            status: Status::ClearOk.as_string(),
+        }
+    )
+    /*
     ok_json(
         IndexResponse {                          
             result: None,
             status: Status::ClearOk.as_string(),
         }
     )
+    */
 }
 
 
 /// DELETE video_id
 /// 
 pub async fn delete(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> Result<web::Json<StatusResponse>> {
+                    //idx: web::Path<String>) -> Result<web::Json<StatusResponse>> {
+                    idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = inner_trim(idx);
 
@@ -219,11 +248,18 @@ pub async fn delete(state: web::Data<AppState>,
         None => Status::VideoIdNotFound,
     };
 
+    resp_json(
+        StatusResponse {
+            status: result.as_string(),
+        }                                        
+    )
+    /*
     ok_json(
         StatusResponse {
             status: result.as_string(),
         }                                        
     )
+    */
 }
 
 
@@ -231,7 +267,8 @@ pub async fn delete(state: web::Data<AppState>,
 ///
 #[get("/list/{group_id}")]
 pub async fn list_group(state: web::Data<AppState>,
-                        idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+                        //idx: web::Path<String>) -> Result<web::Json<IndexResponse>> {
+                        idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = inner_trim(idx);
 
@@ -259,12 +296,20 @@ pub async fn list_group(state: web::Data<AppState>,
         Some(group_map)
     };
 
+    resp_json(
+        IndexResponse {                          
+            result,
+            status: status.as_string(),
+        }
+    )
+    /*
     ok_json(
         IndexResponse {                          
             result,
             status: status.as_string(),
         }
     )
+    */
 }
 
 
@@ -273,32 +318,54 @@ pub async fn list_group(state: web::Data<AppState>,
 pub async fn insert_video(mut payload: Multipart,
                           state: web::Data<AppState>,
                           req: HttpRequest)  -> Result<web::Json<DetailResponse>> {
+                          //req: HttpRequest) -> impl Responder {
 
-    let mut status = Status::Init;
+    //let mut status = Status::Init;
     let mut new_video = Video::default();
 
+    let mut response = DetailResponse {                          
+        result: None,
+        status: Status::Init.as_string(),
+    };
+    
     new_video.id = match verify_header(HeaderKey::VideoId,
                                        req.headers(),
     ) {
         Some(value) => String::from(value),
-        None => return ok_json(
-            DetailResponse {                          
-                result: None,
-                status: Status::EmptyVideoId.as_string(),
-            }
-        ),
+        None => {
+            response.status = Status::EmptyVideoId.as_string();
+
+            return ok_json(response)
+            /*
+            return ok_json(
+                DetailResponse {                          
+                    result: None,
+                    status: Status::EmptyVideoId.as_string(),
+                }
+            */
+        //}
+            //),
+        },
     };
 
     new_video.group = match verify_header(HeaderKey::Group,
                                           req.headers(),
     ) {
         Some(value) => String::from(value),
-        None => return ok_json(
-            DetailResponse {                          
-                result: None,
-                status: Status::EmptyGroup.as_string(),
-            }
-        ),
+        None => {
+            response.status = Status::EmptyGroup.as_string();
+
+            return ok_json(response)
+            
+            /*
+            return ok_json(
+                DetailResponse {                          
+                    result: None,
+                    status: Status::EmptyGroup.as_string(),
+                }
+            ),
+            */
+        },
     };
     
     let mut content_counter = 0;
@@ -317,23 +384,35 @@ pub async fn insert_video(mut payload: Multipart,
                 match content_disposition.get_name() {
                     Some(name) => {
                         if name.trim().eq("") {
+                            response.status = Status::EmptyFormName.as_string(); 
+
+                            return ok_json(response)
+                            /*
                             return ok_json(
                                 DetailResponse {                          
                                     result: None,
                                     status: Status::EmptyFormName.as_string(),                     
                                 }
                             )
+                            */
                         }
 
                         new_video.name = String::from(name);
                     },
-                    None =>
+                    None => {
+                        response.status = Status::EmptyFormName.as_string();
+
+                        return ok_json(response)
+                        
+                        /*
                         return ok_json(
                             DetailResponse {                          
                                 result: None,
                                 status: Status::EmptyFormName.as_string(),                     
                             }
                         ),
+                        */
+                    },
                 }
 
                 match content_disposition.get_filename() {
@@ -393,33 +472,55 @@ pub async fn insert_video(mut payload: Multipart,
                                 );
                         };
 
-                        status = Status::UploadDone;
+                        //response.result = Some(new_video.clone());
+                        response.status = Status::UploadDone.as_string();
+                        //status = Status::UploadDone;
                     },
-                    None =>
+                    None => {
+                        response.status = Status::EmptyFormFilename.as_string();
+
+                        return ok_json(response)
+                        
+                        /*
                         return ok_json(
                             DetailResponse {                          
                                 result: None,
                                 status: Status::EmptyFormFilename.as_string(),
                             }
                         ),
+                        */
+                    },
                 }
             } else {
-
+                response.status = Status::TooManyForms.as_string();
+                
+                return ok_json(response)
+                
+                /*
                 return ok_json(
                     DetailResponse {                          
                         result: None,
                         status: Status::TooManyForms.as_string(),
                     }
                 )
+                */
             }
         }
 
+    response.result = Some(new_video);
+    
+    ok_json(
+        response
+    )
+    
+    /*
     ok_json(
         DetailResponse {                          
             result: Some(new_video),
             status: status.as_string(),
         }
     )
+    */
 }
 
 
@@ -427,7 +528,8 @@ pub async fn insert_video(mut payload: Multipart,
 /// 
 #[get("/download/{idx}")]
 pub async fn download(state: web::Data<AppState>,
-                      idx: web::Path<String>) -> HttpResponse {
+                      //idx: web::Path<String>) -> HttpResponse {
+                      idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = inner_trim(idx);
 
@@ -504,6 +606,17 @@ fn ok_json<T>(response: T) -> Result<web::Json<T>> {
 }
 
 
+/// json as http response
+fn resp_json<T: serde::Serialize>(response: T) -> HttpResponse {
+    HttpResponse::Ok()
+        .json(
+            web::Json(
+                response
+            )
+        )
+}
+
+
 /// unpack pattern and trim
 fn inner_trim(idx: web::Path<String>) -> String {
     idx
@@ -528,37 +641,13 @@ fn verify_header(key: HeaderKey,
     }
 }
 
-/// 
-use serde::Deserialize;
-
-/// json as http response
-fn resp_json<T: serde::Serialize>(response: T) -> HttpResponse {
-    HttpResponse::Ok()
-        .json(
-            web::Json(
-                response
-            )
-        )
-}
-
 /// path tester
 ///
 #[get("/{id}/{group}/{name}")]
 pub async fn data(state: web::Data<AppState>,
-                  //path: web::Path<(String, u32)>,
-                  //path: web::Path<Video>) -> Result<web::Json<DetailResponse>> {
-                  //path: web::Path<Video>) -> HttpResponse {
                   path: web::Path<Video>) -> impl Responder {
 
     let v = path.clone();
-    
-    /*
-    let v = Video {
-               id: path.id.clone(),
-               name: path.name.clone(),
-               group: path.group.clone(),
-           };
-    */
     
     debug!("data_IN: {:#?}",
            &v
@@ -590,54 +679,15 @@ pub async fn data(state: web::Data<AppState>,
         v.clone()
     });
 
-    /*
-    HttpResponse::Ok()
-        .body(
-            format!("{:#?}\n",
-                    //v,
-                    result,
-            )
-        )
-        //.finish()
-    */
-
     resp_json(result)
-    
-    /* //
-    HttpResponse::Ok()
-        .json(
-            web::Json(
-                result
-            )
-        )
-    */
-    
-    /*
-    web::Json(
-        DetailResponse {
-            result,
-            status: status.as_string(),
-        }
-    )
-    */
-
-    /*
-    ok_json(
-        DetailResponse {
-            result,
-            status: status.as_string(),
-        }
-    )
-    */
 }
 
 
-/// stream
+/// stream experiment
 /// 
 #[get("/stream/{idx}")]
 pub async fn stream(state: web::Data<AppState>,
-                    idx: web::Path<String>) -> HttpResponse {
-                    //idx: web::Path<String>) -> Result<bytes::Bytes> {
+                    idx: web::Path<String>) -> impl Responder {
 
     let to_parse_idx = inner_trim(idx);
 
@@ -652,17 +702,7 @@ pub async fn stream(state: web::Data<AppState>,
     
     match result {
         Some(v) => {
-            /*
-            Ok(
-                web::Bytes::from(
-                    v.data
-                )
-            )
-            */
-
-            // /*
             HttpResponse::Ok()
-                /*
                 .append_header(
                     ("Content-Disposition",
                      format!("form-data; filename={}",
@@ -670,45 +710,29 @@ pub async fn stream(state: web::Data<AppState>,
                      ),
                     )
                 )
-                */
                 .append_header(
                     ("Content-Type",
                      v.mime,
-                    )
-                )
-                .append_header(
-                    ("Transfer-encoding", 
-                     "chunked",
-                    )
-                )
-                .append_header(
-                    ("ohh", 
-                     "nooo",
                     )
                 )
                 .body(
                     v
                         .data
                 )
-            // */
         },
         None => {
-            /*
-            Ok(
-                web::Bytes::from(
-                    Status::PlayerBinaryNotFound
-                        .as_string()
-                )
+            resp_json(
+                &StatusResponse {
+                    status: Status::VideoIdNotFound.as_string(),
+                }
             )
-            */
-
-            // /*
+            /*
             HttpResponse::NotFound().json(
                 &StatusResponse {
                     status: Status::VideoIdNotFound.as_string(),
                 }
             )
-            // */
+            */
         },
     }
 }
