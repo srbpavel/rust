@@ -23,6 +23,8 @@ use std::{
     collections::HashMap,
 };
 
+use actix_files::Files;
+
 
 /// for each WORKER thread     
 #[derive(Debug)]                       
@@ -91,6 +93,18 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     // tester
                     .service(video::data)
                     .service(video::stream)
+                    .service(video::favicon)
+                    //.service(Files::new("/static", "."))
+                    .service(Files::new("/files", // url
+                                        "./static", // dir to list
+                                        //"/home/conan/soft/rust/handler_video/static",
+                    )
+                             .show_files_listing()
+                    )
+                    .route("/{filename:.*}",
+                           web::get()
+                           .to(video::single_file)
+                    )
                     //_
                     .service(
                         web::resource("/upload")

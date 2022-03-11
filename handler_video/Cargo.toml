@@ -10,6 +10,7 @@ actix-multipart = "0.4.0"
 futures-util = "0.3.21"
 uuid = { version = "0.8", features = ["v4"] }
 #num_cpus = "1.13.1"
+actix-files = "0.6.0"
 
 [dependencies.actix-web]   
 version = "4.0.1"

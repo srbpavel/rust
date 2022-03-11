@@ -17,6 +17,7 @@ use actix_web::{get,
                 http::header::HeaderMap,
 };
 use actix_multipart::Multipart;
+use actix_files::NamedFile;
 use futures_util::TryStreamExt;
 use serde::{Serialize,
             Deserialize,
@@ -617,4 +618,35 @@ pub async fn stream(state: web::Data<AppState>,
             )
         },
     }
+}
+
+
+/// favicon static
+///
+///
+#[get("/favicon")]
+pub async fn favicon() -> Result<actix_files::NamedFile> {
+    Ok(
+        NamedFile::open(
+            "static/favicon.ico"
+        )?
+    )
+}
+
+/// return single file
+///
+/// curl -v "http://127.0.0.1:8081/video/static/ts.txt"|cat -n|less
+/// curl -v "http://127.0.0.1:8081/video/now.txt"|cat -n|less
+///
+pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
+
+    let path: std::path::PathBuf = req
+        .match_info()
+        .query("filename")
+        .parse()
+        .unwrap();
+    
+    Ok(
+        NamedFile::open(path)?
+    )
 }
