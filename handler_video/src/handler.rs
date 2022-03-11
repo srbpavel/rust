@@ -88,6 +88,10 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::detail)
                     .service(video::clear)
                     .service(video::list_group)
+                    // tester
+                    .service(video::data)
+                    .service(video::stream)
+                    //_
                     .service(
                         web::resource("/upload")
                             .app_data(

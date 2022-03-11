@@ -2,11 +2,11 @@ use crate::{
     handler::AppState,
     status::Status,
 };
-/*
+// /*
 use log::{debug,
-          error,
+          //error,
 };
-*/
+// */
 use actix_web::{get,
                 post,
                 web,
@@ -40,7 +40,8 @@ pub struct Binary {
 }
 
 /// video
-#[derive(Serialize, Debug, Clone)]
+//#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct Video {
     id: String,
     group: String,
@@ -524,5 +525,190 @@ fn verify_header(key: HeaderKey,
             }
         },
         None => None,
+    }
+}
+
+/// 
+use serde::Deserialize;
+
+/// json as http response
+fn resp_json<T: serde::Serialize>(response: T) -> HttpResponse {
+    HttpResponse::Ok()
+        .json(
+            web::Json(
+                response
+            )
+        )
+}
+
+/// path tester
+///
+#[get("/{id}/{group}/{name}")]
+pub async fn data(state: web::Data<AppState>,
+                  //path: web::Path<(String, u32)>,
+                  //path: web::Path<Video>) -> Result<web::Json<DetailResponse>> {
+                  //path: web::Path<Video>) -> HttpResponse {
+                  path: web::Path<Video>) -> impl Responder {
+
+    let v = path.clone();
+    
+    /*
+    let v = Video {
+               id: path.id.clone(),
+               name: path.name.clone(),
+               group: path.group.clone(),
+           };
+    */
+    
+    debug!("data_IN: {:#?}",
+           &v
+    );
+
+    match path.group.as_str() {
+        "raise_error" => {
+            debug!("should raise 404");
+            return HttpResponse::BadRequest().finish()
+        },
+        _ => {},
+    }
+    
+    let mut status;
+    status = Status::VideoIdNotFound;
+    
+    let video = state                                  
+        .video_map
+        .lock()
+        .unwrap();
+
+    let result = video.get(&path.id).map(|v| {
+        status = Status::VideoIdFound;
+
+        debug!("data_OUT: {:#?}",
+               v,
+        );
+        
+        v.clone()
+    });
+
+    /*
+    HttpResponse::Ok()
+        .body(
+            format!("{:#?}\n",
+                    //v,
+                    result,
+            )
+        )
+        //.finish()
+    */
+
+    resp_json(result)
+    
+    /* //
+    HttpResponse::Ok()
+        .json(
+            web::Json(
+                result
+            )
+        )
+    */
+    
+    /*
+    web::Json(
+        DetailResponse {
+            result,
+            status: status.as_string(),
+        }
+    )
+    */
+
+    /*
+    ok_json(
+        DetailResponse {
+            result,
+            status: status.as_string(),
+        }
+    )
+    */
+}
+
+
+/// stream
+/// 
+#[get("/stream/{idx}")]
+pub async fn stream(state: web::Data<AppState>,
+                    idx: web::Path<String>) -> HttpResponse {
+                    //idx: web::Path<String>) -> Result<bytes::Bytes> {
+
+    let to_parse_idx = inner_trim(idx);
+
+    let binary = state
+        .binary_map
+        .lock()
+        .unwrap();
+
+    let result = binary
+        .get(&to_parse_idx)
+        .cloned();
+    
+    match result {
+        Some(v) => {
+            /*
+            Ok(
+                web::Bytes::from(
+                    v.data
+                )
+            )
+            */
+
+            // /*
+            HttpResponse::Ok()
+                /*
+                .append_header(
+                    ("Content-Disposition",
+                     format!("form-data; filename={}",
+                             v.filename,
+                     ),
+                    )
+                )
+                */
+                .append_header(
+                    ("Content-Type",
+                     v.mime,
+                    )
+                )
+                .append_header(
+                    ("Transfer-encoding", 
+                     "chunked",
+                    )
+                )
+                .append_header(
+                    ("ohh", 
+                     "nooo",
+                    )
+                )
+                .body(
+                    v
+                        .data
+                )
+            // */
+        },
+        None => {
+            /*
+            Ok(
+                web::Bytes::from(
+                    Status::PlayerBinaryNotFound
+                        .as_string()
+                )
+            )
+            */
+
+            // /*
+            HttpResponse::NotFound().json(
+                &StatusResponse {
+                    status: Status::VideoIdNotFound.as_string(),
+                }
+            )
+            // */
+        },
     }
 }
