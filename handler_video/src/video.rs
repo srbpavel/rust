@@ -9,12 +9,17 @@ use log::{debug,
 // */
 use actix_web::{get,
                 post,
-                web,
+                web::{self,
+                      Bytes,
+                      BytesMut,
+                      BufMut,
+                },
                 Result,
                 HttpResponse,
                 HttpRequest,
                 Responder,
                 http::header::HeaderMap,
+                
 };
 use actix_multipart::Multipart;
 use actix_files::NamedFile;
@@ -23,9 +28,11 @@ use serde::{Serialize,
             Deserialize,
 };
 use std::collections::HashMap;
+/*
 use bytes::{BytesMut,
             BufMut,
 };
+*/
 
 pub const SCOPE: &str = "/video";
 
@@ -308,7 +315,11 @@ pub async fn insert_video(mut payload: Multipart,
     let mut content_counter = 0;
 
     let AppState { video_map, binary_map } = &*state.into_inner();
-    
+
+    // https://docs.rs/actix-web/latest/actix_web/web/struct.Payload.html
+    // 
+    // via actix_web::web::Payload instead actix_multipart::Multipart
+    //
     while let Some(mut field) = payload
         .try_next()
         .await? {
@@ -474,10 +485,12 @@ pub async fn play(state: web::Data<AppState>,
 
     match result {
         Some(v) => {
-            web::Bytes::from(v.data)
+            //web::Bytes::from(v.data)
+            Bytes::from(v.data)
         },
         None => {
-            web::Bytes::from(
+            //web::Bytes::from(
+            Bytes::from(
                 Status::PlayerBinaryNotFound
                     .as_string()
             )
@@ -621,6 +634,7 @@ pub async fn stream(state: web::Data<AppState>,
 }
 
 
+/*
 /// favicon static
 ///
 ///
@@ -632,6 +646,8 @@ pub async fn favicon() -> Result<actix_files::NamedFile> {
         )?
     )
 }
+*/
+
 
 /// return single file
 ///
@@ -643,8 +659,8 @@ pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
     let path: std::path::PathBuf = req
         .match_info()
         .query("filename")
-        .parse()
-        .unwrap();
+        .parse()?;
+    //.unwrap();
     
     Ok(
         NamedFile::open(path)?

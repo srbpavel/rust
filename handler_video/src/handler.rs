@@ -93,7 +93,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     // tester
                     .service(video::data)
                     .service(video::stream)
-                    .service(video::favicon)
+                    //.service(video::favicon)
                     //.service(Files::new("/static", "."))
                     .service(Files::new("/files", // url
                                         "./static", // dir to list
