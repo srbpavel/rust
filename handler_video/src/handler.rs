@@ -93,6 +93,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     // tester
                     .service(video::data)
                     .service(video::stream)
+                    .service(video::compare)
                     //.service(video::favicon)
                     //.service(Files::new("/static", "."))
                     // curl -v "http://127.0.0.1:8081/video/files"

@@ -33,7 +33,11 @@ use bytes::{BytesMut,
             BufMut,
 };
 */
-use std::fmt;
+use std::fmt::{self,
+               Debug,
+               Display,
+};
+use std::cmp::PartialOrd;
 
 pub const SCOPE: &str = "/video";
 
@@ -83,7 +87,7 @@ impl Video {
 ///
 impl fmt::Display for Video {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "video name: '{}' with id: '{}' is in group: '{}'",
+        write!(f, "video >>> name: '{}' with id: '{}' is in group: '{}'",
                self.name,
                self.id,
                self.group,
@@ -615,11 +619,6 @@ pub async fn data(state: web::Data<AppState>,
              .clone()
     );
 
-    print_it(path
-             .name
-             .clone()
-    );
-
     match path.group.as_str() {
         "raise_error" => {
             debug!("should raise 404");
@@ -648,15 +647,11 @@ pub async fn data(state: web::Data<AppState>,
         );
 
         print_it(v);
-
         print_it(v.as_ref());
-        
-        /*
-        debug!("data_OUT: \n#Display:\n {}",
-               v.to_string(),
-        );
-        */
 
+        print_it("str");
+        print_it(String::from("String"));
+        
         v.clone()
     });
 
@@ -725,7 +720,6 @@ pub async fn favicon() -> Result<actix_files::NamedFile> {
 }
 */
 
-
 /// return single file
 ///
 /// curl -v "http://127.0.0.1:8081/video/static/ts.txt"|cat -n|less
@@ -740,8 +734,8 @@ pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
         .query("filename")
         .parse()?;
     
-    //debug!("single_file_handler: {path:?}");
-
+    debug!("single_file_handler: {path:?}");
+    
     Ok(
         NamedFile::open(path)?
     )
@@ -749,12 +743,48 @@ pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
 
 
 ///
-use std::fmt::{Debug, Display};
-
-///
 fn print_it<T>(input: T)
 where
     T: AsRef<str> + Debug + Display,
 {
     debug!("PRINT_IT: {}", input)
+}
+
+
+///
+fn gives_higher<T>(one: T, two: T) -> Option<T>
+where
+    T: PartialOrd + Display + Debug + Copy
+ {
+    let result = if one > two {
+        one
+    } else if one.eq(&two) {
+        debug!("{one} VS {two} -> are equal");
+
+        return None
+    } else {
+        two
+    };
+
+    debug!("{one} VS {two} -> {:?} is higher", result);
+
+    Some(result)
+}
+
+
+///
+#[get("/{first}/{second}")]
+    pub async fn compare(path: web::Path<(f64, f64)>) -> impl Responder {
+    
+    let (aaa, bbb) = path.into_inner();
+    
+    let h = gives_higher(
+        aaa,
+        bbb,
+    );
+    
+    HttpResponse::Ok()
+        .body(
+            format!("{h:?}\n")
+        )
 }
