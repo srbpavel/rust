@@ -95,6 +95,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::stream)
                     //.service(video::favicon)
                     //.service(Files::new("/static", "."))
+                    // curl -v "http://127.0.0.1:8081/video/files"
                     .service(Files::new("/files", // url
                                         "./static", // dir to list
                                         //"/home/conan/soft/rust/handler_video/static",

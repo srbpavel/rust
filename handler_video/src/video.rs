@@ -33,6 +33,7 @@ use bytes::{BytesMut,
             BufMut,
 };
 */
+use std::fmt;
 
 pub const SCOPE: &str = "/video";
 
@@ -50,11 +51,19 @@ pub struct Binary {
 }
 
 /// video
-#[derive(Serialize, Debug, Clone, Deserialize)]
+//#[derive(Serialize, Debug, Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize)]
 pub struct Video {
     id: String,
     group: String,
     name: String,
+}
+
+
+impl AsRef<str> for Video {
+    fn as_ref(&self) -> &str {
+        &self.id
+    }
 }
 
 impl Video {
@@ -67,6 +76,50 @@ impl Video {
         }
     }
 }
+
+
+///
+/// this also get us .to_string()
+///
+impl fmt::Display for Video {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "video name: '{}' with id: '{}' is in group: '{}'",
+               self.name,
+               self.id,
+               self.group,
+               )
+    }
+}
+
+
+///
+/// for this you need to remove Debug from Struct derive
+///
+impl fmt::Debug for Video {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Video")
+            .field("name", &self.name)
+            .field("id", &self.id)
+            .field("group", &self.group)
+            .finish()
+    }
+}
+
+
+trait MyDebug {
+    fn my_debug(&self) -> String;
+}
+
+impl MyDebug for Video {
+    fn my_debug(&self) -> String {
+        format!("Video >>> \n id: <{}>\n name: <{}>\n group: <{}> }}",
+                self.id,
+                self.name,
+                self.group,
+        )
+    }
+}
+
 
 /// all videos
 #[derive(Serialize, Debug)]
@@ -510,7 +563,7 @@ fn ok_json<T>(response: T) -> Result<web::Json<T>> {
 
 
 /// json as http response
-fn resp_json<T: serde::Serialize>(response: T) -> HttpResponse {
+fn resp_json<T: Serialize>(response: T) -> HttpResponse {
     HttpResponse::Ok()
         .json(
             web::Json(
@@ -553,8 +606,18 @@ pub async fn data(state: web::Data<AppState>,
 
     let v = path.clone();
     
-    debug!("data_IN: {:#?}",
+    debug!("data_IN: \n#Debug:\n {:#?}",
            &v
+    );
+
+    print_it(path
+             .group
+             .clone()
+    );
+
+    print_it(path
+             .name
+             .clone()
     );
 
     match path.group.as_str() {
@@ -576,10 +639,24 @@ pub async fn data(state: web::Data<AppState>,
     let result = video.get(&path.id).map(|v| {
         status = Status::VideoIdFound;
 
-        debug!("data_OUT: {:#?}",
+        debug!("data_OUT: \n#Debug:\n {:?}",
                v,
         );
+
+        debug!("data_OUT: \n#MyDebug:\n {}",
+               v.my_debug(),
+        );
+
+        print_it(v);
+
+        print_it(v.as_ref());
         
+        /*
+        debug!("data_OUT: \n#Display:\n {}",
+               v.to_string(),
+        );
+        */
+
         v.clone()
     });
 
@@ -652,6 +729,8 @@ pub async fn favicon() -> Result<actix_files::NamedFile> {
 /// return single file
 ///
 /// curl -v "http://127.0.0.1:8081/video/static/ts.txt"|cat -n|less
+/// if parent dir handled via service + show_files, file not via this fn
+///
 /// curl -v "http://127.0.0.1:8081/video/now.txt"|cat -n|less
 ///
 pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
@@ -660,9 +739,22 @@ pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
         .match_info()
         .query("filename")
         .parse()?;
-    //.unwrap();
     
+    //debug!("single_file_handler: {path:?}");
+
     Ok(
         NamedFile::open(path)?
     )
+}
+
+
+///
+use std::fmt::{Debug, Display};
+
+///
+fn print_it<T>(input: T)
+where
+    T: AsRef<str> + Debug + Display,
+{
+    debug!("PRINT_IT: {}", input)
 }
