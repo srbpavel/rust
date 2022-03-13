@@ -95,7 +95,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::stream)
                     .service(video::compare)
                     //.service(video::favicon)
-                    //.service(Files::new("/static", "."))
                     // curl -v "http://127.0.0.1:8081/video/files"
                     .service(Files::new("/files", // url
                                         "./static", // dir to list
@@ -103,7 +102,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     )
                              .show_files_listing()
                     )
-                    .route("/{filename:.*}",
+                    .route("/single_file/{filename:.*}",
                            web::get()
                            .to(video::single_file)
                     )

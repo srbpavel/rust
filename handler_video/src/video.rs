@@ -604,7 +604,7 @@ fn verify_header(key: HeaderKey,
 
 /// path tester
 ///
-#[get("/{id}/{group}/{name}")]
+#[get("/data/{id}/{group}/{name}")]
 pub async fn data(state: web::Data<AppState>,
                   path: web::Path<Video>) -> impl Responder {
 
@@ -755,26 +755,26 @@ where
 fn gives_higher<T>(one: T, two: T) -> Option<T>
 where
     T: PartialOrd + Display + Debug + Copy
- {
+{
     let result = if one > two {
         one
     } else if one.eq(&two) {
         debug!("{one} VS {two} -> are equal");
-
+        
         return None
     } else {
         two
     };
-
+    
     debug!("{one} VS {two} -> {:?} is higher", result);
-
+    
     Some(result)
 }
 
 
 ///
-#[get("/{first}/{second}")]
-    pub async fn compare(path: web::Path<(f64, f64)>) -> impl Responder {
+#[get("/compare/float/{first}/{second}")]
+pub async fn compare(path: web::Path<(f64, f64)>) -> impl Responder {
     
     let (aaa, bbb) = path.into_inner();
     
