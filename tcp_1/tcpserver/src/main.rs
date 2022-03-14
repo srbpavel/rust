@@ -44,7 +44,11 @@ fn main() {
             .read(&mut buffer)
             .unwrap();
 
-        println!("receive: <{}>",
+        let now: chrono::DateTime<chrono::Utc> = chrono::Utc::now(); 
+        
+        println!("receive: {:?} / {} --> <{}>",
+                 now,
+                 now.timestamp(),
                  &buffer
                  //&buffer[..10]
                  .iter()
@@ -59,6 +63,8 @@ fn main() {
                  .concat()
 
         );
+
+        //buffer = 
         
         // echo same data back
         stream
