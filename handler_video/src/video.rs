@@ -56,7 +56,7 @@ pub struct Binary {
 
 /// video
 //#[derive(Serialize, Debug, Clone, Deserialize)]
-#[derive(Serialize, Clone, Deserialize)]
+#[derive(Serialize, Clone, Deserialize, PartialEq)]
 pub struct Video {
     id: String,
     group: String,
@@ -788,3 +788,107 @@ pub async fn compare(path: web::Path<(f64, f64)>) -> impl Responder {
             format!("{h:?}\n")
         )
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::{
+        http::{self, header::ContentType},
+        test,
+    };
+
+    use crate::handler::AppState;
+
+    use std::{
+        sync::{Arc,                
+               Mutex,              
+        },
+        collections::HashMap,
+    };
+
+    async fn resp_ok(_req: HttpRequest) -> HttpResponse {
+        HttpResponse::Ok().finish()
+    }
+    
+    async fn resp_bad(_req: HttpRequest) -> HttpResponse {
+        HttpResponse::BadRequest().finish()
+        // simulate FAILED
+        //HttpResponse::Ok().finish()
+    }
+    
+    #[actix_web::test]
+    // cargo test test_index_ok -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+    async fn test_index_ok() {
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .to_http_request();
+
+        let resp = resp_ok(req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    // cargo test test_not_ok -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+    async fn test_index_not_ok() {
+        let req = test::TestRequest::default().to_http_request();
+
+        let resp = resp_bad(req).await;
+
+        assert_eq!(resp.status(), http::StatusCode::BAD_REQUEST);
+    }
+    
+    #[actix_web::test]
+    // cargo test verify_detail -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+    async fn verify_detail() {
+
+        let all_state = AppState {
+            video_map:
+            Arc::new(                        
+                Mutex::new(
+                    HashMap::from([
+                        (String::from("123456"),
+                         Video {
+                             id: String::from("123456"),
+                             group: String::from("da_tester"),
+                             name: String::from("in_test_video"),
+                         },
+                        )
+                    ])
+                )
+            ),
+            binary_map:
+            Arc::new(                        
+                Mutex::new(
+                    HashMap::new()
+                )
+            ),
+        };
+
+        assert_eq!(
+            //String::from("123456"),
+            //String::from("da_tester"),
+            // /*
+            Video {
+                id: String::from("123456"),
+                group: String::from("da_tester"),
+                name: String::from("in_test_video"),
+            },
+            // */
+
+            all_state
+                .video_map
+                .lock()
+                .unwrap()
+                .get("123456").map(|v| {
+                    v
+                        .clone()
+                })
+                .unwrap()
+                //.id
+                //.group
+        );
+    }
+}
+
