@@ -1,6 +1,7 @@
 use crate::{
     handler::AppState,
     status::Status,
+    error::VideoError,
 };
 // /*
 use log::{debug,
@@ -801,7 +802,6 @@ mod tests {
     };
 
     use crate::handler::AppState;
-    //use crate::video;
     
     use std::{
         sync::{Arc,                
@@ -843,9 +843,11 @@ mod tests {
     }
     
     #[actix_web::test]
-    // cargo test verify_detail -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
+    // cargo test verify_detail -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml --nocapture
     async fn verify_detail() {
 
+        let video_id = "123456";
+        
         // appstate with single record
         let all_state = web::Data::new(
             AppState {
@@ -853,9 +855,9 @@ mod tests {
                 Arc::new(                        
                     Mutex::new(
                         HashMap::from([
-                            (String::from("123456"),
+                            (String::from(video_id),
                              Video {
-                                 id: String::from("123456"),
+                                 id: String::from(video_id),
                                  group: String::from("da_tester"),
                                  name: String::from("in_test_video"),
                              },
@@ -884,7 +886,12 @@ mod tests {
 
         // build get url with video_id
         let req = test::TestRequest::get()
-            .uri("/video/detail/123456")
+            // /*
+            .uri(&format!(
+                "/video/detail/{}",
+                video_id,
+            ))
+            // */
             // test FAIL
             //.uri("/video/detail/789")
             .to_request();
@@ -902,37 +909,11 @@ mod tests {
         //println!("T_resp: {resp:?}\n {obj:#?}\n id: {:?}", obj.id);
 
         assert_eq!(
-            "123456",
+            video_id,
             // test FAIL
             //"789",
             obj.id,
         );
-        
-        /*
-        assert_eq!(
-            //String::from("123456"),
-            //String::from("da_tester"),
-            // /*
-            Video {
-                id: String::from("123456"),
-                group: String::from("da_tester"),
-                name: String::from("in_test_video"),
-            },
-            // */
-
-            all_state
-                .video_map
-                .lock()
-                .unwrap()
-                .get("123456").map(|v| {
-                    v
-                        .clone()
-                })
-                .unwrap()
-                //.id
-                //.group
-        );
-        */
     }
 }
 

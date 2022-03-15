@@ -7,6 +7,7 @@ mod handler;
 mod video;
 mod util;
 mod status;
+mod error;
 
 use handler::run;
 
