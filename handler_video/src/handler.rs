@@ -25,8 +25,10 @@ use std::{
 
 use actix_files::Files;
 
+//use serde::Deserialize;
 
 /// for each WORKER thread     
+//#[derive(Debug, Deserialize)]
 #[derive(Debug)]                       
 pub struct AppState {
     pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
@@ -87,7 +89,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::all)
                     .service(video::download)
                     .service(video::play)
-                    .service(video::detail)
+                    //.service(video::detail)
+                    .service(                            
+                        web::resource("/detail/{video_id}") 
+                            .route(web::get()
+                                   .to(video::detail)           
+                            ),                           
+                    )
                     .service(video::clear)
                     .service(video::list_group)
                     // tester

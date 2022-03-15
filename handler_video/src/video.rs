@@ -133,7 +133,7 @@ pub struct IndexResponse {
 }
 
 /// detail
-#[derive(Serialize, Debug)]                               
+#[derive(Serialize, Debug, Deserialize)]                               
 pub struct DetailResponse {                                   
     result: Option<Video>,
     status: String,
@@ -196,7 +196,8 @@ pub async fn all(state: web::Data<AppState>) -> impl Responder {
 
 /// detail
 /// 
-#[get("/detail/{video_id}")]
+// properties in handler, as with macro i cannot perform testing
+//#[get("/detail/{video_id}")]
 pub async fn detail(state: web::Data<AppState>,
                     idx: web::Path<String>) -> impl Responder {
 
@@ -796,10 +797,12 @@ mod tests {
     use actix_web::{
         http::{self, header::ContentType},
         test,
+        App,
     };
 
     use crate::handler::AppState;
-
+    //use crate::video;
+    
     use std::{
         sync::{Arc,                
                Mutex,              
@@ -843,29 +846,69 @@ mod tests {
     // cargo test verify_detail -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
     async fn verify_detail() {
 
-        let all_state = AppState {
-            video_map:
-            Arc::new(                        
-                Mutex::new(
-                    HashMap::from([
-                        (String::from("123456"),
-                         Video {
-                             id: String::from("123456"),
-                             group: String::from("da_tester"),
-                             name: String::from("in_test_video"),
-                         },
-                        )
-                    ])
-                )
-            ),
-            binary_map:
-            Arc::new(                        
-                Mutex::new(
-                    HashMap::new()
-                )
-            ),
-        };
+        // appstate with single record
+        let all_state = web::Data::new(
+            AppState {
+                video_map:
+                Arc::new(                        
+                    Mutex::new(
+                        HashMap::from([
+                            (String::from("123456"),
+                             Video {
+                                 id: String::from("123456"),
+                                 group: String::from("da_tester"),
+                                 name: String::from("in_test_video"),
+                             },
+                            )
+                        ])
+                    )
+                ),
+                binary_map:
+                Arc::new(                        
+                    Mutex::new(
+                        HashMap::new()
+                    )
+                ),
+            }
+        );
 
+        // initial service with get method and fn detail()
+        let app = test::init_service(
+            App::new()
+                .app_data(all_state.clone())
+                .route("/video/detail/{video_id}",
+                       web::get().to(detail),
+                ),
+        )
+        .await;
+
+        // build get url with video_id
+        let req = test::TestRequest::get()
+            .uri("/video/detail/123456")
+            // test FAIL
+            //.uri("/video/detail/789")
+            .to_request();
+        
+        let resp = test::call_and_read_body(&app,
+                                            req,
+        ).await;
+
+        // http_response bytes to json
+        let obj = serde_json::from_slice::<DetailResponse>(&resp)
+            .unwrap()
+            .result
+            .unwrap();
+
+        //println!("T_resp: {resp:?}\n {obj:#?}\n id: {:?}", obj.id);
+
+        assert_eq!(
+            "123456",
+            // test FAIL
+            //"789",
+            obj.id,
+        );
+        
+        /*
         assert_eq!(
             //String::from("123456"),
             //String::from("da_tester"),
@@ -889,6 +932,7 @@ mod tests {
                 //.id
                 //.group
         );
+        */
     }
 }
 
