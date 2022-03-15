@@ -6,3 +6,19 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+#http = {path="../http"}
+
+
+[dependencies.http]
+version = "^0"
+path = "../http"
+#path = "/home/conan/soft/rust/tcp_1/http"
+
+[dependencies.serde]
+#version = "1.0.117"
+version = "1.0.136"
+features = ["derive"]
+
+[dependencies.serde_json]
+#version = "1.0.59"
+version = "1.0.79"
