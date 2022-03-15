@@ -8,6 +8,9 @@ use actix_web::{
 use serde::Serialize;
 use std::fmt;
 
+use log::{debug,
+          error,
+};
 
 #[derive(Debug, Serialize)]
 pub enum VideoError {
@@ -26,18 +29,25 @@ impl VideoError {
     fn error_response(&self) -> String {
         match self {
             Self::HeadersError(msg) => {
-                // this will be debug/error
-                println!("Headers error occurred: {:?}", msg);
-                "Headers error".into()
+                // this goes to server log
+                error!("Headers error occurred: {:?}", msg);
+                // this goes to user as response
+                // + also as DEBUG to server runtime
+                // via -> actix_web::middleware::logger
+                //"Headers error".into()
+                format!("{}",
+                        msg,
+                )
+                    .into()
             },
             
             Self::ActixError(msg) => {
-                println!("Server error occurred: {:?}", msg);
+                error!("Server error occurred: {:?}", msg);
                 "Internal server error".into()
             },
             
             Self::NotFound(msg) => {
-                println!("Not found error occurred: {:?}", msg);
+                error!("Not found error occurred: {:?}", msg);
                 msg.into()
             },
         }
@@ -68,3 +78,17 @@ impl fmt::Display for VideoError {
         write!(f, "{}", self)
     }
 }
+
+impl From<actix_web::error::Error> for VideoError {
+    fn from(err: actix_web::error::Error) -> Self {
+        Self::ActixError(err.to_string())
+    }
+}
+
+/*
+impl From<HeadersError> for VideoError {
+    fn from(err: HeadersError) -> Self {
+        Self::HeadersError(err.to_string())
+    }
+}
+ */

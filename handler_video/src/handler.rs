@@ -102,6 +102,17 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .service(video::data)
                     .service(video::stream)
                     .service(video::compare)
+                    .service(
+                        web::resource("/headers")
+                            .app_data(
+                                Data::new(
+                                    JsonConfig::default()
+                                )
+                            )
+                            .route(web::put()
+                                   .to(video::insert_header)
+                            )
+                    )
                     //.service(video::favicon)
                     // curl -v "http://127.0.0.1:8081/video/files"
                     .service(Files::new("/files", // url

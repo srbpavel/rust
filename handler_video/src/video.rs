@@ -348,7 +348,7 @@ pub async fn insert_video(mut payload: Multipart,
         result: None,
         status: Status::Init.as_string(),
     };
-    
+
     new_video.id = match verify_header(HeaderKey::VideoId,
                                        req.headers(),
     ) {
@@ -604,6 +604,32 @@ fn verify_header(key: HeaderKey,
 }
 
 
+/// header error example
+fn verify_header_result(key: HeaderKey,
+                        headers: &HeaderMap) -> Result<String, VideoError> {
+
+    match headers.get(key.as_string()) {
+        Some(id) => {
+            match id.to_str() {
+                Ok(i) => Ok(String::from(i)),
+                Err(_) => Err(VideoError::HeadersError(
+                    format!("headers <{}> not found",
+                             key.as_string(),
+                    )
+                        .into(),
+                )),
+            }
+        },
+        None => Err(VideoError::HeadersError(
+            format!("headers <{}> not found",
+                    key.as_string(),
+            )
+                .into(),
+        )),
+    }
+}
+
+
 /// path tester
 ///
 #[get("/data/{id}/{group}/{name}")]
@@ -737,7 +763,7 @@ pub async fn single_file(req: HttpRequest) -> Result<NamedFile> {
         .parse()?;
     
     debug!("single_file_handler: {path:?}");
-    
+
     Ok(
         NamedFile::open(path)?
     )
@@ -790,6 +816,36 @@ pub async fn compare(path: web::Path<(f64, f64)>) -> impl Responder {
             format!("{h:?}\n")
         )
 }
+
+
+/// header error handle
+///
+pub async fn insert_header(mut _payload: Multipart,
+                           _state: web::Data<AppState>,
+                           req: HttpRequest) -> Result<HttpResponse, VideoError> {
+
+    match verify_header_result(HeaderKey::VideoId,
+                               req.headers(),
+    ) {
+        Ok(h) => {
+            //debug!("HEADER_ok: {h}");
+
+            Ok(
+                HttpResponse::Ok()
+                    .body(
+                        format!("Ok header --> video_id: <{h}>\n")
+                    )
+            )
+        },
+        
+        Err(why) => {
+            //debug!("HEADER_err: {why:?}");
+
+            Err(why)
+        },
+    }
+}
+
 
 
 #[cfg(test)]
