@@ -7,8 +7,7 @@ use actix_web::{
 };
 use serde::Serialize;
 use std::fmt;
-
-use log::{debug,
+use log::{//debug,
           error,
 };
 
@@ -16,9 +15,8 @@ use log::{debug,
 pub enum VideoError {
     HeadersError(String),
     ActixError(String),
-    NotFound(String),
+    //NotFound(String),
 }
-
 
 #[derive(Debug, Serialize)]
 pub struct MyErrorResponse {
@@ -47,11 +45,13 @@ impl VideoError {
                 error!("Server error occurred: {:?}", msg);
                 "Internal server error".into()
             },
-            
+
+            /*
             Self::NotFound(msg) => {
                 error!("Not found error occurred: {:?}", msg);
                 msg.into()
             },
+            */
         }
     }
 }
@@ -64,7 +64,7 @@ impl error::ResponseError for VideoError {
                 StatusCode::INTERNAL_SERVER_ERROR
             },
             
-            Self::NotFound(_msg) => StatusCode::NOT_FOUND,
+            //Self::NotFound(_msg) => StatusCode::NOT_FOUND,
         }
     }
 

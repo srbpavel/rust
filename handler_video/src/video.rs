@@ -827,27 +827,19 @@ pub async fn insert_header(mut _payload: Multipart,
     match verify_header_result(HeaderKey::VideoId,
                                req.headers(),
     ) {
-        Ok(h) => {
-            //debug!("HEADER_ok: {h}");
-
-            Ok(
-                HttpResponse::Ok()
-                    .body(
-                        format!("Ok header --> video_id: <{h}>\n")
-                    )
-            )
-        },
+        Ok(h) => Ok(
+            HttpResponse::Ok()
+                .body(
+                    format!("Ok header --> video_id: <{h}>\n")
+                )
+        ),
         
-        Err(why) => {
-            //debug!("HEADER_err: {why:?}");
-
-            Err(why)
-        },
+        Err(why) =>  Err(why),
     }
 }
 
-
-
+// run all tests
+// cargo test tests -- /home/conan/soft/rust/handler_video/src/handler_video_config.toml
 #[cfg(test)]
 mod tests {
     use super::*;
