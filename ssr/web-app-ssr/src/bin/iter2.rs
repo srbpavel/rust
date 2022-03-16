@@ -33,7 +33,7 @@ async fn index(tmpl: web::Data<tera::Tera>) -> Result<HttpResponse, Error> {
 }
 
 
-// curl -X POST localhost:8080/tutors -d "name=Terry"
+///curl -X POST localhost:8080/tutors --data-raw "name=conan&role=barbarian"
 async fn handle_post_tutor(tmpl: web::Data<tera::Tera>,
                            params: web::Form<Tutor>) -> Result<HttpResponse, Error> {
     
@@ -45,6 +45,10 @@ async fn handle_post_tutor(tmpl: web::Data<tera::Tera>,
 
     ctx.insert("role",
                &params.role,
+    );
+
+    ctx.insert("god",
+               "CROM",
     );
 
     ctx.insert("text",
@@ -105,6 +109,111 @@ fn app_config(config: &mut web::ServiceConfig) {
                         web::post()
                             .to(handle_post_tutor)
                     )
-            )//,
+            )
     );
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::http::{
+        header::CONTENT_TYPE,
+        header::HeaderValue,
+        StatusCode,
+    };
+
+    //use actix_web::HttpResponseBuilder;
+    
+    use actix_web::dev::{
+        //HttpResponseBuilder, 
+        Service, // traiut
+        ServiceResponse, // struct
+    };
+    use actix_web::test::{
+        self,
+        TestRequest,
+    };
+
+    
+    #[actix_rt::test]
+    //#[actix_web::test]
+    async fn handle_post_1_unit_test() {
+        let params =
+            web::Form(
+                Tutor {
+                    name: "foookume".to_string(),
+                    role: "king".to_string(),
+                }
+            );
+
+        let tera = Tera::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/static/iter2/**/*",
+        ))
+            .unwrap();
+
+        let webdata_tera = web::Data::new(tera);
+
+        let resp = handle_post_tutor(webdata_tera,
+                                     params,
+        )
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+        // test FAIL
+        //assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        assert_eq!(
+            resp
+                .headers()
+                .get(CONTENT_TYPE)
+                .unwrap(),
+
+            HeaderValue::from_static("text/html")
+        );
+    }
+
+    #[actix_rt::test]
+    async fn handle_post_1_integration_test() {
+        let tera = Tera::new(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/static/iter2/**/*",
+        ))
+            .unwrap();
+
+        //let mut app = test::init_service(
+        let app = test::init_service(
+            App::new()
+                //.data(tera)
+                .app_data(
+                    web::Data::new(tera)
+                )
+                .configure(app_config)
+        )
+            .await;
+
+        let req = TestRequest::post()
+            .uri("/tutors")
+            .set_form(&Tutor {
+                name: "ancistrus".to_string(),
+                role: "ranunculus".to_string(),
+                //sex: "male".to_string(),
+            })
+            .to_request();
+
+        let resp: ServiceResponse =
+            app
+            .call(req)
+            .await
+            .unwrap();
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        assert_eq!(
+            resp.headers().get(CONTENT_TYPE).unwrap(),
+            HeaderValue::from_static("text/html")
+        );
+    }
 }

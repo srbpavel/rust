@@ -21,3 +21,8 @@ version = "1.15.0"
 #version = "1"
 version = "1.0.136"
 features = ["derive"]
+
+
+[dev-dependencies.actix-rt]
+#version = "2.2.0"
+version = "2.7.0"
