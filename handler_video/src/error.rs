@@ -23,6 +23,7 @@ pub enum VideoError {
 #[derive(Debug, Serialize)]
 pub struct MyErrorResponse {
     error_message: String,
+    status: String,
 }
 
 impl VideoError {
@@ -30,11 +31,12 @@ impl VideoError {
         match self {
             Self::HeadersError(msg) => {
                 // this goes to server log
+                // ERROR handler_video::error]
                 error!("Headers error occurred: {:?}", msg);
+
                 // this goes to user as response
-                // + also as DEBUG to server runtime
-                // via -> actix_web::middleware::logger
-                //"Headers error".into()
+                // + also to server log
+                // DEBUG actix_web::middleware::logger]
                 format!("{}",
                         msg,
                 )
@@ -55,6 +57,7 @@ impl VideoError {
 }
 
 impl error::ResponseError for VideoError {
+    // here we define which status code will error have
     fn status_code(&self) -> StatusCode {
         match self {
             Self::HeadersError(_msg) | Self::ActixError(_msg) => {
@@ -64,12 +67,22 @@ impl error::ResponseError for VideoError {
             Self::NotFound(_msg) => StatusCode::NOT_FOUND,
         }
     }
-    
+
+    // this is the json response we get after invalid input
     fn error_response(&self) -> HttpResponse {
         HttpResponse::build(self.status_code())
-            .json(MyErrorResponse {
-                error_message: self.error_response(),
-            })
+            .json(
+                // our err resp struct
+                MyErrorResponse {
+                    error_message: self.error_response(),
+                    status: format!("{} / {} / {}",
+                                    self.status_code().as_str(),
+                                    self.status_code().as_u16(),
+                                    // Display Trait
+                                    self.status_code(),
+                                    )
+                }
+            )
     }
 }
 
