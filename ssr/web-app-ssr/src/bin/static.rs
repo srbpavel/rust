@@ -1,3 +1,4 @@
+///STATIC
 use actix_files as fs;
 use actix_web::{error,
                 web,
