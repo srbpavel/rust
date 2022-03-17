@@ -183,10 +183,8 @@ mod tests {
         ))
             .unwrap();
 
-        //let mut app = test::init_service(
         let app = test::init_service(
             App::new()
-                //.data(tera)
                 .app_data(
                     web::Data::new(tera)
                 )
@@ -199,7 +197,6 @@ mod tests {
             .set_form(&Tutor {
                 name: "ancistrus".to_string(),
                 role: "ranunculus".to_string(),
-                //sex: "male".to_string(),
             })
             .to_request();
 

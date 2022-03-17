@@ -1,12 +1,12 @@
 ///STATIC
 use actix_files as fs;
-use actix_web::{error,
-                web,
+use actix_web::{//error,
+                //web,
                 App,
-                Error,
-                HttpResponse,
+                //Error,
+                //HttpResponse,
                 HttpServer,
-                Result,
+                //Result,
 };
 
 

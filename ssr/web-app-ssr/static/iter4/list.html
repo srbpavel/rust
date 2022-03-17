@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Actix web</title>
+  </head>
+  <body>
+    <ol>
+      {% for tutor in tutors %}
+      <li>
+	<p>{{tutor.tutor_name}}</p>
+	<p>{{tutor.tutor_id}}</p>
+      </li>
+      {% endfor %}
+    </ol>
+  </body>
+</html>

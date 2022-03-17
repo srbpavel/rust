@@ -22,6 +22,13 @@ version = "1.15.0"
 version = "1.0.136"
 features = ["derive"]
 
+[dependencies.serde_json]
+#version = "1.0.64"
+version = "1.0.79"
+
+[dependencies.awc]
+version = "3.0.0"
+
 
 [dev-dependencies.actix-rt]
 #version = "2.2.0"
