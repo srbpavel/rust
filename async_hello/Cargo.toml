@@ -1,0 +1,9 @@
+[package]
+name = "async_hello"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.tokio]
+#version = "1"
+version = "1.17.0"
+features = ["full"]
