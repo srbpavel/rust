@@ -13,9 +13,16 @@ struct AsyncTimer {
     expiration_time: Instant,
 }
 
+// https://doc.rust-lang.org/std/future/trait.Future.html
+//
 impl Future for AsyncTimer {
     type Output = String;
 
+    // https://doc.rust-lang.org/std/pin/struct.Pin.html
+    // pinned pointer
+    //
+    // https://doc.rust-lang.org/std/pin/index.html
+    //
     fn poll(self: Pin<&mut Self>,
             cx: &mut Context<'_>) -> Poll<Self::Output> {
 
@@ -99,9 +106,164 @@ async fn main() {
         println!("future_2: {:?}", file2_contents);
     });
 
-    let _ = tokio::join!(h1, h2);
+    // this return result unless we send something else
+    let join_result = tokio::join!(h1, h2);
 
-    println!("time elapsed: {:?}",
+    println!("{join_result:?}\ntime elapsed: {:?}",
+             Instant::now() - start,
+    );
+
+    // just to see duration diff NEW vs FROM
+    println!("\nduration:");
+    // pass fn + delay
+
+    /*
+    //let dur_new = |delay: u64| -> Duration { Duration::new(delay, 0) };
+    let dur_new = |delay| Duration::new(delay, 0);
+    //let dur_from_m = |delay| Duration::from_millis(delay);
+    let dur_from_m = |delay| Duration::from_millis(delay*1000);
+    let dur_from_s = |delay| Duration::from_secs(delay);
+    */
+
+    /*
+    let dur_new = Dur {
+        dur: |delay| Duration::new(delay, 0)
+    };
+
+    let dur_s = Dur {
+        dur: |delay| Duration::from_secs(delay)
+    };
+
+    let dur_m = Dur {
+        dur: |delay| Duration::from_millis(delay)
+    };
+
+    println!("new: {:?}\nsec: {:?}\nmillis: {:?}",
+             (dur_new.dur)(2),
+             (dur_s.dur)(2),
+             (dur_m.dur)(2000),
+    );
+    */
+
+    /*
+    sleep_s(
+        (Dur::new(
+            |delay| Duration::from_secs(delay))
+         .dur)(2)
+    );
+
+    sleep_s(
+        (Dur::new(
+            |delay| Duration::from_millis(delay))
+         .dur)(2000)
+    );
+
+    sleep_s(
+        (Dur::new(
+            |delay| Duration::new(delay, 0))
+         .dur)(2)
+    );
+    */
+
+    [
+        (Dur::new(
+            |delay| Duration::from_secs(delay))
+         .dur)(2),
+        (Dur::new(
+            |delay| Duration::from_millis(delay))
+         .dur)(2000),
+        (Dur::new(
+            |delay| Duration::new(delay, 0))
+         .dur)(2),
+    ]
+        .iter()
+        .for_each(|f|
+                  sleep_s(*f)
+        );
+        
+    /*
+    println!("{:?}",
+             (Dur::new(
+                 |delay| Duration::from_secs(delay))
+              .dur)(2)         
+    );
+    */
+   
+    /*
+    [dur_from_s,
+     dur_from_m,
+     dur_new,
+    ]
+        .iter()
+        .for_each(|f|
+                  sleep_f(*f, 2)
+        );
+    */ 
+
+    /*
+    [
+        (dur_from_s, 2),
+        (dur_from_m, 2000),
+        (dur_new, 2),
+    ]
+        .iter()
+        .for_each(|(f,d)|
+                  sleep_f(*f, *d)
+                  // *Box::new(sleep_f(*f, *d))
+        );
+    */
+
+    /*
+    sleep_f(dur_from_s, 2);
+    sleep_f(dur_from_m, 2*1000);
+    sleep_f(dur_new, 2);
+    */
+}
+
+// as closures inside main
+// /*
+//from_millis
+fn dur_from_m(delay: u64) -> Duration {
+    Duration::from_millis(delay)
+}
+
+//from_secs
+fn dur_from_s(delay: u64) -> Duration {
+    Duration::from_secs(delay)
+}
+
+
+//new
+fn dur_new(delay: u64) -> Duration {
+    Duration::new(delay, 0)
+}
+// */
+
+//sleep s
+fn sleep_s(delay: Duration) {    
+
+    let start = Instant::now();
+    
+    sleep(
+        delay
+    );
+    
+    println!("{:?}",
+             Instant::now() - start,
+    );
+}
+
+//sleep display
+fn sleep_f(f: fn(u64) -> Duration,
+           delay : u64) {
+    
+    let start = Instant::now();
+
+    sleep(
+        f(delay)
+    );
+
+    println!("{:?}",
              Instant::now() - start,
     );
 }
@@ -115,3 +277,51 @@ fn read_from_file2() -> impl Future<Output = String> {
         String::from("Future 2 has completed")
     }
 }
+
+struct Dur {
+    pub dur: fn(u64) -> Duration,
+}
+
+impl Dur {
+    fn new(dur: fn(u64) -> Duration) -> Self {
+        Self {
+            dur,
+        }  
+    }
+}
+
+/*
+struct Cacher<T>
+where
+    T: Fn(u64) -> Duration,
+{
+    calculation: T,
+    value: Option<u64>,
+}
+
+
+impl<T> Cacher<T>
+where
+    T: Fn(u64) -> Duration,
+{
+    fn new(calculation: T) -> Cacher<T> {
+        Cacher {
+            calculation,
+            value: None,
+        }
+    }
+
+    fn value(&mut self,
+             arg: u64) -> Duration {
+
+        match self.value {
+            Some(v) => dur_from_s(arg),
+            None => {
+                let v = (self.calculation)(arg);
+                self.value = Some(v);
+                v
+            }
+        }
+    }
+}
+*/
