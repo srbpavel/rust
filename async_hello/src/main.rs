@@ -8,6 +8,62 @@ use std::time::{Duration,
                 Instant,
 };
 
+///
+/// https://doc.rust-lang.org/stable/book/ch13-01-closures.html#capturing-the-environment-with-closures
+///
+/// https://stackoverflow.com/questions/27831944/how-do-i-store-a-closure-in-a-struct-in-rust
+///
+/// https://doc.rust-lang.org/book/ch19-05-advanced-functions-and-closures.html
+///
+struct MyDuration {
+    pub value: fn(u64) -> Duration,
+}
+
+impl MyDuration {
+    // takes closure + value and return Duration
+    //
+    // let dur_s = Dur {
+    //    dur: |delay| Duration::from_secs(delay)
+    // };
+    //
+    // println!("new: {:?}",
+    //          (dur_new.dur)(2),
+    // );
+    //
+    // (MyDuration::f_new(
+    //        |delay| Duration::from_secs(delay))
+    //     .value)(2),
+    //
+    fn new(value: fn(u64) -> Duration) -> Self {
+        Self {
+            value
+        }  
+    }
+
+    // below is instead closure, because like that it cannot be used via iteration
+    // as different type
+    //
+    // let dur_from_s = |delay| Duration::from_secs(delay);
+    //
+    // fn dur_from_s(delay: u64) -> Duration {
+    //     Duration::from_secs(delay)
+    // }
+    //
+    fn via_secs(delay: u64) -> Duration {
+        Duration::from_secs(delay)
+    }
+    
+    fn via_millis(delay: u64) -> Duration {
+        Duration::from_millis(delay)
+    }
+    
+    fn via_new(secs: u64,
+               nanos: u32) -> Duration {
+        
+        Duration::new(secs, nanos)
+    }
+}
+
 
 struct AsyncTimer {
     expiration_time: Instant,
@@ -97,13 +153,23 @@ async fn main() {
             expiration_time: Instant::now() + Duration::from_millis(4000),
         };
 
-        println!("future_1: {:?}", future1.await);
+        let future_result = future1.await;
+        
+        //println!("future_1: {:?}", future1.await);
+        println!("future_1: {:?}", future_result);
+
+        future_result
     });
 
     let h2 = tokio::spawn(async {
         let file2_contents = read_from_file2().await;
 
-        println!("future_2: {:?}", file2_contents);
+        let future_result = file2_contents;
+        
+        //println!("future_2: {:?}", file2_contents);
+        println!("future_2: {:?}", future_result);
+
+        future_result
     });
 
     // this return result unless we send something else
@@ -113,133 +179,25 @@ async fn main() {
              Instant::now() - start,
     );
 
-    // just to see duration diff NEW vs FROM
+    // just to see duration diff NEW vs FROM + Instant
     println!("\nduration:");
-    // pass fn + delay
-
-    /*
-    //let dur_new = |delay: u64| -> Duration { Duration::new(delay, 0) };
-    let dur_new = |delay| Duration::new(delay, 0);
-    //let dur_from_m = |delay| Duration::from_millis(delay);
-    let dur_from_m = |delay| Duration::from_millis(delay*1000);
-    let dur_from_s = |delay| Duration::from_secs(delay);
-    */
-
-    /*
-    let dur_new = Dur {
-        dur: |delay| Duration::new(delay, 0)
-    };
-
-    let dur_s = Dur {
-        dur: |delay| Duration::from_secs(delay)
-    };
-
-    let dur_m = Dur {
-        dur: |delay| Duration::from_millis(delay)
-    };
-
-    println!("new: {:?}\nsec: {:?}\nmillis: {:?}",
-             (dur_new.dur)(2),
-             (dur_s.dur)(2),
-             (dur_m.dur)(2000),
-    );
-    */
-
-    /*
-    sleep_s(
-        (Dur::new(
-            |delay| Duration::from_secs(delay))
-         .dur)(2)
-    );
-
-    sleep_s(
-        (Dur::new(
-            |delay| Duration::from_millis(delay))
-         .dur)(2000)
-    );
-
-    sleep_s(
-        (Dur::new(
-            |delay| Duration::new(delay, 0))
-         .dur)(2)
-    );
-    */
 
     [
-        (Dur::new(
-            |delay| Duration::from_secs(delay))
-         .dur)(2),
-        (Dur::new(
-            |delay| Duration::from_millis(delay))
-         .dur)(2000),
-        (Dur::new(
-            |delay| Duration::new(delay, 0))
-         .dur)(2),
+        (MyDuration::new(|delay|
+                         Duration::from_secs(delay)
+        ).value)(2),
+        
+        MyDuration::via_secs(2),
+        MyDuration::via_millis(2000),
+        MyDuration::via_new(2, 0),
     ]
         .iter()
         .for_each(|f|
                   sleep_s(*f)
         );
-        
-    /*
-    println!("{:?}",
-             (Dur::new(
-                 |delay| Duration::from_secs(delay))
-              .dur)(2)         
-    );
-    */
-   
-    /*
-    [dur_from_s,
-     dur_from_m,
-     dur_new,
-    ]
-        .iter()
-        .for_each(|f|
-                  sleep_f(*f, 2)
-        );
-    */ 
-
-    /*
-    [
-        (dur_from_s, 2),
-        (dur_from_m, 2000),
-        (dur_new, 2),
-    ]
-        .iter()
-        .for_each(|(f,d)|
-                  sleep_f(*f, *d)
-                  // *Box::new(sleep_f(*f, *d))
-        );
-    */
-
-    /*
-    sleep_f(dur_from_s, 2);
-    sleep_f(dur_from_m, 2*1000);
-    sleep_f(dur_new, 2);
-    */
 }
 
-// as closures inside main
-// /*
-//from_millis
-fn dur_from_m(delay: u64) -> Duration {
-    Duration::from_millis(delay)
-}
-
-//from_secs
-fn dur_from_s(delay: u64) -> Duration {
-    Duration::from_secs(delay)
-}
-
-
-//new
-fn dur_new(delay: u64) -> Duration {
-    Duration::new(delay, 0)
-}
-// */
-
-//sleep s
+/// simple debug for some instant experiment
 fn sleep_s(delay: Duration) {    
 
     let start = Instant::now();
@@ -253,23 +211,7 @@ fn sleep_s(delay: Duration) {
     );
 }
 
-//sleep display
-fn sleep_f(f: fn(u64) -> Duration,
-           delay : u64) {
-    
-    let start = Instant::now();
-
-    sleep(
-        f(delay)
-    );
-
-    println!("{:?}",
-             Instant::now() - start,
-    );
-}
-
-
-// 2seconds sleep, will finish first
+/// 2seconds sleep, will finish first
 fn read_from_file2() -> impl Future<Output = String> {
     async {
         sleep(Duration::new(2, 0));
@@ -278,50 +220,3 @@ fn read_from_file2() -> impl Future<Output = String> {
     }
 }
 
-struct Dur {
-    pub dur: fn(u64) -> Duration,
-}
-
-impl Dur {
-    fn new(dur: fn(u64) -> Duration) -> Self {
-        Self {
-            dur,
-        }  
-    }
-}
-
-/*
-struct Cacher<T>
-where
-    T: Fn(u64) -> Duration,
-{
-    calculation: T,
-    value: Option<u64>,
-}
-
-
-impl<T> Cacher<T>
-where
-    T: Fn(u64) -> Duration,
-{
-    fn new(calculation: T) -> Cacher<T> {
-        Cacher {
-            calculation,
-            value: None,
-        }
-    }
-
-    fn value(&mut self,
-             arg: u64) -> Duration {
-
-        match self.value {
-            Some(v) => dur_from_s(arg),
-            None => {
-                let v = (self.calculation)(arg);
-                self.value = Some(v);
-                v
-            }
-        }
-    }
-}
-*/
