@@ -110,7 +110,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     // metric variables as measurement, tag/field names
     let metric = &config.metrics["temperature"];
     // influx instance to write data to / we only use bucket from here
-    let write_config = &config.all_influx.values[0];
+    //RUTH docker
+    //let write_config = &config.all_influx.values[0];
+    //RUTH debian 2_1_1
+    let write_config = &config.all_influx.values[4];
     
     // populate InfluxConfig
     let influx_config = InfluxConfig::new(
@@ -205,7 +208,8 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     };
             
     // construct CALL for READ
-    let mut influx_call = InfluxCall::new(
+    // write to another influx server, so we do not update original
+    let influx_call = InfluxCall::new(
         uri_write,
         &uri_query,
         vec![&config.template.curl.influx_auth[0],
@@ -284,6 +288,8 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
     */
 
     // NOW WE CAN WRITE DATA TO another influx server or just different bucket or ...
+
+    /* OBS
     // UPDATE InfluxCall -> same SERVER but different BUCKET
     let updated_call = influx_call
         .update_key(
@@ -312,6 +318,13 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             &write_config.server,
         );
         /*
+        .update_key(
+            "port",
+            &read_config.port.to_string(),
+            &write_config.port.to_string(),
+        );
+        */
+        /*
         .update_key( // DUMMY ERROR
             "SERVER",
             &read_config.server,
@@ -320,10 +333,75 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
         */
 
     if config.flag.debug_influx_instances {
-        println!("\n@UPDATE_CALL -> we will WRITE data to BUCKET\n+ InfluxCall.uri_write: {:?}",
-                 updated_call.uri_write,
+        println!("\n@UPDATE_CALL -> we will WRITE data to BUCKET\n+ InfluxCall.uri_write: {:#?}",
+                 //updated_call.uri_write,
+                 updated_call,
         );
     }
+    */
+
+    //WRITE TARGET
+    let write_target = InfluxConfig::new(
+        &write_config.name,
+        write_config.status,
+        &write_config.secure,
+        &write_config.server,
+        write_config.port,
+        &write_config.bucket,
+        &write_config.token,
+        &write_config.org,
+        &write_config.precision,
+        &write_config.machine_id,
+        &write_config.carrier,
+        write_config.flag_valid_default,
+    );
+
+    let uri_write_target = write_target.to_uri_write(
+        &format!("{}{}",
+                 write_target.to_uri(
+                     &config.template.curl.influx_api,
+                     config.flag.debug_template_formater,
+                 ),
+                 &config.template.curl.influx_uri_write,
+        ),
+        config.flag.debug_template_formater,
+    )?;
+
+    let uri_query_target = influxdb_client::format::uri_query(
+        &format!("{}{}",
+                 &config.template.curl.influx_uri_api,
+                 &config.template.curl.influx_uri_query),
+        
+        &write_target,
+        config.flag.debug_template_formater,
+    );
+    
+    let token_target = influxdb_client::format::token(
+        &config.template.curl.influx_auth[1],
+        &write_target,
+        config.flag.debug_template_formater,
+    );
+
+    let influx_call_target = InfluxCall::new(
+        uri_write_target,
+        &uri_query_target,
+        vec![&config.template.curl.influx_auth[0],
+             &token_target,
+        ],
+        vec![&config.template.curl.influx_accept[0],
+             &config.template.curl.influx_accept[1],
+        ],
+        vec![&config.template.curl.influx_content[0],
+             &config.template.curl.influx_content[1],
+        ],
+    );
+
+    if config.flag.debug_influx_instances {
+        println!("\n@{influx_call:#?}");
+    }
+
+    // DEBUG 
+    //println!("****WRITE_TARGET****\n{write_target:#?}\n {influx_call_target:#?}");
     
     //parse response to CSV
     let mut reader = csv::ReaderBuilder::new()
@@ -394,14 +472,22 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
                 match result_lpb {
                     Ok(data) => {
                         let updated_data = InfluxData {
+                            config: write_target.clone(), //influx_config.clone(),
+                            call: influx_call_target.clone(), //influx_call.clone(),
+                            lp: data,
+                        };
+                        /*
+                        let updated_data = InfluxData {
                             config: influx_config.clone(),
                             call: influx_call.clone(),
                             lp: data,
                         };
+                        */
 
                         // CURL WRITE LP reqwest equivalent
-                        let curl_write = updated_data.curl_write(&config.template.curl.curl_write,
-                                                                 config.flag.debug_template_formater,
+                        let curl_write = updated_data.curl_write(
+                            &config.template.curl.curl_write,
+                            config.flag.debug_template_formater,
                         );
                                                           
                         if config.flag.debug_influx_curl {
@@ -548,10 +634,10 @@ pub fn start(config: TomlConfig) -> Result<(), Box<dyn std::error::Error>> {
             },
         };
         
-        // /* DEBUG just to see first record
+        /* DEBUG just to see first record
         println!("\n break");
         break
-        // */
+        */
     }
     
     Ok(())

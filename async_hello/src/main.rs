@@ -30,7 +30,7 @@ impl MyDuration {
     //          (dur_new.dur)(2),
     // );
     //
-    // (MyDuration::f_new(
+    // (MyDuration::new(
     //        |delay| Duration::from_secs(delay))
     //     .value)(2),
     //
@@ -87,7 +87,7 @@ impl Future for AsyncTimer {
                  self.expiration_time,
         );
 
-        // new instant is higher then out 4sec expiration
+        // new instant is higher then our 4sec expiration
         //
         if now >= self.expiration_time {
             println!("Hello, it's time for Future 1");
@@ -96,7 +96,7 @@ impl Future for AsyncTimer {
             Poll::Ready(
                 String::from("Future 1 has completed")
             )
-        // new instant is lower, so we wait
+        // new instant is lower, we wait
         } else {
             println!("Hello, it's not yet time for Future 1. Going to sleep");
 
@@ -129,7 +129,7 @@ impl Future for AsyncTimer {
                     std::thread::sleep(delay);
                 }
 
-                // all done, so let's informa waker other there will be
+                // all done, so let's inform waker or there will be
                 // infinite wait
                 waker.wake();
             });
@@ -155,7 +155,6 @@ async fn main() {
 
         let future_result = future1.await;
         
-        //println!("future_1: {:?}", future1.await);
         println!("future_1: {:?}", future_result);
 
         future_result
@@ -166,13 +165,12 @@ async fn main() {
 
         let future_result = file2_contents;
         
-        //println!("future_2: {:?}", file2_contents);
         println!("future_2: {:?}", future_result);
 
         future_result
     });
 
-    // this return result unless we send something else
+    // this return result Ok() unless we send something else
     let join_result = tokio::join!(h1, h2);
 
     println!("{join_result:?}\ntime elapsed: {:?}",

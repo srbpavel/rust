@@ -6,6 +6,7 @@ mod options {
     pub const ORG: &str = "org";
     pub const BUCKET: &str = "bucket";
     pub const PRECISION: &str = "precision";
+    pub const PORT: &str = "port";
 }
 
 ///
@@ -92,6 +93,12 @@ impl <'i>InfluxCall<'i> {
                 self.uri_write = self.uri_write.replace(
                     &format!("{old}://"),
                     &format!("{new}://"),
+                );
+            },
+            options::PORT => {
+                self.uri_write = self.uri_write.replace(
+                    &format!(":{old}/"),
+                    &format!(":{new}/"),
                 );
             },
             k @ (options::ORG | options::BUCKET | options::PRECISION) => {

@@ -238,6 +238,8 @@ values = [
        #ERROR_TESTER
        {name = "ERROR_TESTER", status = false, secure = "HTTPS", server = "hrobarik", port = 8086, bucket = "BUCKET", token = "TOKEN", org = "ORG", precision = "ms", machine_id = "MACHINE_ID", carrier = "CARRIER", flag_valid_default = true},
 
+       {name = "ruth_debian", status = true, secure = "http", server = "ruth", port = 8087, bucket = "lord", token = "hEsHGE33oeOAVdzeKAHS3FMmXbpjub-0IlijHURvDwYtT9MFw_WCVHHZmTMoSI8EZYG_EiHdWEWF4VaIYbOyVw==", org = "foookin_paavel", precision = "ms", machine_id = "spongebob", carrier = "cargo", flag_valid_default = true},
+
        #{name = "", status = false, secure = "", server = "", port = 8086, bucket = "", token = "", org = "", precision = "ms", machine_id = "", carrier = "", flag_valid_default = true},
        ]
 
