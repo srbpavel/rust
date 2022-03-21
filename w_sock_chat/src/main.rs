@@ -27,10 +27,13 @@ use actix_web_actors::ws;
 mod server;
 mod session;
 
+
+// our browser chat
 async fn index() -> impl Responder {
     NamedFile::open_async("./static/index.html").await.unwrap()
 }
 
+// 
 /// Entry point for our websocket route
 async fn chat_route(req: HttpRequest,
                     stream: web::Payload,
@@ -57,25 +60,43 @@ async fn get_count(count: web::Data<AtomicUsize>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    std::env::set_var(
+        "RUST_LOG",
+        "websocket_chat_server=debug,actix_web=debug,actix_server=info",
+    );
 
+    env_logger::init();
+
+    //env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
+    // our state to share 
     // set up applications state
     // keep a count of the number of visitors
     let app_state = Arc::new(AtomicUsize::new(0));
 
     // start chat server actor
-    let server = server::ChatServer::new(app_state.clone()).start();
+    let server = server::ChatServer::new(
+        app_state
+            .clone()
+    )
+        .start();
 
-    log::info!("starting HTTP server at http://localhost:8080");
+    log::info!("CHAT starting HTTP server at http://localhost:8080");
 
     HttpServer::new(move || {
         App::new()
+            // data: state to count visitors
             .app_data(web::Data::from(app_state.clone()))
+            // data: chat server
             .app_data(web::Data::new(server.clone()))
+            // chat room
             .service(web::resource("/").to(index))
+            // visitor counter
             .route("/count", web::get().to(get_count))
+            // ws main route
             .route("/ws", web::get().to(chat_route))
-            .service(Files::new("/static", "./static"))
+            // no need for this
+            //.service(Files::new("/static", "./static"))
             .wrap(Logger::default())
     })
     .workers(2)
