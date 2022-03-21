@@ -23,6 +23,7 @@ async fn main() {
 
     log::info!("starting echo WebSocket client");
 
+    // channel
     let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
     let mut cmd_rx = UnboundedReceiverStream::new(cmd_rx);
@@ -38,6 +39,10 @@ async fn main() {
             return;
         }
 
+        println!(" sending: {:?}",
+                 cmd,
+        );
+        
         cmd_tx
             .send(cmd)
             .unwrap();
@@ -57,15 +62,26 @@ async fn main() {
             Some(msg) = ws.next() => {
                 match msg {
                     Ok(ws::Frame::Text(txt)) => {
+                        println!("  receive Text -> {:?}",
+                                 txt,
+                        );
+
                         // log echoed messages from server
                         log::info!("Server: {:?}", txt)
                     }
 
-                    Ok(ws::Frame::Ping(_)) => {
+                    //Ok(ws::Frame::Ping(_)) => {
+                    Ok(ws::Frame::Ping(data)) => {
+                        println!("receive Ping -> {:?}",
+                                 data,
+                        );
+
                         // respond to ping probes
                         ws.send(
                             ws::Message::Pong(
-                                Bytes::new()
+                                //Bytes::new()
+                                // data are type: actix_web::web::Bytes
+                                data
                             )
                         )
                             .await

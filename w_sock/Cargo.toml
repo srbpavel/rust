@@ -3,10 +3,13 @@ name = "websocket"
 version = "1.0.0"
 edition = "2021"
 
+# main server to run
 [[bin]]
 name = "websocket-server"
 path = "src/main.rs"
 
+# rust cmd client
+# or we acces via browser -> http://127.0.0.1:8080/
 [[bin]]
 name = "websocket-client"
 path = "src/client.rs"
@@ -15,24 +18,44 @@ path = "src/client.rs"
 [dependencies]
 env_logger = "0.9"
 log = "0.4"
+chrono = "0.4.19"
 
-actix = "0.13"
-actix-codec = "0.5"
-actix-files = "0.6"
-actix-rt = "2"
-actix-web = "4"
-actix-web-actors = "4.1"
-awc = "3.0.0-beta.21"
+#actor
+#actix = "0.13"
+actix = "0.13.0"
+
+#codec utils -> framed protocols
+#actix-codec = "0.5"
+actix-codec = "0.5.0"
+
+#actix-files = "0.6"
+actix-files = "0.6.0"
+
+#tokio single threaded async
+#actix-rt = "2"
+actix-rt = "2.7.0"
+
+#actix-web = "4"
+actix-web = "4.0.1"
+
+#actix-web-actors = "4.1"
+actix-web-actors = "4.1.0"
+
+#awc = "3.0.0-beta.21"
+awc = "3.0.0"
 
 
 [dependencies.futures-util]
-version = "0.3.7"
+#version = "0.3.7"
+version = "0.3.21"
 default-features = false
 features = ["std", "sink"]
 
 [dependencies.tokio]
-version = "1.13.1"
+#version = "1.13.1"
+version = "1.17.0"
 features = ["full"]
 
+#util -> stream and tokio
 [dependencies.tokio-stream]
 version = "0.1.8"

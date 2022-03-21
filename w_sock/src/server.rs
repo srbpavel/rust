@@ -1,8 +1,11 @@
-use std::time::{Duration, Instant};
+use std::time::{Duration,
+                Instant,
+};
 
 use actix::prelude::*;
 use actix_web_actors::ws;
 
+// this starts after connected
 /// How often heartbeat pings are sent
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -41,7 +44,13 @@ impl MyWebSocket {
                 return;
             }
 
-            ctx.ping(b"");
+            let ping_msg = format!("{}",
+                                   chrono::Utc::now(),
+            );
+            
+            println!("  Ping send: {ping_msg}");
+            //ctx.ping(b"");
+            ctx.ping(ping_msg.as_bytes());
         });
     }
 }
@@ -53,6 +62,8 @@ impl Actor for MyWebSocket {
     fn started(&mut self,
                ctx: &mut Self::Context) {
 
+        println!("let's start hearth_beat");
+        
         self.hb(ctx);
     }
 }
@@ -64,23 +75,48 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
               ctx: &mut Self::Context) {
 
         // process websocket messages
-        println!("WS: {:?}", msg);
+        //println!("WS: {:#?}", msg);
+
         match msg {
             Ok(ws::Message::Ping(msg)) => {
+                println!("   Ping recieve: {:?}",
+                         msg,
+                );
+
                 self.hb = Instant::now();
 
                 ctx.pong(&msg);
-            }
-            Ok(ws::Message::Pong(_)) => {
+            },
+            
+            //Ok(ws::Message::Pong(_)) => {
+            Ok(ws::Message::Pong(msg)) => {
+                println!("   Pong receive: {:?}",
+                         msg,
+                );
+
                 self.hb = Instant::now();
-            }
-            Ok(ws::Message::Text(text)) => ctx.text(text),
+            },
+            
+            Ok(ws::Message::Text(text)) => {
+                println!("\n   Text receive: {:?}\n",
+                         text,
+                );
+
+                ctx.text(text)
+            },
+            
             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
-            }
-            _ => ctx.stop(),
+            },
+            
+            _ => {
+                println!("    Other receive --> we stop");
+                
+                ctx.stop()
+            },
         }
     }
 }

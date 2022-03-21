@@ -27,6 +27,7 @@ async fn index() -> impl Responder {
 }
 
 
+// start connect + send msg
 /// WebSocket handshake and start `MyWebSocket` actor.
 async fn echo_ws(req: HttpRequest,
                  stream: web::Payload) -> Result<HttpResponse, Error> {
@@ -40,16 +41,27 @@ async fn echo_ws(req: HttpRequest,
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+    env_logger::init_from_env(
+        env_logger::Env::new()
+            .default_filter_or("info")
+    );
 
-    log::info!("starting HTTP server at http://localhost:8080");
+    log::info!("MAIN >>> starting HTTP server at http://localhost:8080");
 
     HttpServer::new(|| {
         App::new()
+            // this is our browser client
             // WebSocket UI HTML file
-            .service(web::resource("/").to(index))
+            .service(web::resource("/")
+                     .to(index)
+            )
             // websocket route
-            .service(web::resource("/ws").route(web::get().to(echo_ws)))
+            .service(web::resource("/ws")
+                     .route(
+                         web::get()
+                             .to(echo_ws)
+                     )
+            )
             // enable logger
             .wrap(middleware::Logger::default())
     })
