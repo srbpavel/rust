@@ -1,8 +1,10 @@
 //! Simple websocket client.
 
-use std::{io, thread};
+use std::{io,
+          thread,
+};
 
-//use actix_web::web::Bytes;
+use actix_web::web::Bytes;
 use awc::ws;
 use futures_util::{
     SinkExt as _,
@@ -17,10 +19,19 @@ use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[actix_web::main]
 async fn main() {
+    std::env::set_var(
+        "RUST_LOG",
+        "websocket_client=debug,actix_web=debug,actix_server=info",
+    );
+
+    env_logger::init();
+    
+    /*
     env_logger::init_from_env(
         env_logger::Env::new()
             .default_filter_or("info")
     );
+    */
 
     log::info!("starting echo WebSocket client");
 
@@ -30,6 +41,8 @@ async fn main() {
     let mut cmd_rx = UnboundedReceiverStream::new(cmd_rx);
 
     // run blocking terminal input reader on separate thread
+    // https://doc.rust-lang.org/std/thread/
+    // JoinHandle { .. }
     let input_thread = thread::spawn(move || loop {
         let mut cmd = String::with_capacity(32);
 
@@ -65,8 +78,7 @@ async fn main() {
         .await
         .unwrap();
 
-    //log::debug!("response: {res:?}");
-    log::info!("response: {res:?}");
+    log::debug!("response: {res:?}");
     log::info!("connected; server will echo messages sent");
 
     let mut loop_counter = 0;
@@ -84,6 +96,7 @@ async fn main() {
             // actix_codec::framed::Framed<Box<dyn awc::client::connection::ConnectionIo>, Codec> 
             //
             // understand why here .next() but in doc .next_item()
+            // probably lookin at wrong place in doc
             //
             Some(msg) = ws.next() => {
                 match msg {
@@ -104,16 +117,25 @@ async fn main() {
                                  data,
                         );
 
+                        // /* // simulate PONG timeout
                         // respond to ping
                         ws.send(
                             ws::Message::Pong(
                                 //Bytes::new()
-                                // data are type: actix_web::web::Bytes
-                                data
+                                Bytes::from(
+                                    [
+                                        &data,
+                                        format!(" / {}",
+                                                chrono::Utc::now(),
+                                        )
+                                            .as_bytes(),
+                                    ].concat()
+                                )
                             )
                         )
                             .await
                             .unwrap();
+                        // */
                     }
 
                     _ => {}
@@ -146,6 +168,8 @@ async fn main() {
         }
     }
 
+    // join method returns thread::Result
+    // understand this better
     input_thread
         .join()
         .unwrap();

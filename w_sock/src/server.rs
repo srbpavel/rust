@@ -30,12 +30,13 @@ impl MyWebSocket {
     /// also this method checks heartbeats from client
     fn hb(&self,
           ctx: &mut <Self as Actor>::Context) {
-
+        
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
-                println!("Websocket Client heartbeat failed, disconnecting!");
+                //println!("Websocket Client heartbeat failed, disconnecting!");
+                log::info!("Websocket Client heartbeat failed, disconnecting!");
 
                 // stop actor
                 ctx.stop();

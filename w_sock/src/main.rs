@@ -20,6 +20,7 @@ mod server;
 use self::server::MyWebSocket;
 
 
+// via browser
 async fn index() -> impl Responder {
     NamedFile::open_async("./static/index.html")
         .await
@@ -32,26 +33,44 @@ async fn index() -> impl Responder {
 async fn echo_ws(req: HttpRequest,
                  stream: web::Payload) -> Result<HttpResponse, Error> {
 
-    ws::start(MyWebSocket::new(),
-              &req,
-              stream,
+    log::debug!("New SOCKET\n{:?}",
+                req,
+    );
+
+    // https://docs.rs/actix-web-actors/latest/actix_web_actors/ws/fn.start.html
+    //
+    // + builder
+    // https://docs.rs/actix-web-actors/latest/actix_web_actors/ws/struct.WsResponseBuilder.html
+    //
+    // -> HttpResponse
+    ws::start(MyWebSocket::new(), // our Struct with HB
+              &req, // req
+              stream, // payload
     )
 }
 
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    std::env::set_var(
+        "RUST_LOG",
+        "websocket_server=debug,actix_web=debug,actix_server=info",
+    );
+
+    env_logger::init();
+    
+    /*
     env_logger::init_from_env(
-        //env_logger::init();
         env_logger::Env::new()
             .default_filter_or("info")
     );
+    */
 
     log::info!("MAIN >>> starting HTTP server at http://localhost:8080");
 
     HttpServer::new(|| {
         App::new()
-            // this is our browser client
+            // this is for our browser client
             // WebSocket UI HTML file
             .service(web::resource("/")
                      .to(index)
