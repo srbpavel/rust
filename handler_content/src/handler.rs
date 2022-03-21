@@ -1,7 +1,7 @@
 /// HANDLER
 ///
 use crate::handler_content_toml_config_struct::{TomlConfig};
-//use crate::video;
+use crate::content;
 
 use actix_web::{
     web::
@@ -90,6 +90,25 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                         )
                     )
                     .to(HttpResponse::MethodNotAllowed),
+            )
+            .service(                            
+                //web::resource("/{one}/{two}/{three}")
+                web::resource(vec![
+                    "/{id:.*}",
+                    "/{id:.*}/",
+                    //"/{prefix:.*}/{id:.*}",
+                    //"/{prefix:.*}/{id:.*}/",
+                    //"/{one}/{two:.*}/{three:.*}",
+                ])
+                    .route(web::get().to(content::get_content))
+                    .route(web::put().to(content::put_content))
+                    .route(web::delete().to(content::delete_content))
+                /*
+                web::resource("/{video_id}") 
+                    .route(web::get()
+                           .to(content::get_content)           
+                    ),                           
+                */
             )
             /*
             .service(

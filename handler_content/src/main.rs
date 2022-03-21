@@ -4,7 +4,7 @@ extern crate easy_config;
 mod config;
 mod handler_content_toml_config_struct;
 mod handler;
-//mod video;
+mod content;
 mod util;
 //mod status;
 //mod error;
