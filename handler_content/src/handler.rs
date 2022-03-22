@@ -4,40 +4,14 @@ use crate::handler_content_toml_config_struct::{TomlConfig};
 use crate::content;
 
 use actix_web::{
-    web::
-    {self,
-     //Data,
-     //JsonConfig,
-    },
+    web,
     //guard,
     middleware,
     App,
     HttpServer,
-    //HttpResponse,
+    HttpResponse,
+    Responder,
 };
-
-/*
-use std::{
-    sync::{Arc,                
-           Mutex,              
-    },
-    collections::HashMap,
-};
-
-use actix_files::Files;
-*/
-
-//use serde::Deserialize;
-
-/*
-/// for each WORKER thread     
-//#[derive(Debug, Deserialize)]
-#[derive(Debug)]                       
-pub struct AppState {
-    pub video_map: Arc<Mutex<HashMap<video::VideoKey, video::VideoValue>>>,
-    pub binary_map: Arc<Mutex<HashMap<video::VideoKey, video::BinaryValue>>>,
-}                                      
-*/
 
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
@@ -55,32 +29,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     log::info!("{}", welcome_msg(&config)?,);
 
-    /*
-    // detail
-    let video_map =
-        Arc::new(                        
-            Mutex::new(
-                HashMap::new()
-            )
-        );
-
-    // data
-    let binary_map =
-        Arc::new(                        
-            Mutex::new(
-                HashMap::new()
-            )
-        );
-    */
-    
     let mut server = HttpServer::new(move || {
         App::new()
-            /*
-            .app_data(Data::new(AppState {
-                video_map: video_map.clone(),
-                binary_map: binary_map.clone(),
-            }))
-            */
             .wrap(middleware::Logger::new(&config.log_format))
             /*
             .default_service(
@@ -94,15 +44,19 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
             */
             .service(                            
+                web::resource("/")
+                    .route(web::get().to(index))
+            )
+            .service(                            
                 web::resource(vec![
                     "/{id:.*}",
                     "/{id:.*}/",
-                    //"/{prefix:.*}/{id:.*}",
-                    //"/{prefix:.*}/{id:.*}/",
-                    //"/{one}/{two:.*}/{three:.*}",
                 ])
                     .route(web::get().to(content::get_content))
-                    .route(web::put().to(content::put_content))
+                    // multipart
+                    //.route(web::put().to(content::put_content_m))
+                    // payload
+                    .route(web::put().to(content::put_content_p))
                     .route(web::delete().to(content::delete_content))
             )
     })
@@ -138,4 +92,12 @@ fn welcome_msg(config: &TomlConfig) -> std::io::Result<String> {
                 &config.server,
         )
     )
+}
+
+/// INDEX
+/// just to verify resource regex is not greedy
+///
+async fn index() -> impl Responder {
+    HttpResponse::Ok()
+        .body("index")
 }

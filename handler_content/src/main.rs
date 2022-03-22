@@ -1,13 +1,10 @@
 extern crate easy_config;
-//extern crate serde;
 
 mod config;
 mod handler_content_toml_config_struct;
 mod handler;
 mod content;
 mod util;
-//mod status;
-//mod error;
 
 use handler::run;
 
@@ -22,13 +19,6 @@ async fn main() -> std::io::Result<()> {
     
     // CONFIG
     let config = config::sample_config(&config_file);
-
-    /*
-    println!("\nCPU get: {} / phy: {}",
-             num_cpus::get(),
-             num_cpus::get_physical(),
-    );
-    */
 
     //HANDLER
     run(config).await
