@@ -9,11 +9,11 @@ use actix_web::{
      //Data,
      //JsonConfig,
     },
-    guard,
+    //guard,
     middleware,
     App,
     HttpServer,
-    HttpResponse,
+    //HttpResponse,
 };
 
 /*
@@ -82,6 +82,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             }))
             */
             .wrap(middleware::Logger::new(&config.log_format))
+            /*
             .default_service(
                 web::route()
                     .guard(
@@ -91,8 +92,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     )
                     .to(HttpResponse::MethodNotAllowed),
             )
+            */
             .service(                            
-                //web::resource("/{one}/{two}/{three}")
                 web::resource(vec![
                     "/{id:.*}",
                     "/{id:.*}/",
@@ -103,75 +104,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .route(web::get().to(content::get_content))
                     .route(web::put().to(content::put_content))
                     .route(web::delete().to(content::delete_content))
-                /*
-                web::resource("/{video_id}") 
-                    .route(web::get()
-                           .to(content::get_content)           
-                    ),                           
-                */
             )
-            /*
-            .service(
-                web::scope(video::SCOPE)
-                    .service(video::all)
-                    .service(video::download)
-                    .service(video::play)
-                    //.service(video::detail)
-                    .service(                            
-                        web::resource("/detail/{video_id}") 
-                            .route(web::get()
-                                   .to(video::detail)           
-                            ),                           
-                    )
-                    .service(video::clear)
-                    .service(video::list_group)
-                    // tester
-                    .service(video::data)
-                    .service(video::stream)
-                    .service(video::compare)
-                    .service(
-                        web::resource("/headers")
-                            .app_data(
-                                Data::new(
-                                    JsonConfig::default()
-                                )
-                            )
-                            .route(web::put()
-                                   .to(video::insert_header)
-                            )
-                    )
-                    //.service(video::favicon)
-                    // curl -v "http://127.0.0.1:8081/video/files"
-                    .service(Files::new("/files", // url
-                                        "./static", // dir to list
-                                        //"/home/conan/soft/rust/handler_video/static",
-                    )
-                             .show_files_listing()
-                    )
-                    .route("/single_file/{filename:.*}",
-                           web::get()
-                           .to(video::single_file)
-                    )
-                    //_
-                    .service(
-                        web::resource("/upload")
-                            .app_data(
-                                Data::new(
-                                    JsonConfig::default()
-                                )
-                            )
-                            .route(web::put()
-                                   .to(video::insert_video)
-                            )
-                    )
-                    .service(                            
-                        web::resource("/delete/{video_id}") 
-                            .route(web::delete()
-                                   .to(video::delete)           
-                            ),                           
-                    )
-            )
-            */
     })
         .bind(
             format!("{}:{}",
