@@ -5,7 +5,7 @@ use crate::content;
 
 use actix_web::{
     web,
-    //guard,
+    guard,
     middleware,
     App,
     HttpServer,
@@ -32,7 +32,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     let mut server = HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::new(&config.log_format))
-            /*
             .default_service(
                 web::route()
                     .guard(
@@ -42,7 +41,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     )
                     .to(HttpResponse::MethodNotAllowed),
             )
-            */
             .service(                            
                 web::resource("/")
                     .route(web::get().to(index))
@@ -53,9 +51,9 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     "/{id:.*}/",
                 ])
                     .route(web::get().to(content::get_content))
-                    // multipart
+                    // via MULTIPART
                     //.route(web::put().to(content::put_content_m))
-                    // payload
+                    // via WEB::PAYLOAD
                     .route(web::put().to(content::put_content_p))
                     .route(web::delete().to(content::delete_content))
             )
