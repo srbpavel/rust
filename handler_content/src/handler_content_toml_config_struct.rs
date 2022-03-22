@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-type MyStr = Box<str>; 
+type MyStr = Box<str>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TomlConfig {

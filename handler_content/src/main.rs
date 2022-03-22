@@ -1,13 +1,12 @@
 extern crate easy_config;
 
 mod config;
-mod handler_content_toml_config_struct;
-mod handler;
 mod content;
+mod handler;
+mod handler_content_toml_config_struct;
 mod util;
 
 use handler::run;
-
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -16,7 +15,7 @@ async fn main() -> std::io::Result<()> {
         eprintln!("\nEXIT: Problem parsing cmd arguments\nREASON >>> {}", err);
         std::process::exit(1);
     });
-    
+
     // CONFIG
     let config = config::sample_config(&config_file);
 
