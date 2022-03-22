@@ -47,8 +47,8 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
             )
             .service(                            
                 web::resource(vec![
-                    "/{id:.*}",
-                    "/{id:.*}/",
+                    "/{url_path:.*}",
+                    "/{url_path:.*}/",
                 ])
                     .route(web::get().to(content::get_content))
                     // via MULTIPART

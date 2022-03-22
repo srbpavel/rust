@@ -13,10 +13,10 @@ use actix_web::{
 //use actix_multipart::Multipart;
 use futures_util::{
     StreamExt,
-    //TryStreamExt, // MultiPart
+    //TryStreamExt,
 };
 
-const DELIMITER: char = '/';
+const PATH_DELIMITER: char = '/';
 
 /// put_content PAYLOAD
 ///
@@ -39,6 +39,17 @@ pub async fn put_content_p(mut payload: web::Payload,
     debug!("PUT_P:\n{req:?}\n{path:?}");
 
     let result = path.into_inner();
+
+    let parts = &result
+        .rsplitn(2, PATH_DELIMITER)
+        .collect::<Vec<_>>();
+
+    debug!("PARTS[{}]: {:?}",
+           parts.len(),
+           parts,
+    );
+
+    /*
     let parts = result
         .split(DELIMITER)
         .collect::<Vec<_>>();
@@ -50,7 +61,7 @@ pub async fn put_content_p(mut payload: web::Payload,
     parts
         .iter()
         .for_each(|p| {
-            len -=1;
+            len -= 1;
 
             if len.eq(&0) {
                 content_id = p.to_string();
@@ -68,7 +79,8 @@ pub async fn put_content_p(mut payload: web::Payload,
            prefix,
            content_id,
     );
-    
+    */
+
     let mut bytes = web::BytesMut::new();
 
     let mut chunk_counter = 0;
