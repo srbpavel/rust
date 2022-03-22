@@ -11,12 +11,21 @@ use std::{
     collections::HashMap,
 };
 
-#[derive(Debug)]                       
+/*
+#[derive(Debug, Clone)]                       
+pub struct AppState {
+    pub content_map: Arc<HashMap<content::ContentKey, content::ContentValue>>,
+    pub binary_map: Arc<HashMap<content::ContentKey, content::BinaryValue>>,
+} 
+*/                                     
+
+// /*
+#[derive(Debug, Clone)]                       
 pub struct AppState {
     pub content_map: Arc<Mutex<HashMap<content::ContentKey, content::ContentValue>>>,
     pub binary_map: Arc<Mutex<HashMap<content::ContentKey, content::BinaryValue>>>,
 }                                      
-
+// */
 
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
@@ -31,6 +40,19 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     log::info!("{}", welcome_msg(&config)?,);
 
+    /*
+    let content_map =
+        Arc::new(                        
+            HashMap::new()
+        );
+
+    let binary_map =
+        Arc::new(                        
+            HashMap::new()
+        );
+    */
+    
+    // /*
     let content_map =
         Arc::new(                        
             Mutex::new(
@@ -44,6 +66,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 HashMap::new()
             )
         );
+    // */
     
     let mut server = HttpServer::new(move || {
         App::new()
@@ -56,7 +79,7 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 )
             )
             .wrap(middleware::Logger::new(&config.log_format))
-            //.wrap(middleware::Compress::default())
+            .wrap(middleware::Compress::default())
             .default_service(
                 web::route()
                     .guard(guard::Not(guard::Get()))

@@ -4,11 +4,12 @@ use actix_web::{
     web::{self,
           Bytes,
           BytesMut,
-          BufMut,
+          //BufMut,
     },
     Error, HttpRequest, HttpResponse, Responder, Result,
 };
 use log::debug;
+//use std::future::Future;
 use futures_util::StreamExt;
 use serde::{Serialize,
             Deserialize,
@@ -54,50 +55,34 @@ impl Content {
 ///
 pub async fn put_content_p(
     mut payload: web::Payload,
+    //mut data: web::Bytes,
     req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, Error> {
     debug!("PUT_P:\n{req:?}\n{path:?}");
 
+    // /*
     let AppState { content_map, binary_map } = &*state.into_inner();
 
     debug!("ALL_CONTENT: {:?}",
            content_map,
     );
-    
+    // */
+
     let result = path.into_inner();
 
     let mut new_content = Content::default();
     new_content.id = String::from(result);
     
-    /*
-    let parts = &result.rsplitn(2, PATH_DELIMITER).collect::<Vec<_>>();
-
-    debug!("PARTS[{}]: {:?}", parts.len(), parts);
-
-    match parts.len() {
-        2 => {
-            new_content.id = String::from(result.clone());
-            new_content.group = Some(String::from(parts[1]));
-        },
-        _ => {
-            new_content.id = String::from(result.clone());
-            new_content.group = None;
-        },
-    }
-    
-    //new_content.id = String::from(parts[0]);
-    //new_content.id = String::from(result);
-    //new_content.group = String::from(parts[1]);
-    */
-    
     //let mut bytes = web::BytesMut::new();
-    let mut buf = BytesMut::with_capacity(1024);    
+    let mut buf = web::BytesMut::new();
+    //let mut buf = BytesMut::with_capacity(1024);    
 
     let mut chunk_counter = 0;
 
-    while let Some(item) = payload.next().await {
+    // via PAYLOAD
+    while let Some(chunk) = payload.next().await {
         chunk_counter += 1;
 
         // FIRST CHUNK
@@ -107,52 +92,57 @@ pub async fn put_content_p(
             );
 
             // LOCK DATA
+            //let content_hashmap = &mut *state.content_map;
+            // /*
             let mut content_hashmap = content_map
                 .lock()
                 .unwrap();
+            // */
             
             content_hashmap
                 .insert(
-                    new_content.id.clone(), // K: content.id
-                    new_content.clone(), // V: Content {}
+                    new_content.id.clone(),
+                    new_content.clone(),
                 );
         }
 
-        // /*
+        /* // NOT YET
         buf = web::block(move || {
             //let ch = &*chunk;
             //debug!("CHUNK: {chunk_counter}");
             
-            /// bytes.extend_from_slice(&item?);
+            // bytes.extend_from_slice(&item?);
             buf.extend_from_slice(&*item?);
             
             /*
             buf
-            .put(&*chunk);
+            .put(&*item?);
             //.put(ch);
-             */
+            */
             
             buf
         }).await?;
-        // */
-        
-        buf.extend_from_slice(&item?);
+        */
+
+        // BLOCKING 
+        buf.extend_from_slice(&chunk?);
 
         // LOCK DATA
+        // let binary_hashmap = &mut *state.binary_map;
+        // /*
         let mut binary_hashmap = binary_map
             .lock()
             .unwrap();
-        
+        // */
+
         binary_hashmap
             .insert(
-                new_content.id.clone(), // K: video.id
-                buf.clone(), // V: Binary {}
+                new_content.id.clone(),
+                buf.clone(),
             );
     }
-
-    Ok(HttpResponse::Ok()
-       //.body(buf))
-       .body(new_content.id))
+    
+    Ok(HttpResponse::Ok().body(new_content.id))
 }
 
 /// get_content
@@ -171,11 +161,14 @@ pub async fn get_content(req: HttpRequest,
     };
     
     debug!("ID: {content_id}");
-    
+
+    // let all_content = &state.binary_map;
+    // /*
     let all_content = state
         .binary_map
         .lock()
         .unwrap();
+    // */
 
     let result = all_content
         .get(&content_id)
@@ -201,11 +194,7 @@ pub async fn get_content(req: HttpRequest,
     HttpResponse::Ok()
         .insert_header(("content-type", "application/octet-stream"))
         .insert_header(("content-encoding", "chunked"))
-        //.insert_header(header::ContentEncoding::Chunked)
         .body(data)
-
-    //HttpResponse::Ok().body(content_id)
-    //HttpResponse::Ok().body(format!("{:?}", result))
 }
 
 /// delete_content
