@@ -1,19 +1,16 @@
 /// CONTENT
 use crate::handler::AppState;
 use actix_web::{
-    web::{self,
-          Bytes,
-          BytesMut,
-          //BufMut,
+    web::{
+        self,
+        Bytes,
+        BytesMut,
     },
     Error, HttpRequest, HttpResponse, Responder, Result,
 };
 use log::debug;
-//use std::future::Future;
 use futures_util::StreamExt;
-use serde::{Serialize,
-            Deserialize,
-};
+use serde::{Deserialize, Serialize};
 
 const PATH_DELIMITER: char = '/';
 
@@ -55,140 +52,94 @@ impl Content {
 ///
 pub async fn put_content_p(
     mut payload: web::Payload,
-    //mut data: web::Bytes,
     req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, Error> {
+
     debug!("PUT_P:\n{req:?}\n{path:?}");
 
-    // /*
-    let AppState { content_map, binary_map } = &*state.into_inner();
+    let AppState {
+        content_map,
+        binary_map,
+    } = &*state.into_inner();
 
-    debug!("ALL_CONTENT: {:?}",
-           content_map,
-    );
-    // */
+    debug!("ALL_CONTENT: {:?}", content_map,);
 
-    let result = path.into_inner();
+    /*
+    let content_id = path.into_inner();
 
     let mut new_content = Content::default();
-    new_content.id = String::from(result);
+    new_content.id = String::from(content_id);
+    */
+    let mut new_content = Content {
+        id: path.into_inner(),
+        ..Content::default()
+    };
     
-    //let mut bytes = web::BytesMut::new();
     let mut buf = web::BytesMut::new();
-    //let mut buf = BytesMut::with_capacity(1024);    
 
     let mut chunk_counter = 0;
 
-    // via PAYLOAD
     while let Some(chunk) = payload.next().await {
         chunk_counter += 1;
 
         // FIRST CHUNK
         if chunk_counter == 1 {
-            debug!("FIRST CHUNK\n{:?}",
-                   new_content,
-            );
+            debug!("FIRST CHUNK\n{:?}", new_content,);
 
             // LOCK DATA
-            //let content_hashmap = &mut *state.content_map;
-            // /*
-            let mut content_hashmap = content_map
-                .lock()
-                .unwrap();
-            // */
-            
-            content_hashmap
-                .insert(
-                    new_content.id.clone(),
-                    new_content.clone(),
-                );
+            let mut content_hashmap = content_map.lock().unwrap();
+            content_hashmap.insert(new_content.id.clone(), new_content.clone());
         }
 
-        /* // NOT YET
+        /* // NOT THERE YET
+        // the trait `FromResidual<Result<Infallible, PayloadError>>`
+        // is not implemented for `BytesMut`
+        //
         buf = web::block(move || {
-            //let ch = &*chunk;
-            //debug!("CHUNK: {chunk_counter}");
-            
-            // bytes.extend_from_slice(&item?);
-            buf.extend_from_slice(&*item?);
-            
-            /*
-            buf
-            .put(&*item?);
-            //.put(ch);
-            */
-            
+            buf.extend_from_slice(&*chunk?);
+
             buf
         }).await?;
         */
 
-        // BLOCKING 
+        // BLOCKING
         buf.extend_from_slice(&chunk?);
 
         // LOCK DATA
-        // let binary_hashmap = &mut *state.binary_map;
-        // /*
-        let mut binary_hashmap = binary_map
-            .lock()
-            .unwrap();
-        // */
-
-        binary_hashmap
-            .insert(
-                new_content.id.clone(),
-                buf.clone(),
-            );
+        let mut binary_hashmap = binary_map.lock().unwrap();
+        binary_hashmap.insert(new_content.id.clone(), buf.clone());
     }
-    
+
     Ok(HttpResponse::Ok().body(new_content.id))
 }
 
 /// get_content
 ///
-pub async fn get_content(req: HttpRequest,
-                         path: web::Path<String>,
-                         state: web::Data<AppState>) -> impl Responder {
+pub async fn get_content(
+    req: HttpRequest,
+    path: web::Path<String>,
+    state: web::Data<AppState>,
+) -> impl Responder {
 
     debug!("GET: {req:?}\n{path:?}");
-    
+
     let mut content_id = path.into_inner();
 
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(c),
         None => content_id,
     };
-    
+
     debug!("ID: {content_id}");
 
-    // let all_content = &state.binary_map;
-    // /*
-    let all_content = state
-        .binary_map
-        .lock()
-        .unwrap();
-    // */
-
-    let result = all_content
-        .get(&content_id)
-        .cloned();
-
-    /*
-    debug!("RESULT: {:?}",
-           result,
-    );
-    */
+    let all_content = state.binary_map.lock().unwrap();
+    let result = all_content.get(&content_id).cloned();
 
     let data = match result {
-        Some(v) => {
-            Bytes::from(v)
-        },
-        None => {
-            Bytes::from(
-                "GET data error"
-            )
-        },
+        Some(v) => Bytes::from(v),
+        None => Bytes::from("GET data error"),
     };
 
     HttpResponse::Ok()
@@ -199,11 +150,37 @@ pub async fn get_content(req: HttpRequest,
 
 /// delete_content
 ///
-pub async fn delete_content(req: HttpRequest, path: web::Path<String>) -> impl Responder {
+pub async fn delete_content(
+    req: HttpRequest,
+    path: web::Path<String>,
+    state: web::Data<AppState>,
+) -> impl Responder {
+
     debug!("DELETE: {req:?}");
 
-    let result = path.into_inner();
+    let mut content_id = path.into_inner();
+
+    content_id = match content_id.strip_suffix(PATH_DELIMITER) {
+        Some(c) => String::from(c),
+        None => content_id,
+    };
+
+    let mut content_hashmap = state.content_map.lock().unwrap();
+
+    let result = match content_hashmap.get_mut(&content_id) {
+        Some(_) => match content_hashmap.remove(&content_id) {
+            Some(_) => {
+                let mut binary_hashmap = state.binary_map.lock().unwrap();
+
+                match binary_hashmap.remove(&content_id) {
+                    Some(_) => "Status::DeleteOk",
+                    None => "Status::DeleteBinaryError",
+                }
+            }
+            None => "Status::DeleteContentError",
+        },
+        None => "Status::ContentIdNotFound",
+    };
 
     HttpResponse::Ok().body(result)
 }
-

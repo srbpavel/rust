@@ -2,31 +2,31 @@
 ///
 use crate::content;
 use crate::handler_content_toml_config_struct::TomlConfig;
-use actix_web::{guard, middleware, web::{self, Data}, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    guard, middleware,
+    web::{self, Data},
+    App, HttpResponse, HttpServer, Responder,
+};
 use std::{
-    sync::{
-        Arc,
-        Mutex,
-    },
     collections::HashMap,
+    sync::{Arc, Mutex},
 };
 
 /*
-#[derive(Debug, Clone)]                       
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub content_map: Arc<HashMap<content::ContentKey, content::ContentValue>>,
     pub binary_map: Arc<HashMap<content::ContentKey, content::BinaryValue>>,
-} 
-*/                                     
+}
+*/
 
 // /*
-#[derive(Debug, Clone)]                       
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub content_map: Arc<Mutex<HashMap<content::ContentKey, content::ContentValue>>>,
     pub binary_map: Arc<Mutex<HashMap<content::ContentKey, content::BinaryValue>>>,
-}                                      
+}
 // */
-
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -42,44 +42,29 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     /*
     let content_map =
-        Arc::new(                        
+        Arc::new(
             HashMap::new()
         );
 
     let binary_map =
-        Arc::new(                        
+        Arc::new(
             HashMap::new()
         );
     */
-    
-    // /*
-    let content_map =
-        Arc::new(                        
-            Mutex::new(
-                HashMap::new()
-            )
-        );
 
-    let binary_map =
-        Arc::new(                        
-            Mutex::new(
-                HashMap::new()
-            )
-        );
+    // /*
+    let content_map = Arc::new(Mutex::new(HashMap::new()));
+
+    let binary_map = Arc::new(Mutex::new(HashMap::new()));
     // */
-    
     let mut server = HttpServer::new(move || {
         App::new()
-            .app_data(
-                Data::new(
-                    AppState {
-                        content_map: content_map.clone(),
-                        binary_map: binary_map.clone(),
-                    }
-                )
-            )
+            .app_data(Data::new(AppState {
+                content_map: content_map.clone(),
+                binary_map: binary_map.clone(),
+            }))
             .wrap(middleware::Logger::new(&config.log_format))
-            .wrap(middleware::Compress::default())
+            //.wrap(middleware::Compress::default())
             .default_service(
                 web::route()
                     .guard(guard::Not(guard::Get()))
