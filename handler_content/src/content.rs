@@ -1,14 +1,14 @@
 /// CONTENT
 use crate::handler::AppState;
 use actix_web::{
-    web::{
-        self,
-        Bytes,
-        BytesMut,
-    },
-    Error, HttpRequest, HttpResponse, Responder, Result,
+    web::{self, BufMut, Bytes, BytesMut},
+    Error,
+    //HttpRequest,
+    HttpResponse,
+    Responder,
+    Result,
 };
-use log::debug;
+//use log::debug;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 
@@ -16,14 +16,14 @@ const PATH_DELIMITER: char = '/';
 
 /// types for hash_maps
 pub type ContentKey = String;
-pub type ContentValue = Content;
+//pub type ContentValue = Content;
 pub type BinaryValue = BytesMut;
+//pub type BinaryValue = Vec<u8>;
 
 /// content
 #[derive(Debug, Serialize, Clone, Deserialize, PartialEq)]
 pub struct Content {
     id: String,
-    //group: Option<String>,
 }
 
 impl Content {
@@ -31,7 +31,6 @@ impl Content {
     pub fn default() -> Self {
         Self {
             id: String::from(""),
-            //group: None,
         }
     }
 }
@@ -52,32 +51,25 @@ impl Content {
 ///
 pub async fn put_content_p(
     mut payload: web::Payload,
-    req: HttpRequest,
+    //req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, Error> {
-
-    debug!("PUT_P:\n{req:?}\n{path:?}");
+    //debug!("PUT_P:\n{req:?}\n{path:?}");
 
     let AppState {
-        content_map,
+        //content_map,
         binary_map,
     } = &*state.into_inner();
 
-    debug!("ALL_CONTENT: {:?}", content_map,);
-
-    /*
-    let content_id = path.into_inner();
-
-    let mut new_content = Content::default();
-    new_content.id = String::from(content_id);
-    */
-    let mut new_content = Content {
+    let new_content = Content {
         id: path.into_inner(),
         ..Content::default()
     };
-    
+
     let mut buf = web::BytesMut::new();
+    //let mut buf = web::BytesMut::with_capacity(1024);
+    //let mut buf = Vec::new();
 
     let mut chunk_counter = 0;
 
@@ -86,30 +78,46 @@ pub async fn put_content_p(
 
         // FIRST CHUNK
         if chunk_counter == 1 {
-            debug!("FIRST CHUNK\n{:?}", new_content,);
+            //debug!("FIRST CHUNK\n{:?}", new_content);
 
+            /*
             // LOCK DATA
             let mut content_hashmap = content_map.lock().unwrap();
             content_hashmap.insert(new_content.id.clone(), new_content.clone());
+            */
         }
 
-        /* // NOT THERE YET
+        /*
+        // NOT THERE YET
         // the trait `FromResidual<Result<Infallible, PayloadError>>`
         // is not implemented for `BytesMut`
         //
         buf = web::block(move || {
-            buf.extend_from_slice(&*chunk?);
+            //buf.extend_from_slice(&*chunk?);
+            buf.put(&*chunk?);
 
             buf
         }).await?;
         */
 
+        /*
+        let th = std::thread::spawn(move || {
+            buf.put(&*chunk?);
+        });
+
+        th.join().unwrap();
+        */
+
         // BLOCKING
-        buf.extend_from_slice(&chunk?);
+        //buf.extend_from_slice(&chunk?);
+        buf.put(&*chunk?);
 
         // LOCK DATA
-        let mut binary_hashmap = binary_map.lock().unwrap();
+        //let mut binary_hashmap = binary_map.lock().unwrap();
+
+        let binary_hashmap = &binary_map;
         binary_hashmap.insert(new_content.id.clone(), buf.clone());
+        //binary_hashmap.insert(new_content.id.clone(), buf.to_vec().clone());
     }
 
     Ok(HttpResponse::Ok().body(new_content.id))
@@ -118,12 +126,11 @@ pub async fn put_content_p(
 /// get_content
 ///
 pub async fn get_content(
-    req: HttpRequest,
+    //req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-
-    debug!("GET: {req:?}\n{path:?}");
+    //debug!("GET: {req:?}\n{path:?}");
 
     let mut content_id = path.into_inner();
 
@@ -132,13 +139,17 @@ pub async fn get_content(
         None => content_id,
     };
 
-    debug!("ID: {content_id}");
+    //debug!("ID: {content_id}");
 
-    let all_content = state.binary_map.lock().unwrap();
-    let result = all_content.get(&content_id).cloned();
+    //let all_content = state.binary_map.lock().unwrap();
+    let all_content = &state.binary_map;
+    
+    //let result = all_content.get(&content_id).cloned();
+    let result = all_content.get(&content_id);
 
     let data = match result {
-        Some(v) => Bytes::from(v),
+        //Some(v) => Bytes::from(v),
+        Some(v) => Bytes::from(v.clone()),
         None => Bytes::from("GET data error"),
     };
 
@@ -151,12 +162,11 @@ pub async fn get_content(
 /// delete_content
 ///
 pub async fn delete_content(
-    req: HttpRequest,
+    //req: HttpRequest,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> impl Responder {
-
-    debug!("DELETE: {req:?}");
+    //debug!("DELETE: {req:?}");
 
     let mut content_id = path.into_inner();
 
@@ -165,6 +175,16 @@ pub async fn delete_content(
         None => content_id,
     };
 
+    //let mut binary_hashmap = state.binary_map.lock().unwrap();
+    //let mut binary_hashmap = &mut *state.binary_map;
+
+    //let result = match binary_hashmap.remove(&content_id) {
+    let result = match &mut state.binary_map.remove(&content_id) {
+        Some(_) => "Status::DeleteOk",
+        None => "Status::DeleteBinaryError",
+    };
+
+    /*
     let mut content_hashmap = state.content_map.lock().unwrap();
 
     let result = match content_hashmap.get_mut(&content_id) {
@@ -181,6 +201,21 @@ pub async fn delete_content(
         },
         None => "Status::ContentIdNotFound",
     };
+    */
 
     HttpResponse::Ok().body(result)
 }
+
+/*
+/// list_content
+///
+pub async fn list_content(
+    req: HttpRequest,
+    path: web::Path<String>,
+) -> impl Responder {
+
+    debug!("LIST:\n{req:?}\n{path:?}");
+
+    HttpResponse::Ok().body("LIST")
+}
+*/

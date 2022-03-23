@@ -8,25 +8,21 @@ use actix_web::{
     App, HttpResponse, HttpServer, Responder,
 };
 use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
+    //collections::HashMap,
+    sync::{Arc,
+           //Mutex,
+    },
 };
+use dashmap::DashMap;
 
-/*
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub content_map: Arc<HashMap<content::ContentKey, content::ContentValue>>,
-    pub binary_map: Arc<HashMap<content::ContentKey, content::BinaryValue>>,
+    //pub content_map: Arc<Mutex<HashMap<content::ContentKey, content::ContentValue>>>,
+    //pub binary_map: Arc<Mutex<HashMap<content::ContentKey, content::BinaryValue>>>,
+    //pub binary_map: Arc<HashMap<content::ContentKey, content::BinaryValue>>,
+    pub binary_map: Arc<DashMap<content::ContentKey, content::BinaryValue>>,
 }
-*/
 
-// /*
-#[derive(Debug, Clone)]
-pub struct AppState {
-    pub content_map: Arc<Mutex<HashMap<content::ContentKey, content::ContentValue>>>,
-    pub binary_map: Arc<Mutex<HashMap<content::ContentKey, content::BinaryValue>>>,
-}
-// */
 /// RUN
 pub async fn run(config: TomlConfig) -> std::io::Result<()> {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -40,43 +36,38 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     log::info!("{}", welcome_msg(&config)?,);
 
-    /*
-    let content_map =
-        Arc::new(
-            HashMap::new()
-        );
+    //let content_map = Arc::new(Mutex::new(HashMap::new()));
+    //let binary_map = Arc::new(Mutex::new(HashMap::new()));
+    //let binary_map = Arc::new(HashMap::new());
+    let binary_map = Arc::new(DashMap::new());
 
-    let binary_map =
-        Arc::new(
-            HashMap::new()
-        );
-    */
-
-    // /*
-    let content_map = Arc::new(Mutex::new(HashMap::new()));
-
-    let binary_map = Arc::new(Mutex::new(HashMap::new()));
-    // */
     let mut server = HttpServer::new(move || {
         App::new()
             .app_data(Data::new(AppState {
-                content_map: content_map.clone(),
+                //content_map: content_map.clone(),
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
-            //.wrap(middleware::Compress::default())
             .default_service(
                 web::route()
                     .guard(guard::Not(guard::Get()))
                     .to(HttpResponse::MethodNotAllowed),
             )
             .service(web::resource("/").route(web::get().to(index)))
+            /*
+            .service(
+                web::resource(vec!["/{url_path:.*}", "/{url_path:.*}/"])
+                    .route(
+                        web::route()
+                            .guard(guard::Get())
+                            .guard(guard::Header("Method", "LIST"))
+                            .to(content::list_content)
+                    )
+            )
+            */
             .service(
                 web::resource(vec!["/{url_path:.*}", "/{url_path:.*}/"])
                     .route(web::get().to(content::get_content))
-                    // via MULTIPART
-                    //.route(web::put().to(content::put_content_m))
-                    // via WEB::PAYLOAD
                     .route(web::put().to(content::put_content_p))
                     .route(web::delete().to(content::delete_content)),
             )
