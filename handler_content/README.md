@@ -1,6 +1,7 @@
 *PUT*
 ```
 $ ./chunks.sh 
+
 sending '2022-03-23 11:01:42.617909546+00:00'
 *   Trying 127.0.0.1:8081...
 * Connected to localhost (127.0.0.1) port 8081 (#0)
@@ -33,10 +34,11 @@ Status::UploadOk* Connection #0 to host localhost left intact
 
 *GET*
 ```
-$ curl --silent --verbose --no-buffer http://localhost:8081/foo/bar/
+$ watch "curl --silent --verbose --no-buffer http://localhost:8081/foo/bar|tail"
+
 *   Trying 127.0.0.1:8081...
 * Connected to localhost (127.0.0.1) port 8081 (#0)
-> GET /foo/bar/ HTTP/1.1
+> GET /foo/bar HTTP/1.1
 > Host: localhost:8081
 > User-Agent: curl/7.74.0
 > Accept: */*
@@ -46,19 +48,20 @@ $ curl --silent --verbose --no-buffer http://localhost:8081/foo/bar/
 < content-length: 360
 < content-type: application/octet-stream
 < content-encoding: chunked
-< date: Wed, 23 Mar 2022 11:02:22 GMT
+< date: Wed, 23 Mar 2022 11:10:09 GMT
 < 
-2022-03-23 11:01:42.617909546+00:00
-2022-03-23 11:01:43.628144711+00:00
-2022-03-23 11:01:44.636684440+00:00
-2022-03-23 11:01:45.645499602+00:00
-2022-03-23 11:01:46.655412179+00:00
-2022-03-23 11:01:47.663454189+00:00
-2022-03-23 11:01:48.668420300+00:00
-2022-03-23 11:01:49.673739773+00:00
-2022-03-23 11:01:50.681432117+00:00
-2022-03-23 11:01:51.689818652+00:00
+{ [360 bytes data]
 * Connection #0 to host localhost left intact
+2022-03-23 11:09:52.677842287+00:00
+2022-03-23 11:09:53.687030719+00:00
+2022-03-23 11:09:54.692154197+00:00
+2022-03-23 11:09:55.698759817+00:00
+2022-03-23 11:09:56.707270966+00:00
+2022-03-23 11:09:57.714439944+00:00
+2022-03-23 11:09:58.721975301+00:00
+2022-03-23 11:09:59.730703301+00:00
+2022-03-23 11:10:00.739082069+00:00
+2022-03-23 11:10:01.744425419+00:00
 ```
 *DELETE*
 ```
@@ -71,7 +74,8 @@ Status::DeleteBinaryError
 
 *PUT* via pipe
 ```
-cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT "http://127.0.0.1:8081/jules/verne/twenty" --no-buffer --limit-rate 100K -T -
+$ cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT "http://127.0.0.1:8081/jules/verne/twenty" --no-buffer --limit-rate 100K -T -
+
 *   Trying 127.0.0.1:8081...
 * Connected to 127.0.0.1 (127.0.0.1) port 8081 (#0)
 > PUT /jules/verne/twenty HTTP/1.1
@@ -94,7 +98,8 @@ Status::UploadOk* Connection #0 to host 127.0.0.1 left intact
 
 *GET*
 ```
-watch "curl --silent --verbose --no-buffer http://localhost:8081/jules/verne/twenty|tail"
+$watch "curl --silent --verbose --no-buffer http://localhost:8081/jules/verne/twenty|tail"
+
 *   Trying 127.0.0.1:8081...
 * Connected to localhost (127.0.0.1) port 8081 (#0)
 > GET /jules/verne/twenty HTTP/1.1
