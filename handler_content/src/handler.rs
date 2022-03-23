@@ -2,24 +2,12 @@
 ///
 use crate::content;
 use crate::handler_content_toml_config_struct::TomlConfig;
-use actix_web::{
-    guard, middleware,
-    web::{self, Data},
-    App, HttpResponse, HttpServer, Responder,
-};
-use std::{
-    //collections::HashMap,
-    sync::{Arc,
-           //Mutex,
-    },
-};
+use actix_web::{guard, middleware, web, App, HttpResponse, HttpServer, Responder};
 use dashmap::DashMap;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
-    //pub content_map: Arc<Mutex<HashMap<content::ContentKey, content::ContentValue>>>,
-    //pub binary_map: Arc<Mutex<HashMap<content::ContentKey, content::BinaryValue>>>,
-    //pub binary_map: Arc<HashMap<content::ContentKey, content::BinaryValue>>,
     pub binary_map: Arc<DashMap<content::ContentKey, content::BinaryValue>>,
 }
 
@@ -36,15 +24,11 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     log::info!("{}", welcome_msg(&config)?,);
 
-    //let content_map = Arc::new(Mutex::new(HashMap::new()));
-    //let binary_map = Arc::new(Mutex::new(HashMap::new()));
-    //let binary_map = Arc::new(HashMap::new());
     let binary_map = Arc::new(DashMap::new());
 
     let mut server = HttpServer::new(move || {
         App::new()
-            .app_data(Data::new(AppState {
-                //content_map: content_map.clone(),
+            .app_data(web::Data::new(AppState {
                 binary_map: binary_map.clone(),
             }))
             .wrap(middleware::Logger::new(&config.log_format))
@@ -54,17 +38,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .to(HttpResponse::MethodNotAllowed),
             )
             .service(web::resource("/").route(web::get().to(index)))
-            /*
-            .service(
-                web::resource(vec!["/{url_path:.*}", "/{url_path:.*}/"])
-                    .route(
-                        web::route()
-                            .guard(guard::Get())
-                            .guard(guard::Header("Method", "LIST"))
-                            .to(content::list_content)
-                    )
-            )
-            */
             .service(
                 web::resource(vec!["/{url_path:.*}", "/{url_path:.*}/"])
                     .route(web::get().to(content::get_content))
