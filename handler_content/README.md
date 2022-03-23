@@ -1,5 +1,9 @@
 *PUT*
 ```
+$ curl -X PUT http://localhost:8081/foo -d "1234567890"
+
+Status::UploadOk
+
 $ ./chunks.sh 
 
 sending '2022-03-23 11:01:42.617909546+00:00'
