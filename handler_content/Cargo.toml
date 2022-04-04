@@ -15,9 +15,9 @@ futures = "0.3.21"
 version = "1.17"
 features = ["sync"]
 
-[dependencies.tokio-stream]
-version = "0.1.8"
-features = ["time"]
+#[dependencies.tokio-stream]
+#version = "0.1.8"
+#features = ["time"]
 
 [dependencies.futures-util]
 version = "0.3.21"

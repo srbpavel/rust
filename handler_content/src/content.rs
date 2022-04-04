@@ -6,8 +6,10 @@ use actix_web::{
 };
 //use log::debug;
 use futures_util::{Stream, StreamExt};
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 const PATH_DELIMITER: char = '/';
@@ -66,7 +68,9 @@ pub async fn put_content_p(
 ) -> Result<HttpResponse, Error> {
     let AppState { binary_map } = &*state.into_inner();
 
-    let new_content = Content { id: path.into_inner() };
+    let new_content = Content {
+        id: path.into_inner(),
+    };
 
     let mut buf = Binary::new();
     let mut actual_clients = Vec::new();
@@ -74,7 +78,7 @@ pub async fn put_content_p(
     while let Some(chunk) = payload.next().await {
         let data = chunk?;
         let just_last_chunk = web::Bytes::from(data.clone());
-        
+
         buf.data.put(data);
 
         if let Some(record) = binary_map.get(&new_content.id.clone()) {
@@ -84,26 +88,20 @@ pub async fn put_content_p(
         let all_clients: Vec<_> = actual_clients
             .iter_mut()
             .map(|(client, initial_start)| {
-
                 let for_client = if *initial_start {
                     *initial_start = false;
-                    
+
                     buf.data.clone().freeze()
                 } else {
                     just_last_chunk.clone()
                 };
 
-                async {
-                    client
-                        .clone()
-                        .try_send(for_client)
-                        //.unwrap_or(())
-                }
+                async { client.clone().try_send(for_client) }
             })
             .collect();
 
         let _clients_results = futures::future::join_all(all_clients).await;
-        
+
         binary_map.insert(
             new_content.id.clone(),
             Binary {
@@ -117,8 +115,8 @@ pub async fn put_content_p(
     binary_map.insert(
         new_content.id.clone(),
         Binary {
-            data: buf.data.clone(),
-            completed: true, // all data are uploaded
+            data: buf.data,
+            completed: true,     // all data are uploaded
             clients: Vec::new(), // so channels for clients are not needed
         },
     );
@@ -136,7 +134,6 @@ pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) ->
         None => content_id,
     };
 
-    // https://docs.rs/tokio/latest/tokio/sync/mpsc/fn.channel.html
     // limit hardcoded here
     let (tx, rx) = channel(100);
 
@@ -152,8 +149,7 @@ pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) ->
         None => return HttpResponse::Ok().body("Status::IdNotFound"),
     };
 
-    HttpResponse::Ok()
-        .streaming(Client(rx))
+    HttpResponse::Ok().streaming(Client(rx))
 }
 
 /// delete_content
