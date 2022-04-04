@@ -6,9 +6,22 @@ authors = ["Pavel SRB <prace@srbpavel.cz>"]
 
 [dependencies]
 dashmap = "5.2.0"
+futures = "0.3.21"
+#async-stream = "0.3.3"
+#actix = "0.13.0"
+#actix-web-actors = "4.1.0"
+
+[dependencies.tokio]
+version = "1.17"
+features = ["sync"]
+
+[dependencies.tokio-stream]
+version = "0.1.8"
+features = ["time"]
 
 [dependencies.futures-util]
 version = "0.3.21"
+#features = ["std"]
 
 [dependencies.actix-web]   
 version = "4.0.1"

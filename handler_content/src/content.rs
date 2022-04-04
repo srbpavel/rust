@@ -2,106 +2,133 @@
 use crate::handler::AppState;
 use actix_web::{
     web::{self, BufMut, Bytes, BytesMut},
-    Error,
-    HttpResponse,
-    Responder,
-    Result,
+    Error, HttpResponse, Responder, Result,
 };
 //use log::debug;
-use futures_util::StreamExt;
+use futures_util::{Stream, StreamExt};
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 const PATH_DELIMITER: char = '/';
 
-/// types for maps
 pub type ContentKey = String;
-pub type BinaryValue = BytesMut;
+pub type BinaryValue = Binary;
 
-/// content
+/// K for map
 #[derive(Debug, Clone)]
 pub struct Content {
     id: String,
 }
 
-/* FUTURE USE
-impl Content {
-    /// default
-    pub fn default() -> Self {
+/// V for map
+#[derive(Debug, Clone)]
+pub struct Binary {
+    data: BytesMut,
+    completed: bool,
+    clients: Vec<(Sender<Bytes>, bool)>,
+}
+
+impl Binary {
+    pub fn new() -> Self {
         Self {
-            id: String::from(""),
+            data: web::BytesMut::new(),
+            completed: false,
+            clients: Vec::new(),
         }
     }
 }
-*/
+
+/// channel for continuos chunk streaming
+///
+pub struct Client(Receiver<Bytes>);
+
+impl Stream for Client {
+    type Item = Result<Bytes, Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>,
+                 cx: &mut Context<'_>,
+    ) -> Poll<Option<Self::Item>> {
+        match Pin::new(&mut self.0).poll_recv(cx) {
+            Poll::Ready(Some(v)) => Poll::Ready(Some(Ok(v))),
+            Poll::Ready(None) => Poll::Ready(None),
+            Poll::Pending => Poll::Pending,
+        }
+    }
+}
 
 /// put_content PAYLOAD
-///
-/// https://docs.rs/actix-web/latest/actix_web/web/struct.Payload.html
-///
-/// cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT "http://127.0.0.1:8081/foo/bar" --no-buffer --limit-rate 100K -T -
-///
-///
-/// curl --verbose -X PUT http://localhost:8081/foo/bar/456 -d "1234567890"
-///
-/// ./chunk.sh
-/// ./ccc.sh
-///
-/// cat /home/conan/video/youtube/lines_twenty_thousand_leagues_under_the_sea_by_jules_verne.txt | curl -v -X PUT -H "Transfer-Encoding: chunked" -H "Content-type: multipart/form-data" "http://127.0.0.1:8081/jules/verne/twenty" -F "ts=@-;type=text/plain" -H "video_id: verne_piped" -H "group: chunk_tester" --no-buffer --limit-rate 100K
 ///
 pub async fn put_content_p(
     mut payload: web::Payload,
     path: web::Path<String>,
     state: web::Data<AppState>,
 ) -> Result<HttpResponse, Error> {
-
     let AppState { binary_map } = &*state.into_inner();
 
-    let new_content = Content {
-        id: path.into_inner(),
-        // FUTURE USE if more fields later
-        //..Content::default()
-    };
+    let new_content = Content { id: path.into_inner() };
 
-    let mut buf = web::BytesMut::new();
+    let mut buf = Binary::new();
+    let mut actual_clients = Vec::new();
 
     while let Some(chunk) = payload.next().await {
-        /*
-        // NOT THERE YET
-        // the trait `FromResidual<Result<Infallible, PayloadError>>`
-        // is not implemented for `BytesMut`
-        //
-        buf = web::block(move || {
-            buf.put(&*chunk?);
+        let data = chunk?;
+        let just_last_chunk = web::Bytes::from(data.clone());
+        
+        buf.data.put(data);
 
-            buf
-        }).await?;
-        */
+        if let Some(record) = binary_map.get(&new_content.id.clone()) {
+            actual_clients = record.clients.clone();
+        };
 
-        // BLOCKING
-        //buf.extend_from_slice(&chunk?);
-        buf.put(&*chunk?);
+        let all_clients: Vec<_> = actual_clients
+            .iter_mut()
+            .map(|(client, initial_start)| {
 
-        let binary_hashmap = &binary_map;
+                let for_client = if *initial_start {
+                    *initial_start = false;
+                    
+                    buf.data.clone().freeze()
+                } else {
+                    just_last_chunk.clone()
+                };
 
-        binary_hashmap.insert(new_content.id.clone(), buf.clone());
+                async {
+                    client
+                        .clone()
+                        .try_send(for_client)
+                        //.unwrap_or(())
+                }
+            })
+            .collect();
+
+        let _clients_results = futures::future::join_all(all_clients).await;
+        
+        binary_map.insert(
+            new_content.id.clone(),
+            Binary {
+                data: buf.data.clone(),
+                completed: false,
+                clients: actual_clients.clone(),
+            },
+        );
     }
+
+    binary_map.insert(
+        new_content.id.clone(),
+        Binary {
+            data: buf.data.clone(),
+            completed: true, // all data are uploaded
+            clients: Vec::new(), // so channels for clients are not needed
+        },
+    );
 
     Ok(HttpResponse::Ok().body("Status::UploadOk"))
 }
 
 /// get_content
 ///
-/// watch curl --silent --verbose --no-buffer http://localhost:8081/foo/bar
-///
-/// curl --silent --verbose --no-buffer http://localhost:8081/jules/verne/twenty
-///
-/// curl --silent --verbose --no-buffer http://localhost:8081/foo/
-/// curl --silent --verbose --no-buffer http://localhost:8081/foo
-///
-pub async fn get_content(
-    path: web::Path<String>,
-    state: web::Data<AppState>,
-) -> impl Responder {
-
+pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
@@ -109,33 +136,29 @@ pub async fn get_content(
         None => content_id,
     };
 
-    //debug!("ID: {content_id}");
+    // https://docs.rs/tokio/latest/tokio/sync/mpsc/fn.channel.html
+    // limit hardcoded here
+    let (tx, rx) = channel(100);
 
-    let all_content = &state.binary_map;
+    match state.binary_map.get_mut(&content_id) {
+        Some(mut r) => {
+            if r.completed {
+                return HttpResponse::Ok().body(r.data.clone());
+            }
 
-    let result = all_content.get(&content_id);
-
-    let data = match result {
-        Some(v) => Bytes::from(v.clone()),
-        None => Bytes::from("GET data error"),
+            // insert new client TX channel + first_time flag
+            r.clients.push((tx, true));
+        }
+        None => return HttpResponse::Ok().body("Status::IdNotFound"),
     };
 
     HttpResponse::Ok()
-        .insert_header(("content-type", "application/octet-stream"))
-        .insert_header(("content-encoding", "chunked"))
-        .body(data)
+        .streaming(Client(rx))
 }
 
 /// delete_content
 ///
-/// curl -X DELETE "http://127.0.0.1:8081/foo/bar/"
-/// curl -X DELETE "http://127.0.0.1:8081/foo/bar"
-///
-pub async fn delete_content(
-    path: web::Path<String>,
-    state: web::Data<AppState>,
-) -> impl Responder {
-
+pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
