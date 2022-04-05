@@ -48,9 +48,7 @@ pub struct Client(Receiver<Bytes>);
 impl Stream for Client {
     type Item = Result<Bytes, Error>;
 
-    fn poll_next(mut self: Pin<&mut Self>,
-                 cx: &mut Context<'_>,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match Pin::new(&mut self.0).poll_recv(cx) {
             Poll::Ready(Some(v)) => Poll::Ready(Some(Ok(v))),
             Poll::Ready(None) => Poll::Ready(None),
@@ -77,7 +75,7 @@ pub async fn put_content_p(
 
     while let Some(chunk) = payload.next().await {
         let data = chunk?;
-        let just_last_chunk = web::Bytes::from(data.clone());
+        let just_last_chunk = data.clone();
 
         buf.data.put(data);
 
@@ -101,7 +99,9 @@ pub async fn put_content_p(
 
                     if let Ok(()) = result {
                         Some((client.clone(), initial_start))
-                    } else {None}
+                    } else {
+                        None
+                    }
                 }
             })
             .collect();
@@ -109,14 +109,12 @@ pub async fn put_content_p(
         let mut alive_clients = Vec::new();
         let results = futures::future::join_all(all_clients).await;
 
-        results
-            .iter()
-            .for_each(|r|
-                      if let Some((c,i)) = r {
-                          alive_clients.push((c.clone(), **i));
-                      }
-            );
-        
+        results.iter().for_each(|r| {
+            if let Some((c, i)) = r {
+                alive_clients.push((c.clone(), **i));
+            }
+        });
+
         binary_map.insert(
             new_content.id.clone(),
             Binary {
@@ -131,7 +129,7 @@ pub async fn put_content_p(
         new_content.id,
         Binary {
             data: buf.data,
-            completed: true, // all data are uploaded
+            completed: true,     // all data are uploaded
             clients: Vec::new(), // so channels for clients are not needed
         },
     );
