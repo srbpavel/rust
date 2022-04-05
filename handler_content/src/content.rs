@@ -96,27 +96,42 @@ pub async fn put_content_p(
                     just_last_chunk.clone()
                 };
 
-                async { client.clone().try_send(for_client) }
+                async {
+                    let result = client.clone().try_send(for_client);
+
+                    if let Ok(()) = result {
+                        Some((client.clone(), initial_start))
+                    } else {None}
+                }
             })
             .collect();
 
-        let _clients_results = futures::future::join_all(all_clients).await;
+        let mut alive_clients = Vec::new();
+        let results = futures::future::join_all(all_clients).await;
 
+        results
+            .iter()
+            .for_each(|r|
+                      if let Some((c,i)) = r {
+                          alive_clients.push((c.clone(), **i));
+                      }
+            );
+        
         binary_map.insert(
             new_content.id.clone(),
             Binary {
                 data: buf.data.clone(),
                 completed: false,
-                clients: actual_clients.clone(),
+                clients: alive_clients.clone(),
             },
         );
     }
 
     binary_map.insert(
-        new_content.id.clone(),
+        new_content.id,
         Binary {
             data: buf.data,
-            completed: true,     // all data are uploaded
+            completed: true, // all data are uploaded
             clients: Vec::new(), // so channels for clients are not needed
         },
     );
