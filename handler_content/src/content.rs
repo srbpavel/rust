@@ -13,6 +13,7 @@ use std::{
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 const PATH_DELIMITER: char = '/';
+const PATH_LIST_SUFFIX: &'static str = "/*";
 
 pub type ContentKey = String;
 pub type BinaryValue = Binary;
@@ -69,10 +70,14 @@ pub async fn put_content_p(
     let id = path.into_inner();
     
     let new_content = Content {
-        id: match &id.strip_suffix("/") {
+        /*
+        id: match &id.strip_suffix(PATH_DELIMITER) {
             Some(p) => p.to_string(),
             None => id,
         }
+         */
+        //id : remove_suffix(&id, &PATH_DELIMITER.to_string()).to_string(),
+        id : remove_suffix(&id, PATH_DELIMITER).to_string(),
     };
 
     let mut buf = Binary::new();
@@ -147,10 +152,15 @@ pub async fn put_content_p(
 pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
+    /*
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(c),
         None => content_id,
     };
+    */
+
+    //content_id = remove_suffix(&content_id, &PATH_DELIMITER.to_string()).to_string();
+    content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
 
     // limit hardcoded here
     let (tx, rx) = channel(100);
@@ -199,15 +209,13 @@ pub async fn list_content(path: web::Path<String>,
     
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(
-            //format!("/{}", c)
             c
         ),
         None => content_id,
     };
 
-    //debug!("LIST path: {:?}", content_id);
-    
-    let search_pattern = match content_id.strip_suffix("/*") {
+    //let search_pattern = match content_id.strip_suffix("/*") {
+    let search_pattern = match content_id.strip_suffix(PATH_LIST_SUFFIX) {
         Some(p) => p,
         None => return HttpResponse::Ok().body("notValidSearchPattern")
     };
@@ -236,4 +244,15 @@ pub async fn list_content(path: web::Path<String>,
     );
     
     HttpResponse::Ok().body(result)
+}
+
+/// remove trailing char
+///
+fn remove_suffix<'a>(text: &'a str,
+                     pattern: char,
+) -> &'a str {
+    match &text.strip_suffix(pattern) {
+        Some(t) => t,
+        None => text,
+    }
 }
