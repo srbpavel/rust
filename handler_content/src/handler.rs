@@ -45,10 +45,11 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .route(web::delete().to(content::delete_content))
                     .route(
                         web::route()
-                            .method(match http::Method::from_bytes(b"LIST") {
-                                Ok(m) => m,
-                                Err(_) => http::Method::POST,
-                            })
+                            .method(
+                                http::Method::from_bytes(b"LIST")
+                                    // will panic 
+                                    .expect("method LIST")
+                            )
                             .to(content::list_content),
                     ),
             )
