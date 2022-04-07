@@ -4,7 +4,7 @@ use actix_web::{
     web::{self, BufMut, Bytes, BytesMut},
     Error, HttpResponse, Responder, Result,
 };
-use log::debug;
+//use log::debug;
 use futures_util::{Stream, StreamExt};
 use std::{
     pin::Pin,
@@ -66,8 +66,13 @@ pub async fn put_content_p(
 ) -> Result<HttpResponse, Error> {
     let AppState { binary_map } = &*state.into_inner();
 
+    let id = path.into_inner();
+    
     let new_content = Content {
-        id: path.into_inner(),
+        id: match &id.strip_suffix("/") {
+            Some(p) => p.to_string(),
+            None => id,
+        }
     };
 
     let mut buf = Binary::new();
@@ -185,6 +190,8 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
 
 /// list_content
 ///
+/// no limit or padding
+///
 pub async fn list_content(path: web::Path<String>,
                           state: web::Data<AppState>) -> impl Responder {
 
@@ -192,16 +199,14 @@ pub async fn list_content(path: web::Path<String>,
     
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(
-            format!("/{}", c)
+            //format!("/{}", c)
+            c
         ),
         None => content_id,
     };
 
-    debug!("LIST path: {:?}", content_id);
+    //debug!("LIST path: {:?}", content_id);
     
-    //match state.binary_map.get_mut(&content_id) {
-    //}
-
     let search_pattern = match content_id.strip_suffix("/*") {
         Some(p) => p,
         None => return HttpResponse::Ok().body("notValidSearchPattern")
@@ -224,7 +229,6 @@ pub async fn list_content(path: web::Path<String>,
                          .binary_map
                          .clone()
                          .iter()
-                         //.filter(|d| d.key().starts_with(&content_id))
                          .filter(|d| d.key().starts_with(&search_pattern))
                          .map(|d| d.key().clone()
                          )
