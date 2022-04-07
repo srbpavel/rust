@@ -67,17 +67,10 @@ pub async fn put_content_p(
 ) -> Result<HttpResponse, Error> {
     let AppState { binary_map } = &*state.into_inner();
 
-    let id = path.into_inner();
+    let content_id = path.into_inner();
     
     let new_content = Content {
-        /*
-        id: match &id.strip_suffix(PATH_DELIMITER) {
-            Some(p) => p.to_string(),
-            None => id,
-        }
-         */
-        //id : remove_suffix(&id, &PATH_DELIMITER.to_string()).to_string(),
-        id : remove_suffix(&id, PATH_DELIMITER).to_string(),
+        id : remove_suffix(&content_id, PATH_DELIMITER).to_string(),
     };
 
     let mut buf = Binary::new();
@@ -152,14 +145,6 @@ pub async fn put_content_p(
 pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
-    /*
-    content_id = match content_id.strip_suffix(PATH_DELIMITER) {
-        Some(c) => String::from(c),
-        None => content_id,
-    };
-    */
-
-    //content_id = remove_suffix(&content_id, &PATH_DELIMITER.to_string()).to_string();
     content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
 
     // limit hardcoded here
@@ -185,11 +170,8 @@ pub async fn get_content(path: web::Path<String>, state: web::Data<AppState>) ->
 pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
-    content_id = match content_id.strip_suffix(PATH_DELIMITER) {
-        Some(c) => String::from(c),
-        None => content_id,
-    };
-
+    content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
+    
     let result = match &mut state.binary_map.remove(&content_id) {
         Some(_) => "Status::DeleteOk",
         None => "Status::DeleteBinaryError",
@@ -208,13 +190,10 @@ pub async fn list_content(path: web::Path<String>,
     let mut content_id = path.into_inner();
     
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
-        Some(c) => String::from(
-            c
-        ),
+        Some(c) => String::from(c),
         None => content_id,
     };
 
-    //let search_pattern = match content_id.strip_suffix("/*") {
     let search_pattern = match content_id.strip_suffix(PATH_LIST_SUFFIX) {
         Some(p) => p,
         None => return HttpResponse::Ok().body("notValidSearchPattern")
