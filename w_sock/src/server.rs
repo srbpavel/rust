@@ -5,12 +5,14 @@ use std::time::{Duration,
 use actix::prelude::*;
 use actix_web_actors::ws;
 
+const DELAY: u64 = 1*60;
+
 // this starts after connected
 /// How often heartbeat pings are sent
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(DELAY);
 
 /// How long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(DELAY + 10);
 
 /// websocket connection is long running connection, it easier
 /// to handle with an actor
@@ -30,7 +32,8 @@ impl MyWebSocket {
     /// also this method checks heartbeats from client
     fn hb(&self,
           ctx: &mut <Self as Actor>::Context) {
-        
+
+        // does this run loop ? 
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
@@ -103,7 +106,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWebSocket {
                          text,
                 );
 
-                ctx.text(text)
+                if text.eq("") || text.eq("\n"){
+                    println!("\n   Empty MSG is not forwarded");
+                } else {
+                    ctx.text(text)
+                }
             },
             
             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),

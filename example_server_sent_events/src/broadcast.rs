@@ -3,7 +3,6 @@ use std::{
     task::{Context, Poll},
     time::Duration,
 };
-
 use actix_web::{
     rt::time::{interval_at, Instant},
     web::{Bytes, Data},
@@ -41,6 +40,7 @@ impl Broadcaster {
             let mut interval = interval_at(Instant::now(), Duration::from_secs(10));
 
             loop {
+                println!("tick: start");
                 interval.tick().await;
                 me.remove_stale_clients();
             }
@@ -51,6 +51,9 @@ impl Broadcaster {
         let mut inner = self.inner.lock();
 
         let mut ok_clients = Vec::new();
+
+        println!("clients_in: {:?}", inner.clients);
+        
         for client in inner.clients.iter() {
             let result = client.clone().try_send(Bytes::from("data: ping\n\n"));
 
@@ -59,6 +62,8 @@ impl Broadcaster {
             }
         }
         inner.clients = ok_clients;
+
+        println!("clients_out: {:?}", inner.clients);
     }
 
     pub fn new_client(&self) -> Client {
@@ -76,6 +81,11 @@ impl Broadcaster {
         let msg = Bytes::from(["data: ", msg, "\n\n"].concat());
 
         let inner = self.inner.lock();
+
+        if inner.clients.len().eq(&0) {
+            println!("no clients online to send msg: <{msg:?}>");
+        }
+
         for client in inner.clients.iter() {
             client.clone().try_send(msg.clone()).unwrap_or(());
         }
@@ -94,7 +104,7 @@ impl Stream for Client {
 
         match Pin::new(&mut self.0).poll_recv(cx) {
             Poll::Ready(Some(v)) => {
-                println!("IMPL:\n  ---> {:#?}",
+                println!("\nIMPL: ---> {:?}",
                          v,
                 );
 

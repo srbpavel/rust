@@ -4,7 +4,7 @@ use actix_web::{
     web::{self, BufMut, Bytes, BytesMut},
     Error, HttpResponse, Responder, Result,
 };
-//use log::debug;
+use log::debug;
 use futures_util::{Stream, StreamExt};
 use std::{
     pin::Pin,
@@ -180,5 +180,37 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
         None => "Status::DeleteBinaryError",
     };
 
+    HttpResponse::Ok().body(result)
+}
+
+/// list_content
+///
+pub async fn list_content(path: web::Path<String>,
+                          state: web::Data<AppState>) -> impl Responder {
+
+    let mut content_id = path.into_inner();
+    
+    content_id = match content_id.strip_suffix(PATH_DELIMITER) {
+        Some(c) => String::from(c),
+        None => content_id,
+    };
+
+    debug!("LIST path: {:?}", content_id);
+    
+    //match state.binary_map.get_mut(&content_id) {
+    //}
+
+    let result = format!("\nLIST[{}]:\n{:?}",
+                         state.binary_map.len(),
+
+                         state
+                         .binary_map
+                         .clone()
+                         .iter()
+                         //.count()
+                         .map(|d| d.key().clone())
+                         .collect::<Vec<_>>()
+    );
+    
     HttpResponse::Ok().body(result)
 }

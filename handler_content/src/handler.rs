@@ -42,7 +42,19 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                 web::resource(vec!["/{url_path:.*}", "/{url_path:.*}/"])
                     .route(web::get().to(content::get_content))
                     .route(web::put().to(content::put_content_p))
-                    .route(web::delete().to(content::delete_content)),
+                    .route(web::delete().to(content::delete_content))//,
+                    // LIST try
+                    // https://docs.rs/actix-web/4.0.1/actix_web/struct.Route.html#method.method
+                    .route(
+                        // https://docs.rs/actix-web/4.0.1/src/actix_web/route.rs.html#108-113
+                        web::route()
+                            .method(
+                                // https://docs.rs/actix-web/4.0.1/actix_web/http/struct.Method.html#method.from_bytes
+                                http::Method::from_bytes(b"LIST")
+                                    .unwrap() //not safe
+                            )
+                            .to(content::list_content)
+                    ),
             )
     })
     .bind(format!("{}:{}", &config.server, config.port,))?;

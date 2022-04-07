@@ -21,6 +21,8 @@ use self::server::MyWebSocket;
 
 
 // via browser
+// as the path is relative, take care as if you start:
+// cargo run -> inside ./src --> index.html will be not found
 async fn index() -> impl Responder {
     NamedFile::open_async("./static/index.html")
         .await
@@ -33,7 +35,9 @@ async fn index() -> impl Responder {
 async fn echo_ws(req: HttpRequest,
                  stream: web::Payload) -> Result<HttpResponse, Error> {
 
-    log::debug!("New SOCKET\n{:?}",
+    // here is REQ HEaders is:
+    // "sec-websocket-key": "kRu9FdtEUjiglnK4gINBiA=="
+    log::debug!("New SOCKET [aka client]\n{:?}",
                 req,
     );
 
@@ -43,6 +47,9 @@ async fn echo_ws(req: HttpRequest,
     // https://docs.rs/actix-web-actors/latest/actix_web_actors/ws/struct.WsResponseBuilder.html
     //
     // -> HttpResponse
+    //
+    // so we send back actor ws start with new MyWebSocket with hb Instant
+    // this is Actor start and in initiate HB
     ws::start(MyWebSocket::new(), // our Struct with HB
               &req, // req
               stream, // payload

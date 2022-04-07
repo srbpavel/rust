@@ -43,27 +43,33 @@ async fn main() {
     // run blocking terminal input reader on separate thread
     // https://doc.rust-lang.org/std/thread/
     // JoinHandle { .. }
-    let input_thread = thread::spawn(move || loop {
-        let mut cmd = String::with_capacity(32);
-
-        // out keyboard input
-        if io::stdin()
-            .read_line(&mut cmd)
-            .is_err() {
-            log::error!("error reading line");
-            return;
-        }
-
-        println!("  TX: {:?}",
-                 cmd,
-        );
-
-        // TRANSMIT CHANNEL 
-        cmd_tx
-            .send(cmd)
-            .unwrap();
-    });
-
+    //
+    // this is started before connecting to server
+    let input_thread = thread::spawn(
+        move ||
+            // infinite loop for MSG's keyboard WRITE
+            loop {
+                let mut cmd = String::with_capacity(32);
+                
+                // out keyboard input
+                if io::stdin()
+                    .read_line(&mut cmd)
+                    .is_err() {
+                        log::error!("error reading line");
+                        return;
+                    }
+                
+                println!("  TX: {:?}",
+                         cmd,
+                );
+                
+                // TRANSMIT CHANNEL 
+                cmd_tx
+                    .send(cmd)
+                    .unwrap();
+            }
+    );
+    
     //via awc client connect so we have response + web_socket
     let (res, mut ws) = awc::Client::new()
         // https://docs.rs/awc/3.0.0/awc/struct.Client.html#method.ws
@@ -83,7 +89,8 @@ async fn main() {
 
     let mut loop_counter = 0;
     
-    // infinite 
+    // another infinite to read msg from previous keyboard loop
+    // + send to server
     loop {
         loop_counter += 1;
 
@@ -124,8 +131,10 @@ async fn main() {
                                 //Bytes::new()
                                 Bytes::from(
                                     [
+                                        "in: "
+                                            .as_bytes(),
                                         &data,
-                                        format!(" / {}",
+                                        format!(" / out: {}",
                                                 chrono::Utc::now(),
                                         )
                                             .as_bytes(),

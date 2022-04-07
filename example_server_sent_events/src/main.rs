@@ -41,7 +41,7 @@ async fn index() -> impl Responder {
 async fn new_client(broadcaster: Data<Broadcaster>) -> impl Responder {
     let rx = broadcaster.new_client();
 
-    println!("start new client\n -> {:#?}",
+    println!("start new client\n -> {:?}",
              broadcaster
              .inner
              .lock()
@@ -55,7 +55,7 @@ async fn new_client(broadcaster: Data<Broadcaster>) -> impl Responder {
 
 //BROADCASTER -> our video upload + bytes updater
 async fn broadcast(msg: Path<String>, broadcaster: Data<Broadcaster>) -> impl Responder {
-    println!("boardcast msg:\n -> <{msg:?}>\n  --> {:#?}",
+    println!("boardcast msg:\n -> <{msg:?}>\n  --> {:?}",
              broadcaster // our Struct
              .inner
              .lock()

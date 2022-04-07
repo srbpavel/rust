@@ -10,6 +10,7 @@ futures = "0.3.21"
 #async-stream = "0.3.3"
 #actix = "0.13.0"
 #actix-web-actors = "4.1.0"
+http = "0.2.6"
 
 [dependencies.tokio]
 version = "1.17"
