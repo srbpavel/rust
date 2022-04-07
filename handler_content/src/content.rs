@@ -187,11 +187,15 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
 pub async fn list_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
 
+    /*
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(c),
         None => content_id,
     };
+    */
 
+    content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
+    
     let search_pattern = match content_id.strip_suffix(PATH_LIST_SUFFIX) {
         Some(p) => p,
         None => return HttpResponse::Ok().body("notValidSearchPattern"),
@@ -212,8 +216,15 @@ pub async fn list_content(path: web::Path<String>, state: web::Data<AppState>) -
             .binary_map
             .clone()
             .iter()
+            /*
             .filter(|d| d.key().starts_with(&search_pattern))
             .map(|d| d.key().clone())
+            */
+            .filter_map(|d| if d.key().starts_with(&search_pattern) {
+                Some(d.key().clone())
+            } else {
+                None
+            })
             .collect::<Vec<_>>(),
     );
 
