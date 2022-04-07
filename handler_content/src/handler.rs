@@ -43,17 +43,13 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
                     .route(web::get().to(content::get_content))
                     .route(web::put().to(content::put_content_p))
                     .route(web::delete().to(content::delete_content))
-                    .route(web::route()
-                           .method(
-                               match http::Method::from_bytes(b"LIST")
-                               {
-                                   Ok(m) => m,
-                                   Err(_) => {
-                                       http::Method::POST
-                                   },
-                               }
-                           )
-                           .to(content::list_content)
+                    .route(
+                        web::route()
+                            .method(match http::Method::from_bytes(b"LIST") {
+                                Ok(m) => m,
+                                Err(_) => http::Method::POST,
+                            })
+                            .to(content::list_content),
                     ),
             )
     })

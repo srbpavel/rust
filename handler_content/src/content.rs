@@ -68,9 +68,9 @@ pub async fn put_content_p(
     let AppState { binary_map } = &*state.into_inner();
 
     let content_id = path.into_inner();
-    
+
     let new_content = Content {
-        id : remove_suffix(&content_id, PATH_DELIMITER).to_string(),
+        id: remove_suffix(&content_id, PATH_DELIMITER).to_string(),
     };
 
     let mut buf = Binary::new();
@@ -171,7 +171,7 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
     let mut content_id = path.into_inner();
 
     content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
-    
+
     let result = match &mut state.binary_map.remove(&content_id) {
         Some(_) => "Status::DeleteOk",
         None => "Status::DeleteBinaryError",
@@ -184,11 +184,9 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
 ///
 /// no limit or padding
 ///
-pub async fn list_content(path: web::Path<String>,
-                          state: web::Data<AppState>) -> impl Responder {
-
+pub async fn list_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
     let mut content_id = path.into_inner();
-    
+
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
         Some(c) => String::from(c),
         None => content_id,
@@ -196,40 +194,35 @@ pub async fn list_content(path: web::Path<String>,
 
     let search_pattern = match content_id.strip_suffix(PATH_LIST_SUFFIX) {
         Some(p) => p,
-        None => return HttpResponse::Ok().body("notValidSearchPattern")
+        None => return HttpResponse::Ok().body("notValidSearchPattern"),
     };
-    
-    let result = format!("\nLIST[{}]:\n PATTERN: {} <-> {}\n ALL: {:?}\n FILTER: {:?}",
-                         state.binary_map.len(),
 
-                         content_id,
-                         search_pattern,
-                         
-                         state
-                         .binary_map
-                         .clone()
-                         .iter()
-                         .map(|d| d.key().clone())
-                         .collect::<Vec<_>>(),
-
-                         state
-                         .binary_map
-                         .clone()
-                         .iter()
-                         .filter(|d| d.key().starts_with(&search_pattern))
-                         .map(|d| d.key().clone()
-                         )
-                         .collect::<Vec<_>>(),
+    let result = format!(
+        "\nLIST[{}]:\n PATTERN: {} <-> {}\n ALL: {:?}\n FILTER: {:?}",
+        state.binary_map.len(),
+        content_id,
+        search_pattern,
+        state
+            .binary_map
+            .clone()
+            .iter()
+            .map(|d| d.key().clone())
+            .collect::<Vec<_>>(),
+        state
+            .binary_map
+            .clone()
+            .iter()
+            .filter(|d| d.key().starts_with(&search_pattern))
+            .map(|d| d.key().clone())
+            .collect::<Vec<_>>(),
     );
-    
+
     HttpResponse::Ok().body(result)
 }
 
 /// remove trailing char
 ///
-fn remove_suffix<'a>(text: &'a str,
-                     pattern: char,
-) -> &'a str {
+fn remove_suffix<'a>(text: &'a str, pattern: char) -> &'a str {
     match &text.strip_suffix(pattern) {
         Some(t) => t,
         None => text,
