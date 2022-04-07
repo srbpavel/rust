@@ -191,7 +191,9 @@ pub async fn list_content(path: web::Path<String>,
     let mut content_id = path.into_inner();
     
     content_id = match content_id.strip_suffix(PATH_DELIMITER) {
-        Some(c) => String::from(c),
+        Some(c) => String::from(
+            format!("/{}", c)
+        ),
         None => content_id,
     };
 
@@ -200,16 +202,33 @@ pub async fn list_content(path: web::Path<String>,
     //match state.binary_map.get_mut(&content_id) {
     //}
 
-    let result = format!("\nLIST[{}]:\n{:?}",
+    let search_pattern = match content_id.strip_suffix("/*") {
+        Some(p) => p,
+        None => return HttpResponse::Ok().body("notValidSearchPattern")
+    };
+    
+    let result = format!("\nLIST[{}]:\n PATTERN: {} <-> {}\n ALL: {:?}\n FILTER: {:?}",
                          state.binary_map.len(),
+
+                         content_id,
+                         search_pattern,
+                         
+                         state
+                         .binary_map
+                         .clone()
+                         .iter()
+                         .map(|d| d.key().clone())
+                         .collect::<Vec<_>>(),
 
                          state
                          .binary_map
                          .clone()
                          .iter()
-                         //.count()
-                         .map(|d| d.key().clone())
-                         .collect::<Vec<_>>()
+                         //.filter(|d| d.key().starts_with(&content_id))
+                         .filter(|d| d.key().starts_with(&search_pattern))
+                         .map(|d| d.key().clone()
+                         )
+                         .collect::<Vec<_>>(),
     );
     
     HttpResponse::Ok().body(result)
