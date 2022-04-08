@@ -2,9 +2,9 @@
 use crate::handler::AppState;
 use actix_web::{
     web::{self, BufMut, Bytes, BytesMut},
-    Error, HttpResponse, Responder, Result,
+    Error, HttpResponse, Responder, HttpRequest, Result,http::header::HeaderMap,
 };
-//use log::debug;
+use log::debug;
 use futures_util::{Stream, StreamExt};
 use std::{
     pin::Pin,
@@ -14,6 +14,23 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 const PATH_DELIMITER: char = '/';
 const PATH_LIST_SUFFIX: &'static str = "/*";
+const LIMIT: usize = 100;
+const PAGE: usize = 1;
+
+/// req header keys
+enum HeaderKey {
+    Page,
+    Limit,
+}
+
+impl HeaderKey {
+    pub fn as_string(&self) -> String {
+        match *self {
+            Self::Page => String::from("page"),
+            Self::Limit => String::from("limit"),
+        }
+    }
+}
 
 pub type ContentKey = String;
 pub type BinaryValue = Binary;
@@ -184,15 +201,43 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
 ///
 /// no limit or padding
 ///
-pub async fn list_content(path: web::Path<String>, state: web::Data<AppState>) -> impl Responder {
-    let mut content_id = path.into_inner();
-
-    /*
-    content_id = match content_id.strip_suffix(PATH_DELIMITER) {
-        Some(c) => String::from(c),
-        None => content_id,
+pub async fn list_content(path: web::Path<String>,
+                          state: web::Data<AppState>,
+                          req: HttpRequest,
+) -> impl Responder {
+    let page = match verify_header(HeaderKey::Page,
+                                        req.headers(),
+    ) {
+        //Some(value) => value,
+        Some(value) => match value.parse::<usize>() {
+            Ok(v) => v,
+            Err(why) => {
+                debug!("\nHEADER Error LIMIT: not usize <{}>\n REASON >>> {why}", value);
+                
+                PAGE}
+            ,
+        },
+        //None => String::from("1"),
+        //None => "1",
+        None => PAGE,
     };
-    */
+
+    let limit = match verify_header(HeaderKey::Limit,
+                                    req.headers(),
+    ) {
+        Some(value) => match value.parse::<usize>() {
+            Ok(v) => v,
+            Err(why) => {
+                debug!("\nHEADER Error LIMIT: not usize <{}>\n REASON >>> {why}", value);
+                
+                LIMIT}
+            ,
+        },
+        //None => LIMIT.to_string(),
+        None => LIMIT,
+    };
+
+    let mut content_id = path.into_inner();
 
     content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
     
@@ -201,31 +246,34 @@ pub async fn list_content(path: web::Path<String>, state: web::Data<AppState>) -
         None => return HttpResponse::Ok().body("notValidSearchPattern"),
     };
 
+    let data = state
+        .binary_map
+        .clone();
+    
+    let all = &data
+        .iter()
+        .map(|d| d.key().clone())
+        .collect::<Vec<_>>();
+
+    let filtered = data
+        .iter()
+        .filter_map(|d| if d.key().starts_with(&search_pattern) {
+            Some(d.key().clone())
+        } else {
+            None
+        })
+        .collect::<Vec<_>>();
+    
     let result = format!(
-        "\nLIST[{}]:\n PATTERN: {} <-> {}\n ALL: {:?}\n FILTER: {:?}",
-        state.binary_map.len(),
+        "\nLIST[{}/{}]: page: {} limit: {}\n PATTERN: {} -> {}\n ALL: {:?}\n FILTER: {:?}",
+        all.len(),
+        filtered.len(),
+        page,
+        limit,
         content_id,
         search_pattern,
-        state
-            .binary_map
-            .clone()
-            .iter()
-            .map(|d| d.key().clone())
-            .collect::<Vec<_>>(),
-        state
-            .binary_map
-            .clone()
-            .iter()
-            /*
-            .filter(|d| d.key().starts_with(&search_pattern))
-            .map(|d| d.key().clone())
-            */
-            .filter_map(|d| if d.key().starts_with(&search_pattern) {
-                Some(d.key().clone())
-            } else {
-                None
-            })
-            .collect::<Vec<_>>(),
+        all,
+        filtered,
     );
 
     HttpResponse::Ok().body(result)
@@ -239,3 +287,24 @@ fn remove_suffix<'a>(text: &'a str, pattern: char) -> &'a str {
         None => text,
     }
 }
+
+
+/// search for header key
+///
+fn verify_header(key: HeaderKey,
+                 //headers: &HeaderMap) -> Option<String> {
+                 headers: &HeaderMap) -> Option<&str> {
+
+    match headers.get(key.as_string()) {
+        Some(id) => {
+            match id.to_str() {
+                //Ok(i) => Some(String::from(i.trim())),
+                Ok(i) => Some(i.trim()),
+                Err(_) => None,
+            }
+        },
+        None => None,
+    }
+}
+
+
