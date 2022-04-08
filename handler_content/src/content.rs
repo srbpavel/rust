@@ -33,6 +33,13 @@ impl HeaderKey {
             Self::Limit => "limit",
         }
     }
+
+    pub fn default(&self) -> usize {
+        match *self {
+            Self::Page => PAGE,
+            Self::Limit => LIMIT,
+        }
+    }
 }
 
 pub type ContentKey = String;
@@ -208,6 +215,9 @@ pub async fn list_content(path: web::Path<String>,
                           state: web::Data<AppState>,
                           req: HttpRequest,
 ) -> impl Responder {
+    let page = verify_header_result(HeaderKey::Page, req.headers());
+    
+    /*
     let page = match verify_header(HeaderKey::Page,
                                    req.headers(),
     ) {
@@ -220,7 +230,10 @@ pub async fn list_content(path: web::Path<String>,
         },
         None => PAGE,
     };
+    */
 
+    let limit = verify_header_result(HeaderKey::Limit, req.headers());
+    /*
     let limit = match verify_header(HeaderKey::Limit,
                                     req.headers(),
     ) {
@@ -233,6 +246,7 @@ pub async fn list_content(path: web::Path<String>,
         },
         None => LIMIT,
     };
+    */
 
     let mut content_id = path.into_inner();
 
@@ -302,3 +316,31 @@ fn verify_header(key: HeaderKey,
         None => None,
     }
 }
+
+/// 
+fn verify_header_result(key: HeaderKey,
+                        headers: &HeaderMap) -> usize {
+
+    //match headers.get(key.as_string()) {
+    match headers.get(key.as_str()) {
+        Some(id) => {
+            match id.to_str() {
+                //Ok(i) => Some(i.trim()),
+                Ok(i) => match i.parse::<usize>() {
+                    Ok(v) => v,
+                    Err(why) => {
+                        debug!("\nHEADER Error <{}>: not usize <{}>\n REASON >>> {why}",
+                               key.as_str(),
+                               i);
+                        
+                        PAGE},
+                },
+                
+                
+                Err(_) => key.default(),
+            }
+        },
+        None => key.default(),
+    }
+}
+
