@@ -24,10 +24,13 @@ enum HeaderKey {
 }
 
 impl HeaderKey {
-    pub fn as_string(&self) -> String {
+    //pub fn as_string(&self) -> String {
+    pub fn as_str(&self) -> &str {
         match *self {
-            Self::Page => String::from("page"),
-            Self::Limit => String::from("limit"),
+            //Self::Page => String::from("page"),
+            Self::Page => "page",
+            //Self::Limit => String::from("limit"),
+            Self::Limit => "limit",
         }
     }
 }
@@ -206,19 +209,15 @@ pub async fn list_content(path: web::Path<String>,
                           req: HttpRequest,
 ) -> impl Responder {
     let page = match verify_header(HeaderKey::Page,
-                                        req.headers(),
+                                   req.headers(),
     ) {
-        //Some(value) => value,
         Some(value) => match value.parse::<usize>() {
             Ok(v) => v,
             Err(why) => {
-                debug!("\nHEADER Error LIMIT: not usize <{}>\n REASON >>> {why}", value);
+                debug!("\nHEADER Error PAGE: not usize <{}>\n REASON >>> {why}", value);
                 
-                PAGE}
-            ,
+                PAGE},
         },
-        //None => String::from("1"),
-        //None => "1",
         None => PAGE,
     };
 
@@ -230,10 +229,8 @@ pub async fn list_content(path: web::Path<String>,
             Err(why) => {
                 debug!("\nHEADER Error LIMIT: not usize <{}>\n REASON >>> {why}", value);
                 
-                LIMIT}
-            ,
+                LIMIT},
         },
-        //None => LIMIT.to_string(),
         None => LIMIT,
     };
 
@@ -292,13 +289,12 @@ fn remove_suffix<'a>(text: &'a str, pattern: char) -> &'a str {
 /// search for header key
 ///
 fn verify_header(key: HeaderKey,
-                 //headers: &HeaderMap) -> Option<String> {
                  headers: &HeaderMap) -> Option<&str> {
 
-    match headers.get(key.as_string()) {
+    //match headers.get(key.as_string()) {
+    match headers.get(key.as_str()) {
         Some(id) => {
             match id.to_str() {
-                //Ok(i) => Some(String::from(i.trim())),
                 Ok(i) => Some(i.trim()),
                 Err(_) => None,
             }
@@ -306,5 +302,3 @@ fn verify_header(key: HeaderKey,
         None => None,
     }
 }
-
-
