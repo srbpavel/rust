@@ -217,36 +217,7 @@ pub async fn list_content(path: web::Path<String>,
 ) -> impl Responder {
     let page = verify_header_result(HeaderKey::Page, req.headers());
     
-    /*
-    let page = match verify_header(HeaderKey::Page,
-                                   req.headers(),
-    ) {
-        Some(value) => match value.parse::<usize>() {
-            Ok(v) => v,
-            Err(why) => {
-                debug!("\nHEADER Error PAGE: not usize <{}>\n REASON >>> {why}", value);
-                
-                PAGE},
-        },
-        None => PAGE,
-    };
-    */
-
     let limit = verify_header_result(HeaderKey::Limit, req.headers());
-    /*
-    let limit = match verify_header(HeaderKey::Limit,
-                                    req.headers(),
-    ) {
-        Some(value) => match value.parse::<usize>() {
-            Ok(v) => v,
-            Err(why) => {
-                debug!("\nHEADER Error LIMIT: not usize <{}>\n REASON >>> {why}", value);
-                
-                LIMIT},
-        },
-        None => LIMIT,
-    };
-    */
 
     let mut content_id = path.into_inner();
 
@@ -299,33 +270,14 @@ fn remove_suffix<'a>(text: &'a str, pattern: char) -> &'a str {
     }
 }
 
-
-/// search for header key
-///
-fn verify_header(key: HeaderKey,
-                 headers: &HeaderMap) -> Option<&str> {
-
-    //match headers.get(key.as_string()) {
-    match headers.get(key.as_str()) {
-        Some(id) => {
-            match id.to_str() {
-                Ok(i) => Some(i.trim()),
-                Err(_) => None,
-            }
-        },
-        None => None,
-    }
-}
-
+/// verify_headers for keys
 /// 
 fn verify_header_result(key: HeaderKey,
                         headers: &HeaderMap) -> usize {
 
-    //match headers.get(key.as_string()) {
     match headers.get(key.as_str()) {
         Some(id) => {
             match id.to_str() {
-                //Ok(i) => Some(i.trim()),
                 Ok(i) => match i.parse::<usize>() {
                     Ok(v) => v,
                     Err(why) => {
@@ -335,8 +287,6 @@ fn verify_header_result(key: HeaderKey,
                         
                         PAGE},
                 },
-                
-                
                 Err(_) => key.default(),
             }
         },
