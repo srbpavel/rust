@@ -22,8 +22,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     env_logger::init();
 
-    //log::info!("{}", welcome_msg(&config)?,);
-
     let binary_map = Arc::new(DashMap::new());
 
     let mut server = HttpServer::new(move || {
@@ -69,16 +67,6 @@ pub async fn run(config: TomlConfig) -> std::io::Result<()> {
 
     server.run().await
 }
-
-/* // OBSOLETE
-/// welcome msg
-fn welcome_msg(config: &TomlConfig) -> std::io::Result<String> {
-    Ok(format!(
-        "start -> {} at {} / {}",
-        &config.name, &config.host, &config.server,
-    ))
-}
-*/
 
 /// INDEX
 /// just to verify resource regex is not greedy

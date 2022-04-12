@@ -2,9 +2,9 @@
 use crate::handler::AppState;
 use actix_web::{
     web::{self, BufMut, Bytes, BytesMut},
-    Error, HttpResponse, Responder, HttpRequest, Result,http::header::HeaderMap,
+    Error, HttpResponse, Responder, Result,
 };
-use log::debug;
+//use log::debug;
 use futures_util::{Stream, StreamExt};
 use std::{
     pin::Pin,
@@ -14,33 +14,6 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 const PATH_DELIMITER: char = '/';
 const PATH_LIST_SUFFIX: &'static str = "/*";
-const LIMIT: usize = 100;
-const PAGE: usize = 1;
-
-/// req header keys
-enum HeaderKey {
-    Page,
-    Limit,
-}
-
-impl HeaderKey {
-    //pub fn as_string(&self) -> String {
-    pub fn as_str(&self) -> &str {
-        match *self {
-            //Self::Page => String::from("page"),
-            Self::Page => "page",
-            //Self::Limit => String::from("limit"),
-            Self::Limit => "limit",
-        }
-    }
-
-    pub fn default(&self) -> usize {
-        match *self {
-            Self::Page => PAGE,
-            Self::Limit => LIMIT,
-        }
-    }
-}
 
 pub type ContentKey = String;
 pub type BinaryValue = Binary;
@@ -108,7 +81,7 @@ pub async fn put_content_p(
         let just_last_chunk = data.clone();
 
         buf.data.put(data);
-
+       
         if let Some(record) = binary_map.get(&new_content.id.clone()) {
             actual_clients = record.clients.clone();
         };
@@ -138,7 +111,7 @@ pub async fn put_content_p(
 
         let mut alive_clients = Vec::new();
         let results = futures::future::join_all(all_clients).await;
-
+       
         results.iter().for_each(|r| {
             if let Some((c, i)) = r {
                 alive_clients.push((c.clone(), **i));
@@ -209,35 +182,23 @@ pub async fn delete_content(path: web::Path<String>, state: web::Data<AppState>)
 
 /// list_content
 ///
-/// no limit or padding
+/// root disabled: server:port/*
+/// if needed all can be listed via: server:port//*
 ///
 pub async fn list_content(path: web::Path<String>,
                           state: web::Data<AppState>,
-                          req: HttpRequest,
 ) -> impl Responder {
-    let page = verify_header_result(HeaderKey::Page, req.headers());
-    
-    let limit = verify_header_result(HeaderKey::Limit, req.headers());
-
     let mut content_id = path.into_inner();
 
     content_id = remove_suffix(&content_id, PATH_DELIMITER).to_string();
-    
+
     let search_pattern = match content_id.strip_suffix(PATH_LIST_SUFFIX) {
         Some(p) => p,
         None => return HttpResponse::Ok().body("notValidSearchPattern"),
     };
 
-    let data = state
+    let filtered = state
         .binary_map
-        .clone();
-    
-    let all = &data
-        .iter()
-        .map(|d| d.key().clone())
-        .collect::<Vec<_>>();
-
-    let filtered = data
         .iter()
         .filter_map(|d| if d.key().starts_with(&search_pattern) {
             Some(d.key().clone())
@@ -245,21 +206,12 @@ pub async fn list_content(path: web::Path<String>,
             None
         })
         .collect::<Vec<_>>();
-    
-    let result = format!(
-        "\nLIST[{}/{}]: page: {} limit: {}\n PATTERN: {} -> {}\n ALL: {:?}\n FILTER: {:?}",
-        all.len(),
-        filtered.len(),
-        page,
-        limit,
-        content_id,
-        search_pattern,
-        all,
-        filtered,
-    );
+
+    let result = format!("{:?}", filtered);
 
     HttpResponse::Ok().body(result)
 }
+
 
 /// remove trailing char
 ///
@@ -269,28 +221,3 @@ fn remove_suffix<'a>(text: &'a str, pattern: char) -> &'a str {
         None => text,
     }
 }
-
-/// verify_headers for keys
-/// 
-fn verify_header_result(key: HeaderKey,
-                        headers: &HeaderMap) -> usize {
-
-    match headers.get(key.as_str()) {
-        Some(id) => {
-            match id.to_str() {
-                Ok(i) => match i.parse::<usize>() {
-                    Ok(v) => v,
-                    Err(why) => {
-                        debug!("\nHEADER Error <{}>: not usize <{}>\n REASON >>> {why}",
-                               key.as_str(),
-                               i);
-                        
-                        PAGE},
-                },
-                Err(_) => key.default(),
-            }
-        },
-        None => key.default(),
-    }
-}
-

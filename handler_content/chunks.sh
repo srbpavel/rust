@@ -1,4 +1,5 @@
 for i in {1..10}; do
+#for i in {1..20}; do
     DATE="$(date --rfc-3339=ns --utc)"
     >&2 echo "sending '$DATE'"
     echo $DATE
